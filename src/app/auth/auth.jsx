@@ -43,21 +43,69 @@ export const loginWithGoogle = async () => {
   }
 };
 
-// Login with email
+// Login dengan email dan password menggunakan API endpoint
 export const loginWithEmail = async (email, password) => {
   try {
+    const myHeaders = new Headers();
+    myHeaders.append("Content-Type", "application/json");
+
+    const raw = JSON.stringify({
+      email,
+      password
+    });
+
+    const requestOptions = {
+      method: "POST",
+      headers: myHeaders,
+      body: raw,
+      redirect: "follow"
+    };
+
+    const response = await fetch("http://localhost:5000/auth/login", requestOptions);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Login failed');
+    }
+
+    // Optional: Jika Anda juga ingin menggunakan Firebase Auth
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
+
   } catch (error) {
     throw new Error(error.message);
   }
 };
 
-// Register with email
-export const registerWithEmail = async (email, password) => {
+// Register dengan email
+export const registerWithEmail = async (email, password, firstName, lastName, phoneNumber) => {
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
+    const myHeaders = new Headers();
+    myHeaders.append("Content-Type", "application/json");
+
+    const raw = JSON.stringify({
+      email,
+      password,
+      firstName,
+      lastName,
+      phoneNumber
+    });
+
+    const requestOptions = {
+      method: "POST",
+      headers: myHeaders,
+      body: raw,
+      redirect: "follow"
+    };
+
+    const response = await fetch("http://localhost:5000/auth/register", requestOptions);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Registration failed');
+    }
+
+    return result;
   } catch (error) {
     throw new Error(error.message);
   }

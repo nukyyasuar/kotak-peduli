@@ -3,13 +3,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-export default function Navbar() {
+
+export default function navbarBeforeLogin() {
   return (
     <nav className="bg-white py-4">
       <div className="container mx-auto px-4 flex justify-between items-center">
         {/* Logo dan Teks Kotak Peduli - Dapat diklik untuk kembali ke homepage */}
           <div className="flex items-center space-x-2 cursor-pointer">
-            <Image src="/logo.png" alt="Kotak Peduli Logo" width={40} height={40} />
+            <Image src="/Main Design Skripsi Group 430.svg" alt="Kotak Peduli Logo" width={40} height={40} />
             <span className="font-bold text-[#4A2C2A]">Kotak Peduli</span>
           </div>
 
@@ -25,7 +26,7 @@ export default function Navbar() {
 
         {/* Tombol */}
         <div className="flex space-x-2">
-          <Link href="/donasi">
+          <Link href="/form">
             <button className="bg-[#F5E5C5] text-[#4A2C2A] px-4 py-2 rounded">
               Donasi Sekarang
             </button>
@@ -45,3 +46,4 @@ export default function Navbar() {
     </nav>
   );
 }
+

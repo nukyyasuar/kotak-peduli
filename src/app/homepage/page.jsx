@@ -4,8 +4,14 @@
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
-import Navbar from "../navbar/page"; // Adjust path as needed
-import Footer from "../footer/page"; // Adjust path as needed
+import NavbarBeforeLogin from "../navbarBeforeLogin/page";
+import NavbarAfterLogin from "../navbarAfterLogin/page"; 
+import Footer from "../footer/page";
+
+//pake react-hooks from
+//validasi pake yup
+//mau kirim axios
+//payload alamat donatur dan alamat tempat tujuan tujuan
 
 export default function Home() {
   return (
@@ -19,7 +25,7 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Navbar />
+      <NavbarAfterLogin />
 
       {/* Hero Section */}
       <section className="relative w-full h-[600px]">

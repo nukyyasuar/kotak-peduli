@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
 // pages/index.js
-import { useState, useRef } from 'react';
-import Head from 'next/head';
-import Image from 'next/image';
-import Navbar from '../navbar/page'; 
-import Footer from '../footer/page'; 
+import { useState, useRef } from "react";
+import Head from "next/head";
+import Image from "next/image";
+import Navbar from "../navbarBeforeLogin/page";
+import Footer from "../footer/page";
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState('Pakaian');
-  const [fileName, setFileName] = useState('foto_barang.jpg'); // State to store the selected file name
+  const [selectedCategory, setSelectedCategory] = useState("Pakaian");
+  const [fileName, setFileName] = useState("foto_barang.jpg"); // State to store the selected file name
   const fileInputRef = useRef(null); // Ref to access the hidden file input
 
   // Function to handle file selection
@@ -37,10 +37,13 @@ export default function Home() {
 
       <main className="max-w-6xl mx-auto px-6 py-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-center mb-2">Yuk Donasikan Barangmu</h1>
+          <h1 className="text-3xl font-bold text-center mb-2">
+            Yuk Donasikan Barangmu
+          </h1>
           <p className="text-center mb-6 text-sm">
-            Pilih jenis barang terlebih dahulu dari daftar dibawah (bisa lebih dari satu)<br />
-            & tempat penampung yang dituju
+            Pilih jenis barang terlebih dahulu dari daftar dibawah (bisa lebih
+            dari satu)
+            <br />& tempat penampung yang dituju
           </p>
 
           <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -65,19 +68,21 @@ export default function Home() {
               </div>
             </div>
             <div className="md:w-3/5 grid grid-cols-4 gap-2">
-              {['Pakaian', 'Mainan', 'Alat Elektronik', 'Buku'].map((category) => (
-                <button
-                  key={category}
-                  className={`border rounded-md py-2 px-4 text-sm ${
-                    selectedCategory === category
-                      ? 'bg-amber-800 text-white'
-                      : 'bg-white border-gray-300 hover:bg-gray-100'
-                  }`}
-                  onClick={() => setSelectedCategory(category)}
-                >
-                  {category}
-                </button>
-              ))}
+              {["Pakaian", "Mainan", "Alat Elektronik", "Buku"].map(
+                (category) => (
+                  <button
+                    key={category}
+                    className={`border rounded-md py-2 px-4 text-sm ${
+                      selectedCategory === category
+                        ? "bg-amber-800 text-white"
+                        : "bg-white border-gray-300 hover:bg-gray-100"
+                    }`}
+                    onClick={() => setSelectedCategory(category)}
+                  >
+                    {category}
+                  </button>
+                )
+              )}
             </div>
           </div>
 
@@ -90,7 +95,9 @@ export default function Home() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
               <div>
-                <label className="block mb-1 font-medium text-gray-700">Nama Lengkap</label>
+                <label className="block mb-1 font-medium text-gray-700">
+                  Nama Lengkap
+                </label>
                 <input
                   type="text"
                   className="w-full border border-gray-300 rounded-md p-2"
@@ -138,7 +145,9 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="block mb-1 font-medium text-gray-700">Metode Pengiriman</label>
+                <label className="block mb-1 font-medium text-gray-700">
+                  Metode Pengiriman
+                </label>
                 <div className="relative">
                   <select
                     className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 focus:outline-none bg-white"
@@ -161,8 +170,10 @@ export default function Home() {
 
               <div>
                 <label className="block mb-1 font-medium text-gray-700">
-                  Alamat Lengkap{' '}
-                  <span className="text-amber-500 text-xs">Simpan sebagai rumah?</span>
+                  Alamat Lengkap{" "}
+                  <span className="text-amber-500 text-xs">
+                    Simpan sebagai rumah?
+                  </span>
                 </label>
                 <textarea
                   className="w-full border border-gray-300 rounded-md p-2 h-35.5"
@@ -172,7 +183,9 @@ export default function Home() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block mb-1 font-medium text-gray-700">Foto Barang</label>
+                  <label className="block mb-1 font-medium text-gray-700">
+                    Foto Barang
+                  </label>
                   <div className="flex">
                     <input
                       type="text"
@@ -186,10 +199,11 @@ export default function Home() {
                       className="hidden"
                       onChange={handleFileChange}
                     />
-                    <button 
-                    type='button'
-                    onClick={handleFileButtonClick}
-                    className="bg-gray-200 text-gray-700 px-3 py-2 rounded-r-md text-sm">
+                    <button
+                      type="button"
+                      onClick={handleFileButtonClick}
+                      className="bg-gray-200 text-gray-700 px-3 py-2 rounded-r-md text-sm"
+                    >
                       Pilih file
                     </button>
                   </div>
