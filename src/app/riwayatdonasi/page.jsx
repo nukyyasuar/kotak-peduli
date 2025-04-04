@@ -24,10 +24,10 @@ export default function Home() {
           </div>
         </div>
         <div className="flex space-x-8">
-          <Link href="/cerita-kami" className="text-gray-800">
+          <Link href="/about" className="text-gray-800">
             Cerita Kami
           </Link>
-          <Link href="/tempat-penampungan" className="text-gray-800">
+          <Link href="/tempatpenampungan" className="text-gray-800">
             Tempat Penampungan
           </Link>
         </div>
@@ -36,9 +36,9 @@ export default function Home() {
             Donasi Sekarang
           </button>
           <div className="bg-gray-200 rounded-full h-10 w-10 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
+            </svg> */}
           </div>
         </div>
       </nav>
@@ -58,17 +58,17 @@ export default function Home() {
             <div className="flex flex-col space-y-4">
               <button className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100">
                 <div className="bg-amber-800 rounded-full p-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  </svg> */}
                 </div>
                 <span className="text-gray-800 font-medium">Informasi Akun</span>
               </button>
               <button className="flex items-center space-x-2 p-2">
                 <div className="bg-amber-800 rounded-full p-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
+                  </svg> */}
                 </div>
                 <span className="text-amber-800 font-medium">Riwayat Donasi</span>
               </button>

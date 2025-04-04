@@ -21,7 +21,13 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "baseUrl": ".", // Set the base directory (usually the root of your project)
+    "paths": {
+      "@/*": ["./*"], // Example: '@/' maps to the root directory
+      "@components/*": ["components/*"], // Example: '@components/' maps to the 'components' folder
+      "@utils/*": ["utils/*"] // Example: '@utils/' maps to the 'utils' folder
+    }
   },
   "include": [
     "next-env.d.ts",

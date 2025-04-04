@@ -10,7 +10,7 @@ export default function navbarBeforeLogin() {
       <div className="container mx-auto px-4 flex justify-between items-center">
         {/* Logo dan Teks Kotak Peduli - Dapat diklik untuk kembali ke homepage */}
           <div className="flex items-center space-x-2 cursor-pointer">
-            <Image src="/Main Design Skripsi Group 430.svg" alt="Kotak Peduli Logo" width={40} height={40} />
+            <Image src="/Main Desain Skripsi Group 430.webp" alt="Kotak Peduli Logo" width={40} height={40} />
             <span className="font-bold text-[#4A2C2A]">Kotak Peduli</span>
           </div>
 

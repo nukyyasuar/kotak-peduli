@@ -7,11 +7,14 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  GoogleAuthProvider,        
-  signInWithPopup
+  GoogleAuthProvider,
+  signInWithPopup,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+  PhoneAuthProvider,
 } from 'firebase/auth';
 
-// Konfigurasi Firebase Anda
+// Konfigurasi Firebase Anda (sama seperti sebelumnya)
 const firebaseConfig = {
   apiKey: "AIzaSyCAeCE6eEwhhNaUY77yvN2BFbfBvFqF1O0",
   authDomain: "sms-otp-51501.firebaseapp.com",
@@ -22,12 +25,91 @@ const firebaseConfig = {
   measurementId: "G-CD2Z5818LY"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // Inisialisasi Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
+
+// Setup reCAPTCHA verifier
+let recaptchaVerifier;
+
+export const setupRecaptcha = () => {
+  if (!recaptchaVerifier) {
+    recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      'size': 'invisible',
+      'callback': (response) => {
+        // reCAPTCHA solved - akan memungkinkan pengiriman SMS
+      },
+      'expired-callback': () => {
+        // Response expired. Reset reCAPTCHA
+        recaptchaVerifier.clear();
+        recaptchaVerifier = null;
+      }
+    });
+  }
+  return recaptchaVerifier;
+};
+
+// Mengirim kode verifikasi ke nomor telepon
+export const sendPhoneVerificationCode = async (phoneNumber) => {
+  try {
+    const verifier = setupRecaptcha();
+    const formattedPhoneNumber = phoneNumber.startsWith('+') 
+      ? phoneNumber 
+      : `+${phoneNumber}`; // Pastikan format nomor telepon dengan kode negara
+    
+    const confirmationResult = await signInWithPhoneNumber(
+      auth,
+      formattedPhoneNumber,
+      verifier
+    );
+    
+    return confirmationResult;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+// Memverifikasi kode OTP
+export const verifyPhoneCode = async (confirmationResult, verificationCode) => {
+  try {
+    const result = await confirmationResult.confirm(verificationCode);
+    return result.user;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+// // Contoh fungsi alternatif dengan backend API Anda
+// export const sendPhoneVerificationCodeWithAPI = async (phoneNumber) => {
+//   try {
+//     const myHeaders = new Headers();
+//     myHeaders.append("Content-Type", "application/json");
+
+//     const raw = JSON.stringify({
+//       phoneNumber: phoneNumber
+//     });
+
+//     const requestOptions = {
+//       method: "POST",
+//       headers: myHeaders,
+//       body: raw,
+//       redirect: "follow"
+//     };
+
+//     const response = await fetch("http://localhost:5000/auth/send-phone-verification", requestOptions);
+//     const result = await response.json();
+    
+//     if (!response.ok) {
+//       throw new Error(result.message || 'Failed to send verification code');
+//     }
+
+//     return result;
+//   } catch (error) {
+//     throw new Error(error.message);
+//   }
+// };
 
 // Login with Google
 export const loginWithGoogle = async () => {

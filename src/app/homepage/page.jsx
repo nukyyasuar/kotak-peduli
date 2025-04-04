@@ -8,24 +8,10 @@ import NavbarBeforeLogin from "../navbarBeforeLogin/page";
 import NavbarAfterLogin from "../navbarAfterLogin/page"; 
 import Footer from "../footer/page";
 
-//pake react-hooks from
-//validasi pake yup
-//mau kirim axios
-//payload alamat donatur dan alamat tempat tujuan tujuan
-
 export default function Home() {
   return (
-    <div className="min-h-screen">
-      <Head>
-        <title>Beri Barang - Donasi untuk Indonesia</title>
-        <meta
-          name="description"
-          content="Platform donasi barang untuk Indonesia"
-        />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <NavbarAfterLogin />
+    <>
+      <NavbarBeforeLogin />
 
       {/* Hero Section */}
       <section className="relative w-full h-[600px]">
@@ -36,7 +22,6 @@ export default function Home() {
           objectFit="cover"
           priority
         />
-
         <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center">
           <div className="container mx-auto px-4">
             <div className="bg-brown-800 bg-opacity-80 p-6 text-white max-w-md">
@@ -63,7 +48,6 @@ export default function Home() {
           <h2 className="text-center text-3xl font-light mb-12 text-amber-700">
             INDAHNYA BERDONASI
           </h2>
-
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="flex flex-col items-center text-center">
               <div className="mb-4">
@@ -78,7 +62,6 @@ export default function Home() {
                 Berdonasi adalah wujud kasih sayang dan kepedulian.
               </p>
             </div>
-
             <div className="flex flex-col items-center text-center">
               <div className="mb-4">
                 <Image
@@ -92,7 +75,6 @@ export default function Home() {
                 Setiap bantuan dapat dibagikan kepada keluarga yang membutuhkan.
               </p>
             </div>
-
             <div className="flex flex-col items-center text-center">
               <div className="mb-4">
                 <Image
@@ -107,7 +89,6 @@ export default function Home() {
                 pada kesejahteraan masyarakat luas.
               </p>
             </div>
-
             <div className="flex flex-col items-center text-center">
               <div className="mb-4">
                 <Image
@@ -151,7 +132,6 @@ export default function Home() {
           <h2 className="text-center text-2xl mb-8 text-amber-700">
             TERIMAKASIH PARA DONATUR
           </h2>
-
           <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
             <div className="flex flex-col md:flex-row items-center">
               <div className="md:w-1/3 mb-4 md:mb-0">
@@ -172,13 +152,11 @@ export default function Home() {
                 <p className="text-gray-500 text-sm">Ketua Pengurus</p>
               </div>
             </div>
-
             <div className="flex justify-center mt-4 space-x-2">
               <button className="w-2 h-2 rounded-full bg-amber-300"></button>
               <button className="w-2 h-2 rounded-full bg-amber-200"></button>
               <button className="w-2 h-2 rounded-full bg-amber-200"></button>
             </div>
-
             <div className="flex justify-between mt-4">
               <button className="text-amber-400 hover:text-amber-600">
                 &lt;
@@ -192,6 +170,6 @@ export default function Home() {
       </section>
 
       <Footer />
-    </div>
+    </>
   );
 }

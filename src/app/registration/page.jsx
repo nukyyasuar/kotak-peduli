@@ -24,7 +24,7 @@ const registrationSchema = Yup.object().shape({
     .min(2, 'Nama belakang minimal 2 karakter'),
   phone: Yup.string()
     .required('Nomor telepon wajib diisi')
-    .matches(/^[0-9]+$/, 'Nomor telepon hanya boleh berisi angka')
+    //.matches(/^[0-9]+$/, 'Nomor telepon hanya boleh berisi angka')
     .min(10, 'Nomor telepon minimal 10 digit'),
   email: Yup.string()
     .required('Email wajib diisi')
