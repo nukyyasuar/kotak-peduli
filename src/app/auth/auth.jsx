@@ -11,10 +11,9 @@ import {
   signInWithPopup,
   RecaptchaVerifier,
   signInWithPhoneNumber,
-  PhoneAuthProvider,
 } from 'firebase/auth';
 
-// Konfigurasi Firebase Anda (sama seperti sebelumnya)
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyCAeCE6eEwhhNaUY77yvN2BFbfBvFqF1O0",
   authDomain: "sms-otp-51501.firebaseapp.com",
@@ -25,10 +24,11 @@ const firebaseConfig = {
   measurementId: "G-CD2Z5818LY"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-// Inisialisasi Google Auth Provider
+// Initialize Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
 
 // Setup reCAPTCHA verifier
@@ -39,7 +39,7 @@ export const setupRecaptcha = () => {
     recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
       'size': 'invisible',
       'callback': (response) => {
-        // reCAPTCHA solved - akan memungkinkan pengiriman SMS
+        // reCAPTCHA solved - allows SMS sending
       },
       'expired-callback': () => {
         // Response expired. Reset reCAPTCHA
@@ -51,13 +51,13 @@ export const setupRecaptcha = () => {
   return recaptchaVerifier;
 };
 
-// Mengirim kode verifikasi ke nomor telepon
+// Send verification code to phone number
 export const sendPhoneVerificationCode = async (phoneNumber) => {
-  try {
+  
     const verifier = setupRecaptcha();
     const formattedPhoneNumber = phoneNumber.startsWith('+') 
       ? phoneNumber 
-      : `+${phoneNumber}`; // Pastikan format nomor telepon dengan kode negara
+      : `+${phoneNumber}`; // Ensure phone number format with country code
     
     const confirmationResult = await signInWithPhoneNumber(
       auth,
@@ -66,12 +66,9 @@ export const sendPhoneVerificationCode = async (phoneNumber) => {
     );
     
     return confirmationResult;
-  } catch (error) {
-    throw new Error(error.message);
   }
-};
 
-// Memverifikasi kode OTP
+// Verify OTP code
 export const verifyPhoneCode = async (confirmationResult, verificationCode) => {
   try {
     const result = await confirmationResult.confirm(verificationCode);
@@ -81,42 +78,11 @@ export const verifyPhoneCode = async (confirmationResult, verificationCode) => {
   }
 };
 
-// // Contoh fungsi alternatif dengan backend API Anda
-// export const sendPhoneVerificationCodeWithAPI = async (phoneNumber) => {
-//   try {
-//     const myHeaders = new Headers();
-//     myHeaders.append("Content-Type", "application/json");
-
-//     const raw = JSON.stringify({
-//       phoneNumber: phoneNumber
-//     });
-
-//     const requestOptions = {
-//       method: "POST",
-//       headers: myHeaders,
-//       body: raw,
-//       redirect: "follow"
-//     };
-
-//     const response = await fetch("http://localhost:5000/auth/send-phone-verification", requestOptions);
-//     const result = await response.json();
-    
-//     if (!response.ok) {
-//       throw new Error(result.message || 'Failed to send verification code');
-//     }
-
-//     return result;
-//   } catch (error) {
-//     throw new Error(error.message);
-//   }
-// };
-
 // Login with Google
 export const loginWithGoogle = async () => {
   try {
-    // Force the account picker by setting the prompt option
     googleProvider.setCustomParameters({
-      prompt: 'select_account', // This forces the Google account chooser
+      prompt: 'select_account', // Forces Google account chooser
     });
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
@@ -125,7 +91,7 @@ export const loginWithGoogle = async () => {
   }
 };
 
-// Login dengan email dan password menggunakan API endpoint
+// Login with email and password using API endpoint
 export const loginWithEmail = async (email, password) => {
   try {
     const myHeaders = new Headers();
@@ -150,17 +116,16 @@ export const loginWithEmail = async (email, password) => {
       throw new Error(result.message || 'Login failed');
     }
 
-    // Optional: Jika Anda juga ingin menggunakan Firebase Auth
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
-
+    // Store token or user data in localStorage (adjust based on backend response)
+    localStorage.setItem('authToken', result.token || result.accessToken);
+    return result.user || result;
   } catch (error) {
     throw new Error(error.message);
   }
 };
 
-// Register dengan email
-export const registerWithEmail = async (email, password, firstName, lastName, phoneNumber) => {
+// Register with email using API endpoint
+export const registerWithEmail = async ({email, password, firstName, lastName, phoneNumber}) => {
   try {
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
@@ -173,11 +138,14 @@ export const registerWithEmail = async (email, password, firstName, lastName, ph
       phoneNumber
     });
 
+    console.log(raw);
+
     const requestOptions = {
       method: "POST",
       headers: myHeaders,
       body: raw,
-      redirect: "follow"
+      redirect: "follow",
+      credentials: 'include' // Include cookies in the request
     };
 
     const response = await fetch("http://localhost:5000/auth/register", requestOptions);
@@ -187,7 +155,11 @@ export const registerWithEmail = async (email, password, firstName, lastName, ph
       throw new Error(result.message || 'Registration failed');
     }
 
-    return result;
+    // Optionally store token if registration auto-logs in
+    if (result.token || result.accessToken) {
+      localStorage.setItem('authToken', result.token || result.accessToken);
+    }
+    return result.user || result;
   } catch (error) {
     throw new Error(error.message);
   }
@@ -196,13 +168,25 @@ export const registerWithEmail = async (email, password, firstName, lastName, ph
 // Logout
 export const logout = async () => {
   try {
-    await signOut(auth);
+    // Optionally call a logout endpoint
+    const myHeaders = new Headers();
+    myHeaders.append("Content-Type", "application/json");
+    myHeaders.append("Authorization", `Bearer ${localStorage.getItem('authToken')}`);
+
+    const requestOptions = {
+      method: "POST",
+      headers: myHeaders,
+      redirect: "follow"
+    };
+
+    await fetch("http://localhost:5000/auth/logout", requestOptions);
+    localStorage.removeItem('authToken');
   } catch (error) {
     throw new Error(error.message);
   }
 };
 
-// Auth state observer
+// Check auth state (replace Firebase's onAuthStateChange)
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, callback);
-};
+}

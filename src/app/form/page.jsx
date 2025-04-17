@@ -1,16 +1,20 @@
 "use client";
 
 // pages/index.js
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Head from "next/head";
 import Image from "next/image";
-import Navbar from "../navbarBeforeLogin/page";
+import NavbarBeforeLogin from "../navbarBeforeLogin/page";
+import NavbarAfterLogin from "../navbarAfterLogin/page";
 import Footer from "../footer/page";
+import { Icon } from "@iconify/react"; // Import Iconify
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState("Pakaian");
-  const [fileName, setFileName] = useState("foto_barang.jpg"); // State to store the selected file name
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [fileName, setFileName] = useState(""); // State to store the selected file name
+  const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
   const fileInputRef = useRef(null); // Ref to access the hidden file input
+  const mapRef = useRef(null); // Ref for the map container
 
   // Function to handle file selection
   const handleFileChange = (event) => {
@@ -25,198 +29,236 @@ export default function Home() {
     fileInputRef.current.click(); // Programmatically trigger the hidden file input
   };
 
+  // Function to open/close the modal
+  const toggleModal = () => {
+    setIsModalOpen(!isModalOpen);
+  };
+
+  // Function to initialize the Google Map
+  useEffect(() => {
+    if (isModalOpen && mapRef.current) {
+      const loadGoogleMapsScript = () => {
+        const script = document.createElement("script");
+        script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap`;
+        script.async = true;
+        document.head.appendChild(script);
+
+        window.initMap = () => {
+          const location = { lat: -6.2088, lng: 106.8456 }; // Default location (Jakarta, Indonesia)
+          const map = new google.maps.Map(mapRef.current, {
+            center: location,
+            zoom: 15,
+          });
+
+          // Add a marker at the default location
+          new google.maps.Marker({
+            position: location,
+            map: map,
+            title: "Selected Location",
+          });
+        };
+      };
+
+      // Load the Google Maps script only if the modal is open
+      loadGoogleMapsScript();
+    }
+  }, [isModalOpen]);
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="flex flex-col h-screen bg-white">
       <Head>
         <title>Beri Barang - Donasi Barang</title>
         <meta name="description" content="Platform donasi barang bekas" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Navbar />
+      <NavbarAfterLogin />
 
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-center mb-2">
-            Yuk Donasikan Barangmu
-          </h1>
-          <p className="text-center mb-6 text-sm">
-            Pilih jenis barang terlebih dahulu dari daftar dibawah (bisa lebih
-            dari satu)
-            <br />& tempat penampung yang dituju
-          </p>
+      <main className="max-w-4xl mx-auto px-4 py-8 flex-1">
+        <h1 className="text-4xl font-bold text-center mb-2 text-[#131010]">
+          Yuk Donasikan Barangmu
+        </h1>
+        <p className="text-center mb-8 text-[#543A14] text-sm">
+          Pilih jenis barang terlebih dahulu dari daftar dibawah (bisa lebih dari satu)<br />
+          & tempat penampung yang dituju
+        </p>
 
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="md:w-2/5">
-              <div className="relative">
-                <select
-                  className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 focus:outline-none bg-white"
-                  defaultValue="Pilih tempat penampung"
-                >
-                  <option>Pilih tempat penampung</option>
-                  {/* Add options from backend endpoint */}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <svg
-                    className="fill-current h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-            <div className="md:w-3/5 grid grid-cols-4 gap-2">
-              {["Pakaian", "Mainan", "Alat Elektronik", "Buku"].map(
-                (category) => (
-                  <button
-                    key={category}
-                    className={`border rounded-md py-2 px-4 text-sm ${
-                      selectedCategory === category
-                        ? "bg-amber-800 text-white"
-                        : "bg-white border-gray-300 hover:bg-gray-100"
-                    }`}
-                    onClick={() => setSelectedCategory(category)}
-                  >
-                    {category}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          <div className="bg-amber-50 rounded-md p-6">
-            <div className="flex justify-center mb-6">
-              <div className="bg-amber-800 text-white text-center px-4 py-1 rounded-md">
-                {selectedCategory}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <div>
+            <h3 className="text-lg font-bold mb-2 text-[#000000]">Informasi Donatur</h3>
+            <div className="space-y-4">
               <div>
-                <label className="block mb-1 font-medium text-gray-700">
+                <label className="block mb-1 font-bold text-[#000000]">
                   Nama Lengkap
                 </label>
                 <input
                   type="text"
-                  className="w-full border border-gray-300 rounded-md p-2"
+                  className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
                   defaultValue="Matthew Emmanuel"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block mb-1 font-medium text-gray-700">
-                    Jumlah Barang (satuan)
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border border-gray-300 rounded-md p-2"
-                    defaultValue="1 dus"
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1 font-medium text-gray-700">
-                    Total Berat Barang
-                  </label>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      className="w-full border border-gray-300 rounded-l-md p-2"
-                      defaultValue="10"
-                    />
-                    <span className="bg-gray-200 px-2 flex items-center justify-center rounded-r-md text-gray-700">
-                      kg
-                    </span>
+              <div>
+                <label className="block mb-1 font-bold text-[#000000]">
+                  Nomor Telpon (Whatsapp)
+                </label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
+                  defaultValue="+62812468751243"
+                />
+              </div>
+
+              <div>
+                <label className="block mb-1 font-bold text-[#000000]">
+                  Alamat Lengkap{" "}
+                  <span
+                    className="text-[#F0BB78] text-xs cursor-pointer underline"
+                    onClick={toggleModal}
+                  >
+                    simpan sebagai rumah?
+                  </span>
+                </label>
+                <input
+                  className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
+                  defaultValue="Jl. Tanah Air, Blok A, No. 1, Alam Sutera"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-lg font-bold mb-2 text-[#000000]">Tujuan Donasi</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block mb-1 font-bold text-[#000000]">
+                  Tempat Penampungan
+                </label>
+                <div className="relative">
+                  <select
+                    className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
+                    defaultValue="Pilih tempat penampung tujuan donasi"
+                  >
+                    <option>Pilih tempat penampung tujuan donasi</option>
+                    {/* Add options from backend endpoint */}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                   </div>
                 </div>
               </div>
 
               <div>
-                <label className="block mb-1 font-medium text-gray-700">
-                  Nomor Telpon (Whatsapp)
+                <label className="block mb-1 font-bold text-gray-700">
+                  Cabang / Drop Point
                 </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md p-2"
-                  defaultValue="081246875243"
-                />
+                <div className="relative">
+                  <select
+                    className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
+                    defaultValue="Pilih cabang atau drop point (jika tersedia)"
+                  >
+                    <option>Pilih cabang atau drop point (jika tersedia)</option>
+                    {/* Add options from backend endpoint */}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  </div>
+                </div>
               </div>
 
               <div>
-                <label className="block mb-1 font-medium text-gray-700">
+                <label className="block mb-1 font-bold text-gray-700">
                   Metode Pengiriman
                 </label>
                 <div className="relative">
                   <select
-                    className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 focus:outline-none bg-white"
+                    className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
                     defaultValue="Pilih metode pengiriman barang"
                   >
                     <option>Pilih metode pengiriman barang</option>
                     {/* Add options from backend endpoint */}
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                    <svg
-                      className="fill-current h-4 w-4"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block mb-1 font-medium text-gray-700">
-                  Alamat Lengkap{" "}
-                  <span className="text-amber-500 text-xs">
-                    Simpan sebagai rumah?
-                  </span>
-                </label>
-                <textarea
-                  className="w-full border border-gray-300 rounded-md p-2 h-35.5"
-                  defaultValue="Jl. Tanah Air, Blok A, No. 1, Alam Sutera, Tangerang Selatan, Banten"
-                ></textarea>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block mb-1 font-medium text-gray-700">
-                    Foto Barang
-                  </label>
-                  <div className="flex">
-                    <input
-                      type="text"
-                      className="w-full border border-gray-300 rounded-l-md p-2 bg-white text-gray-400"
-                      readOnly
-                      value={fileName}
-                    />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      onChange={handleFileChange}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleFileButtonClick}
-                      className="bg-gray-200 text-gray-700 px-3 py-2 rounded-r-md text-sm"
-                    >
-                      Pilih file
-                    </button>
                   </div>
                 </div>
               </div>
             </div>
-
-            <button className="w-full bg-amber-800 text-white py-3 rounded-md mt-6 font-medium">
-              Kirim
-            </button>
           </div>
         </div>
+
+        <div className="mb-8">
+          <h3 className="text-lg font-bold mb-4 text-[#000000]">Jenis Barang Donasi</h3>
+          <button
+            className="flex items-center bg-[#F0BB78] text-[#543A14] py-2 px-4 rounded-md font-bold hover:bg-amber-200"
+            onClick={() => setSelectedCategory("")}
+          >
+            <Icon icon="mdi:plus" className="mr-2 h-5 w-5" /> {/* Add Iconify plus icon */}
+            Tambah Jenis Barang
+          </button>
+        </div>
+
+        <button className="w-full bg-amber-800 text-white py-3 rounded-md font-bold">
+          Kirim
+        </button>
       </main>
+
+      {/* Modal for "Simpan sebagai rumah?" */}
+      {isModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 bg-opacity-50 z-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col">
+            <div className="p-6">
+              <h3 className="text-lg font-bold mb-4 text-[#000000]">Detail Alamat</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700">
+                    Nama Jalan, Perumahan, Komplek
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md p-2 text-gray-700"
+                    placeholder="Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700">
+                    Patokan, Blok, No. Rumah
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md p-2 text-gray-700"
+                    placeholder="Blok Z, No. 99"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 text-sm text-gray-700">
+                    Peta (Jika tersedia)
+                  </label>
+                  <div
+                    ref={mapRef}
+                    className="border border-gray-300 rounded-md h-40 w-full"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer section for buttons */}
+            <div className=" p-4 flex justify-end space-x-3 rounded-b-lg bg-transparent">
+              <button
+                className="flex-1 bg-[#F0BB78] text-[#543A14] py-2 rounded-md font-bold"
+                onClick={toggleModal}
+              >
+                Simpan
+              </button>
+              <button
+                className="flex-1 bg-gray-300 text-[#543A14] py-2 rounded-md font-bold"
+                onClick={toggleModal}
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

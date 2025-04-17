@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Head from "next/head";
-import Image from "next/image"; // Added Image import
-import Link from "next/link"; // Changed to correct Link import
+import Image from "next/image";
+import Link from "next/link";
 import NavbarAfterLogin from "../navbarAfterLogin/page";
 import Footer from "../footer/page";
+import { Icon } from '@iconify/react'; // Added Iconify import
 
 export default function Shelter() {
   const [formData, setFormData] = useState({
@@ -110,36 +111,31 @@ export default function Shelter() {
       <NavbarAfterLogin />
 
       <main className="flex-grow">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="bg-white shadow-md rounded-lg p-6">
-          <div className="flex">
-            <div className="w-1/4 pr-6">
-              <h2 className="text-lg font-semibold text-gray-800">Halo, Nuky Yasuar Zamzamy</h2>
-              <div className="space-y-4">
-                <Link href="/riwayat-donasi">
-                  <div className="flex items-center text-amber-800 space-x-2 cursor-pointer">
-                    <div className="bg-amber-800 rounded-full p-1">
-                      {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                      </svg> */}
+        <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          <div className="bg-white shadow-md rounded-lg p-6">
+            <div className="flex">
+              <div className="w-1/4 pr-6">
+                <h2 className="text-lg font-semibold text-gray-800">Halo, Nuky Yasuar Zamzamy</h2>
+                <div className="space-y-4">
+                  <Link href="/riwayat-donasi">
+                    <div className="flex items-center text-amber-800 space-x-2 cursor-pointer">
+                      <div className="bg-amber-800 rounded-full p-1">
+                        <Icon icon="mdi:account" className="h-5 w-5 text-white" />
+                      </div>
+                      <span>Informasi Akun</span>
                     </div>
-                    <span>Informasi Akun</span>
-                  </div>
-                </Link>
+                  </Link>
 
-                <Link href="/riwayatdonasi">
-                  <div className="flex items-center text-amber-800 space-x-2 cursor-pointer">
-                    <div className="bg-amber-800 rounded-full p-1">
-                      {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                        <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                      </svg> */}
+                  <Link href="/riwayatdonasi">
+                    <div className="flex items-center text-amber-800 space-x-2 cursor-pointer">
+                      <div className="bg-amber-800 rounded-full p-1">
+                        <Icon icon="mdi:history" className="h-5 w-5 text-white" />
+                      </div>
+                      <span>Riwayat Donasi</span>
                     </div>
-                    <span>Riwayat Donasi</span>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               </div>
-            </div>
 
               <div className="w-3/4">
                 <h2 className="text-xl font-bold text-gray-800">Daftar Sebagai Tempat Penampungan</h2>
@@ -159,7 +155,6 @@ export default function Shelter() {
                 )}
 
                 <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-                  {/* Form fields remain the same */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Nama Tempat Penampungan</label>
                     <input

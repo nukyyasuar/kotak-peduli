@@ -5,35 +5,35 @@ import Link from 'next/link';
 
 export default function navbarAfterLogin() {
   return (
-    <nav className="bg-white py-4 shadow-md">
-      <div className="container mx-auto px-4 flex justify-between items-center">
-        {/* Logo dan Teks Kotak Peduli */}
-        <Link href="/">
-          <div className="flex items-center space-x-2 cursor-pointer">
-            <Image
-              src="/Main Desain Skripsi Group 430.webp" // Pastikan path ke logo sesuai
-              alt="Kotak Peduli Logo"
-              width={40}
-              height={40}
-            />
-            <span className="font-bold text-[#4A2C2A] text-lg">Kotak Peduli</span>
-          </div>
-        </Link>
-
-        {/* Navigasi */}
-        <div className="hidden md:flex space-x-6">
-          <Link href="/about" className="text-[#4A2C2A] hover:text-amber-600 font-medium">
-            Cerita Kami
-          </Link>
-          <Link href="/tempatpenampung" className="text-[#4A2C2A] hover:text-amber-600 font-medium">
-            Tempat Penampung
-          </Link>
-        </div>
+    <nav className="bg-white py-4">
+          <div className="container mx-auto px-4 flex justify-between items-center">
+            {/* Logo dan Navigasi dalam satu flex container */}
+            <div className="flex items-center space-x-12">
+              {/* Logo */}
+              <div className="flex items-center cursor-pointer">
+                <Image 
+                  src="/Main Desain Skripsi Frame 431.webp"  
+                  alt="Kotak Peduli Logo"
+                  width={100} 
+                  height={100} 
+                />
+              </div>
+    
+              {/* Navigasi */}
+              <div className="hidden md:flex space-x-6">
+                <Link href="/about" className="text-[#4A2C2A] hover:text-amber-600">
+                  Cerita Kami
+                </Link>
+                <Link href="/tempatpenampung" className="text-[#4A2C2A] hover:text-amber-600">
+                  Tempat Penampung
+                </Link>
+              </div>
+            </div>
 
         {/* Tombol dan Ikon Profil */}
         <div className="flex items-center space-x-4">
           <Link href="/form">
-            <button className="bg-[#4A2C2A] text-white px-4 py-2 rounded-md hover:bg-amber-600 transition">
+            <button className="bg-[#543A14] text-[#FFF0DC] px-4 py-2 rounded-md transition">
               Donasi Sekarang
             </button>
           </Link>

@@ -5,6 +5,7 @@ import Head from 'next/head'
 import Image from 'next/image'
 import Link from 'next/link'
 import { FaInstagram, FaYoutube, FaWhatsapp, FaTwitter } from 'react-icons/fa';
+import { Icon } from '@iconify/react'; // Added Iconify import
 
 export default function Home() {
   return (
@@ -36,9 +37,7 @@ export default function Home() {
             Donasi Sekarang
           </button>
           <div className="bg-gray-200 rounded-full h-10 w-10 flex items-center justify-center">
-            {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg> */}
+            <Icon icon="mdi:account" className="h-6 w-6 text-gray-600" />
           </div>
         </div>
       </nav>
@@ -58,17 +57,13 @@ export default function Home() {
             <div className="flex flex-col space-y-4">
               <button className="flex items-center space-x-2 p-2 rounded hover:bg-gray-100">
                 <div className="bg-amber-800 rounded-full p-1">
-                  {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg> */}
+                  <Icon icon="mdi:account" className="h-5 w-5 text-white" />
                 </div>
                 <span className="text-gray-800 font-medium">Informasi Akun</span>
               </button>
               <button className="flex items-center space-x-2 p-2">
                 <div className="bg-amber-800 rounded-full p-1">
-                  {/* <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg> */}
+                  <Icon icon="mdi:history" className="h-5 w-5 text-white" />
                 </div>
                 <span className="text-amber-800 font-medium">Riwayat Donasi</span>
               </button>
@@ -134,11 +129,11 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="mt-4 md:mt-0 md:text-right">
-                    <div className="mt-4 flex justify-end">
-                    <button className="bg-green-600 text-white px-4 py-2 rounded-md text-sm">
-                      Pemeriksaan Digital
-                    </button>
-                  </div>
+                      <div className="mt-4 flex justify-end">
+                        <button className="bg-green-600 text-white px-4 py-2 rounded-md text-sm">
+                          Pemeriksaan Digital
+                        </button>
+                      </div>
                       <div className="text-sm space-y-1">
                         <div className="flex justify-between text-gray-600">
                           <span>Metode Pengiriman:</span>
@@ -216,7 +211,7 @@ export default function Home() {
         </div>
       </main>
 
-      {/* Footer  */}
+      {/* Footer */}
       <footer className="w-full bg-amber-300 py-4 mt-auto">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
@@ -225,21 +220,21 @@ export default function Home() {
                 "Dari bekas menjadi berkah, membantu sesama"
               </p>
             </div>
-            
+
             <div className="mb-4 md:mb-0">
               <div className="flex items-center justify-center">
-                 <div className="mb-6 md:mb-0">
-                              <Image
-                                src="/logo-white.png"
-                                alt="Kotak Peduli Logo"
-                                width={150}
-                                height={60}
-                              />
-                            </div>
+                <div className="mb-6 md:mb-0">
+                  <Image
+                    src="/logo-white.png"
+                    alt="Kotak Peduli Logo"
+                    width={150}
+                    height={60}
+                  />
+                </div>
                 <span className="ml-2 text-amber-800 font-bold">Kotak Peduli</span>
               </div>
             </div>
-            
+
             <div className="flex space-x-4">
               <Link href="#" className="text-amber-800 hover:text-amber-900">
                 <FaInstagram size={24} />

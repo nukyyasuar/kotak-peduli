@@ -12,48 +12,82 @@ import {
   registerWithEmail,
   loginWithGoogle,
   onAuthStateChange,
+  setupRecaptcha,
+  sendPhoneVerificationCode,
 } from '../auth/auth';
 
 // Define validation schema with Yup
 const registrationSchema = Yup.object().shape({
   firstName: Yup.string()
-    .required('Nama depan wajib diisi')
-    .min(2, 'Nama depan minimal 2 karakter'),
+    .required('Nama depan tidak boleh kosong')
+    .min(3, 'Nama depan harus berisi minimal 3 karakter')
+    .matches(/^[A-Za-z\s]+$/, 'Nama depan hanya boleh berisi huruf dan spasi'),
   lastName: Yup.string()
-    .required('Nama belakang wajib diisi')
-    .min(2, 'Nama belakang minimal 2 karakter'),
-  phone: Yup.string()
-    .required('Nomor telepon wajib diisi')
-    //.matches(/^[0-9]+$/, 'Nomor telepon hanya boleh berisi angka')
-    .min(10, 'Nomor telepon minimal 10 digit'),
+    .required('Nama belakang tidak boleh kosong')
+    .min(3, 'Nama belakang harus berisi minimal 3 karakter')
+    .matches(/^[A-Za-z\s]+$/, 'Nama belakang hanya boleh berisi huruf dan spasi'),
+  phoneNumber: Yup.string()
+    .required('Nomor telepon tidak boleh kosong')
+    .min(9, 'Nomor telepon harus berisi minimal 9 digit')
+    .max(13, 'Nomor telepon tidak boleh lebih dari 13 digit')
+    .matches(/^[8][0-9]*$/, 'Nomor telepon harus diawali dengan angka ‘8’'),
   email: Yup.string()
-    .required('Email wajib diisi')
-    .email('Email tidak valid'),
+    .required('Email tidak boleh kosong')
+    .email('Format email salah. Masukkan format email yang valid (contoh: user@example.com)'),
   password: Yup.string()
-    .required('Password wajib diisi')
-    .min(8, 'Password minimal 8 karakter'),
+    .required('Password tidak boleh kosong')
+    .min(8, 'Password harus berisi minimal 8 karakter')
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      'Password harus mengandung huruf besar, huruf kecil, dan angka'
+    ),
 });
 
 export default function Registration() {
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
   const router = useRouter();
-  
+
   const {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(registrationSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
-      phone: "",
+      phoneNumber: "",
       email: "",
       password: "",
     }
   });
+
+  const firstNameValue = watch("firstName");
+  const lastNameValue = watch("lastName");
+  const phoneValue = watch("phoneNumber");
+  const emailValue = watch("email");
+  const passwordValue = watch("password");
+
+  // Initialize reCAPTCHA
+  useEffect(() => {
+    const initializeRecaptcha = () => {
+      if (document.getElementById('recaptcha-container')) {
+        try {
+          setupRecaptcha();
+          console.log('reCAPTCHA initialized in Registration');
+        } catch (err) {
+          setError('Gagal menginisialisasi reCAPTCHA: ' + err.message);
+        }
+      } else {
+        console.log('reCAPTCHA container not found, retrying...');
+        setTimeout(initializeRecaptcha, 100);
+      }
+    };
+    initializeRecaptcha();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange((currentUser) => {
@@ -65,14 +99,21 @@ export default function Registration() {
   const onSubmit = async (data) => {
     setError('');
     try {
-      const { email, password, firstName, lastName, phone } = data;
-      const result = await registerWithEmail(email, password, firstName, lastName, phone);
-      
+      const formattedPhoneNumber = '+62' + data.phoneNumber;
+      const result = await registerWithEmail({
+        ...data,
+        phoneNumber: formattedPhoneNumber
+      });
       console.log('Registration successful:', result);
+      const confirmation = await sendPhoneVerificationCode(formattedPhoneNumber);
+      console.log('OTP sent, navigating to OTP page');
+      // Simpan confirmationResult di sessionStorage
+      sessionStorage.setItem('otpConfirmation', JSON.stringify(confirmation));
       reset();
-      router.push('/homepage');
+      router.push(`/otplogin?phone=${encodeURIComponent(formattedPhoneNumber)}`);
     } catch (err) {
-      setError(err.message || 'Something went wrong');
+      console.error('Registration error:', err);
+      setError(err.message || 'Terjadi kesalahan saat mendaftar');
     }
   };
 
@@ -86,7 +127,6 @@ export default function Registration() {
     }
   };
 
-  // The JSX remains largely the same, only the validation logic changes
   return (
     <div className="min-h-screen bg-white flex">
       <Head>
@@ -98,46 +138,34 @@ export default function Registration() {
       </Head>
 
       <div className="w-full max-w-6xl mx-auto px-4 py-8 flex flex-col md:flex-row items-center">
-        {/* Logo Section - unchanged */}
-        <div className="absolute top-8 left-8">
+        <div className="absolute top-0 left-0 cursor-pointer">
           <div className="flex items-center">
-            <div className="h-10 w-10">
-              <Image
-                src="/logo.png"
-                alt="Beri Barang Logo"
-                width={50}
-                height={50}
-                className="object-contain"
-              />
-            </div>
-            <span className="ml-2 text-amber-800 font-bold text-xl">
-              Beri Barang
-            </span>
+            <Image
+              src="/Main Design Skripsi Frame 431.webp"
+              alt="Beri Barang Logo"
+              width={188}
+              height={80}
+            />
           </div>
         </div>
 
-        {/* Illustration Section - unchanged */}
-        <div className="w-full md:w-1/2 mb-8 md:mb-0 flex justify-center">
-          <div className="bg-amber-50 rounded-lg p-8 max-w-md">
+        <div className="md:w-1/2 mb-8 md:mb-0 flex justify-center w-[477px] h-[541px]">
+          <div className="bg-[#FFF0DC] rounded-lg p-8 max-w-md">
             <div className="relative">
               <Image
-                src="/donation-illustration.png"
+                src="/Main Design Frame.webp"
                 alt="Donation Illustration"
                 width={400}
                 height={400}
                 className="object-contain"
               />
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 bg-white px-6 py-2 rounded-lg border-2 border-amber-400">
-                <p className="text-amber-800 font-bold">YUK, DONASI!</p>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* Form Section */}
         <div className="w-full md:w-1/2 md:pl-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">DAFTAR</h1>
-          <p className="text-gray-700 mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2 text-center">DAFTAR</h1>
+          <p className="text-gray-700 mb-6 text-center">
             Bersama menyejahterakan masyarakat
           </p>
 
@@ -145,37 +173,47 @@ export default function Registration() {
             <p className="text-red-500 text-center mb-4">{error}</p>
           )}
 
-          {user && (
+          {/* {user && (
             <p className="text-green-500 text-center mb-4">
               Anda sudah login sebagai {user.email}. Ingin menggunakan akun lain?
             </p>
-          )}
+          )} */}
+
+          <div id="recaptcha-container" className="normal"></div>
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="flex gap-4 mb-4">
               <div className="w-1/2">
-                <label htmlFor="firstName" className="block text-gray-700 font-medium mb-1">
+                <label htmlFor="firstName" className="block text-gray-700 font-bold mb-1">
                   Nama Depan
                 </label>
                 <input
                   {...register("firstName")}
                   id="firstName"
                   placeholder="Matthew"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-amber-500 outline outline-1"
+                  style={{
+                    color: firstNameValue?.length > 0 ? '#131010' : '#C2C2C2',
+                    outlineColor: firstNameValue?.length > 0 ? '#131010' : '#C2C2C2'
+                  }}
                 />
                 {errors.firstName && (
                   <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
                 )}
               </div>
               <div className="w-1/2">
-                <label htmlFor="lastName" className="block text-gray-700 font-medium mb-1">
+                <label htmlFor="lastName" className="block text-gray-700 font-bold mb-1">
                   Nama Belakang
                 </label>
                 <input
                   {...register("lastName")}
                   id="lastName"
                   placeholder="Emmanuel"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-amber-500 outline outline-1"
+                  style={{
+                    color: lastNameValue?.length > 0 ? '#131010' : '#C2C2C2',
+                    outlineColor: lastNameValue?.length > 0 ? '#131010' : '#C2C2C2'
+                  }}
                 />
                 {errors.lastName && (
                   <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
@@ -184,29 +222,37 @@ export default function Registration() {
             </div>
 
             <div className="mb-4">
-              <label htmlFor="phone" className="block text-gray-700 font-medium mb-1">
+              <label htmlFor="phoneNumber" className="block text-gray-700 font-bold mb-1">
                 Nomor Telepon (Whatsapp)
               </label>
               <input
-                {...register("phone")}
-                id="phone"
-                placeholder="081246875123"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500"
+                {...register("phoneNumber")}
+                id="phoneNumber"
+                placeholder="81246875123"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-amber-500 outline outline-1"
+                style={{
+                  color: phoneValue?.length > 0 ? '#131010' : '#C2C2C2',
+                  outlineColor: phoneValue?.length > 0 ? '#131010' : '#C2C2C2'
+                }}
               />
-              {errors.phone && (
-                <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+              {errors.phoneNumber && (
+                <p className="text-red-500 text-sm mt-1">{errors.phoneNumber.message}</p>
               )}
             </div>
 
             <div className="mb-4">
-              <label htmlFor="email" className="block text-gray-700 font-medium mb-1">
+              <label htmlFor="email" className="block text-gray-700 font-bold mb-1">
                 Email
               </label>
               <input
                 {...register("email")}
                 id="email"
                 placeholder="example@email.com"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-amber-500 outline outline-1"
+                style={{
+                  color: emailValue?.length > 0 ? '#131010' : '#C2C2C2',
+                  outlineColor: emailValue?.length > 0 ? '#131010' : '#C2C2C2'
+                }}
               />
               {errors.email && (
                 <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
@@ -214,15 +260,19 @@ export default function Registration() {
             </div>
 
             <div className="mb-6">
-              <label htmlFor="password" className="block text-gray-700 font-medium mb-1">
+              <label htmlFor="password" className="block text-gray-700 font-bold mb-1">
                 Password
               </label>
               <input
                 {...register("password")}
                 type="password"
                 id="password"
-                placeholder="Masukkan minimum 8 karakter"
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-amber-500"
+                placeholder="Masukkan minimum 6 karakter"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-amber-500 outline-1"
+                style={{
+                  color: passwordValue?.length > 0 ? '#131010' : '#C2C2C2',
+                  outlineColor: passwordValue?.length > 0 ? '#131010' : '#C2C2C2'
+                }}
               />
               {errors.password && (
                 <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
@@ -231,14 +281,14 @@ export default function Registration() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-amber-400 hover:bg-amber-500 text-white font-medium rounded-md transition duration-200"
+              className="w-full py-3 bg-[#F0BB78] text-white font-bold rounded-md transition duration-200"
             >
               Buat Akun
             </button>
 
             <div className="flex items-center my-6">
               <div className="flex-grow border-t border-gray-300"></div>
-              <span className="px-3 text-gray-500 text-sm">
+              <span className="px-3 text-[#C2C2C2] text-sm">
                 atau menggunakan
               </span>
               <div className="flex-grow border-t border-gray-300"></div>
@@ -247,7 +297,7 @@ export default function Registration() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full py-3 border border-gray-300 flex justify-center items-center gap-2 rounded-md hover:bg-gray-50 transition duration-200"
+              className="w-full py-3 border border-[#FFC107] flex justify-center items-center gap-2 rounded-md transition duration-200 text-[#131010] font-bold"
             >
               <FcGoogle size={20} />
               <span>Google</span>

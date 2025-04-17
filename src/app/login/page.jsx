@@ -24,6 +24,23 @@ const validationSchema = Yup.object().shape({
   password: Yup.string()
     .min(6, 'Password minimal 6 karakter')
     .required('Password wajib diisi'),
+  firstName: Yup.string().when('$isLogin', {
+    is: false,
+    then: (schema) => schema.required('Nama depan wajib diisi'),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+  lastName: Yup.string().when('$isLogin', {
+    is: false,
+    then: (schema) => schema.required('Nama belakang wajib diisi'),
+    otherwise: (schema) => schema.notRequired(),
+  }),
+  phoneNumber: Yup.string().when('$isLogin', {
+    is: false,
+    then: (schema) => schema
+      .matches(/^\+?\d{10,}$/, 'Nomor telepon tidak valid')
+      .required('Nomor telepon wajib diisi'),
+    otherwise: (schema) => schema.notRequired(),
+  }),
 });
 
 export default function Login() {
@@ -38,19 +55,25 @@ export default function Login() {
     formState: { errors },
     reset 
   } = useForm({
-    resolver: yupResolver(validationSchema),
+    resolver: yupResolver(validationSchema, { context: { isLogin } }),
     defaultValues: {
       email: '',
-      password: ''
+      password: '',
+      firstName: '',
+      lastName: '',
+      phoneNumber: ''
     }
   });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange((currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        router.push('/homepage');
+      }
     });
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   const onSubmit = async (data) => {
     setError('');
@@ -58,7 +81,13 @@ export default function Login() {
       if (isLogin) {
         await loginWithEmail(data.email, data.password);
       } else {
-        await registerWithEmail(data.email, data.password);
+        await registerWithEmail(
+          data.email,
+          data.password,
+          data.firstName,
+          data.lastName,
+          data.phoneNumber
+        );
       }
       reset();
       router.push('/homepage');
@@ -99,22 +128,23 @@ export default function Login() {
         {/* Left side with illustration */}
         <div className="w-full md:w-1/2 mb-6 md:mb-0">
           <div className="p-4">
-            <div className="mb-4">
-              <Image
-                src="/logo.png"
-                alt="Beri Barang Logo"
-                width={150}
-                height={50}
-                className="object-contain"
-              />
-            </div>
+            <div className="absolute top-0 left-0 cursor-pointer">
+                    <div className="flex items-center">
+                      <Image
+                        src="/Main Design Skripsi Frame 431.webp"
+                        alt="Beri Barang Logo"
+                        width={188}
+                        height={80}
+                      />
+                    </div>
+                  </div>
             <div className="bg-[#FDF6E7] rounded-2xl p-4">
               <div className="relative h-80 w-full">
                 <Image
-                  src="/donation-illustration.png"
+                  src="/Main Design Frame.webp"
                   alt="Donation Illustration"
-                  layout="fill"
-                  objectFit="contain"
+                  fill
+                  className="object-contain"
                 />
               </div>
             </div>
@@ -134,14 +164,74 @@ export default function Login() {
             )}
             
             {user && (
-              <p className="text-green-500 text-center mb-4">
-                Anda sudah login sebagai {user.email}. Ingin menggunakan akun lain?
-              </p>
+              <div className="text-center mb-4">
+                <p className="text-green-500 mb-2">
+                  Anda sudah login sebagai {user.email}.
+                </p>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm text-gray-600 hover:text-amber-600 underline"
+                >
+                  Gunakan akun lain
+                </button>
+              </div>
             )}
 
             <form onSubmit={handleSubmit(onSubmit)}>
+              {!isLogin && (
+                <>
+                  <div className="mb-4">
+                    <label htmlFor="firstName" className="block text-gray-700 mb-2">Nama Depan</label>
+                    <input
+                      type="text"
+                      id="firstName"
+                      className={`w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                        errors.firstName ? 'border-red-500' : ''
+                      }`}
+                      placeholder="Masukkan nama depan"
+                      {...register('firstName')}
+                    />
+                    {errors.firstName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
+                    )}
+                  </div>
+
+                  <div className="mb-4">
+                    <label htmlFor="lastName" className="block text-gray-700 mb-2">Nama Belakang</label>
+                    <input
+                      type="text"
+                      id="lastName"
+                      className={`w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                        errors.lastName ? 'border-red-500' : ''
+                      }`}
+                      placeholder="Masukkan nama belakang"
+                      {...register('lastName')}
+                    />
+                    {errors.lastName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
+                    )}
+                  </div>
+
+                  <div className="mb-4">
+                    <label htmlFor="phoneNumber" className="block text-gray-700 mb-2">Nomor Telepon</label>
+                    <input
+                      type="text"
+                      id="phoneNumber"
+                      className={`w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
+                        errors.phoneNumber ? 'border-red-500' : ''
+                      }`}
+                      placeholder="+6281234567890"
+                      {...register('phoneNumber')}
+                    />
+                    {errors.phoneNumber && (
+                      <p className="text-red-500 text-sm mt-1">{errors.phoneNumber.message}</p>
+                    )}
+                  </div>
+                </>
+              )}
+
               <div className="mb-4">
-                <label htmlFor="email" className="block text-gray-700 mb-2">Email</label>
+                <label htmlFor="email" className="block text-gray-700 mb-2 font-bold">Email</label>
                 <input
                   type="email"
                   id="email"
@@ -157,7 +247,7 @@ export default function Login() {
               </div>
               
               <div className="mb-6">
-                <label htmlFor="password" className="block text-gray-700 mb-2">Password</label>
+                <label htmlFor="password" className="block text-gray-700 mb-2 font-bold">Password</label>
                 <input
                   type="password"
                   id="password"

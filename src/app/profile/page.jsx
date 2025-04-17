@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Head from 'next/head';
-import Image from 'next/image';
 import Link from 'next/link';
-import { FaInstagram, FaYoutube, FaWhatsapp, FaTwitter } from 'react-icons/fa';
+import NavbarAfterLogin from '../navbarAfterLogin/page';
+import Footer from '../footer/page';
+import { Icon } from '@iconify/react'; // Import Iconify
 
 export default function Profile() {
   const [formData, setFormData] = useState({
@@ -24,7 +25,6 @@ export default function Profile() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle form submission
     console.log('Form submitted:', formData);
   };
 
@@ -35,42 +35,10 @@ export default function Profile() {
         <meta name="description" content="Kotak Peduli Profile Page" />
       </Head>
 
-      {/* Header */}
-      <header className="bg-white px-6 py-4 flex justify-between items-center shadow-sm">
-        <div className="flex items-center space-x-6">
-          <Link href="/">
-            <div className="flex items-center cursor-pointer">
-              <Image src="/logo.png" alt="Kotak Peduli" width={40} height={40} />
-              <span className="ml-2 text-amber-800 font-bold">Kotak Peduli</span>
-            </div>
-          </Link>
-          <nav className="hidden md:flex space-x-6">
-            <Link href="/cerita-kami" className="text-gray-700 hover:text-amber-800">
-              Cerita Kami
-            </Link>
-            <Link href="/tempat-penampungan" className="text-gray-700 hover:text-amber-800">
-              Tempat Penampungan
-            </Link>
-          </nav>
-        </div>
-        <div className="flex items-center space-x-4">
-          <Link href="/donasi">
-            <button className="bg-amber-800 text-white px-4 py-2 rounded-md hover:bg-amber-900">
-              Donasi Sekarang
-            </button>
-          </Link>
-          <div className="bg-amber-800 rounded-full w-8 h-8 flex items-center justify-center text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              {/* <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /> */}
-            </svg>
-          </div>
-        </div>
-      </header>
+      <NavbarAfterLogin/>
 
-      {/* Main content */}
       <main className="flex-grow max-w-6xl mx-auto px-4 py-8 w-full">
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar */}
           <div className="w-full md:w-1/4">
             <div className="mb-6">
               <h2 className="text-lg text-amber-800">Halo,</h2>
@@ -81,9 +49,7 @@ export default function Profile() {
               <Link href="/riwayat-donasi">
                 <div className="flex items-center text-amber-800 space-x-2 cursor-pointer">
                   <div className="bg-amber-800 rounded-full p-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                    </svg>
+                    <Icon icon="mdi:account" className="h-5 w-5 text-white" />
                   </div>
                   <span>Informasi Akun</span>
                 </div>
@@ -92,10 +58,7 @@ export default function Profile() {
               <Link href="/riwayatdonasi">
                 <div className="flex items-center text-amber-800 space-x-2 cursor-pointer">
                   <div className="bg-amber-800 rounded-full p-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
-                      <path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" />
-                    </svg>
+                    <Icon icon="mdi:credit-card-outline" className="h-5 w-5 text-white" />
                   </div>
                   <span>Riwayat Donasi</span>
                 </div>
@@ -103,7 +66,6 @@ export default function Profile() {
             </div>
           </div>
           
-          {/* Form and Profile Picture */}
           <div className="w-full md:w-3/4">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-amber-800">Profil</h2>
@@ -111,7 +73,6 @@ export default function Profile() {
             </div>
             
             <div className="flex flex-col md:flex-row gap-8">
-              {/* Form Fields */}
               <div className="w-full md:w-2/3">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="flex flex-col md:flex-row gap-4">
@@ -184,12 +145,9 @@ export default function Profile() {
                 </form>
               </div>
               
-              {/* Profile Picture - positioned to the right side of form */}
               <div className="w-full md:w-1/3 flex flex-col items-center mt-4 md:mt-0">
                 <div className="w-32 h-32 bg-gray-100 rounded-full mb-4 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                  </svg>
+                  <Icon icon="mdi:account" className="h-16 w-16 text-gray-300" />
                 </div>
                 <button
                   type="button"
@@ -207,47 +165,7 @@ export default function Profile() {
         </div>
       </main>
 
-      {/* Footer  */}
-      <footer className="w-full bg-amber-300 py-4 mt-auto">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="mb-4 md:mb-0">
-              <p className="text-amber-800 font-medium">
-                "Dari bekas menjadi berkah, membantu sesama"
-              </p>
-            </div>
-            
-            <div className="mb-4 md:mb-0">
-              <div className="flex items-center justify-center">
-                 <div className="mb-6 md:mb-0">
-                              <Image
-                                src="/logo-white.png"
-                                alt="Kotak Peduli Logo"
-                                width={150}
-                                height={60}
-                              />
-                            </div>
-                <span className="ml-2 text-amber-800 font-bold">Kotak Peduli</span>
-              </div>
-            </div>
-            
-            <div className="flex space-x-4">
-              <Link href="#" className="text-amber-800 hover:text-amber-900">
-                <FaInstagram size={24} />
-              </Link>
-              <Link href="#" className="text-amber-800 hover:text-amber-900">
-                <FaYoutube size={24} />
-              </Link>
-              <Link href="#" className="text-amber-800 hover:text-amber-900">
-                <FaWhatsapp size={24} />
-              </Link>
-              <Link href="#" className="text-amber-800 hover:text-amber-900">
-                <FaTwitter size={24} />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer/>
     </div>
   );
 }
