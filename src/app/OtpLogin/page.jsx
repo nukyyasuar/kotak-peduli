@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Head from 'next/head';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { setupRecaptcha, verifyPhoneCode, sendPhoneVerificationCode } from '../auth/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getConfirmationResult, clearConfirmationResult } from '../auth/authStore';
@@ -16,16 +16,23 @@ export default function OtpLogin() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const phoneNumber = searchParams.get('phone') || 'nomor telepon anda';
+  const recaptchaContainerRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const initializeRecaptcha = async () => {
       try {
-        await setupRecaptcha();
+        if (!recaptchaContainerRef.current) {
+          setError('reCAPTCHA container tidak ditemukan.');
+          return;
+        }
+
+        await setupRecaptcha(recaptchaContainerRef.current.id);
         console.log('reCAPTCHA initialized in OtpLogin');
       } catch (err) {
         if (isMounted) {
+          console.error('reCAPTCHA initialization error:', err);
           setError('Gagal menginisialisasi reCAPTCHA: ' + err.message);
         }
       }
@@ -128,6 +135,21 @@ export default function OtpLogin() {
     }
 
     try {
+      // Clear previous confirmation result
+      setConfirmationResult(null);
+      clearConfirmationResult();
+
+      // Ensure reCAPTCHA container exists
+      if (!recaptchaContainerRef.current) {
+        setError('reCAPTCHA container tidak ditemukan.');
+        return;
+      }
+
+      // Force reset reCAPTCHA to ensure fresh session
+      await setupRecaptcha(recaptchaContainerRef.current.id, true);
+      console.log('reCAPTCHA reinitialized for resend OTP');
+
+      // Send new OTP
       const confirmation = await sendPhoneVerificationCode(phoneNumber);
       setConfirmationResult(confirmation);
       setTimer(60);
@@ -135,6 +157,7 @@ export default function OtpLogin() {
       setOtp(['', '', '', '', '', '']);
       alert('Kode OTP baru telah dikirim.');
     } catch (err) {
+      console.error('Resend OTP error:', err);
       switch (err.code) {
         case 'auth/invalid-phone-number':
           setError('Format nomor telepon salah');
@@ -215,7 +238,7 @@ export default function OtpLogin() {
             ))}
           </div>
 
-          <div id="recaptcha-container" className="hidden"></div>
+          <div id="recaptcha-container" ref={recaptchaContainerRef}></div>
 
           <button
             onClick={() => {

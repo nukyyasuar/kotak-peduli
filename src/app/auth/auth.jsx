@@ -29,37 +29,76 @@ const auth = getAuth(app);
 // Initialize Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
 
-// Setup reCAPTCHA verifier
-let recaptchaVerifier;
+// Store reCAPTCHA verifier globally
+let recaptchaVerifier = null;
 
-export const setupRecaptcha = () => {
-  if (!recaptchaVerifier) {
-    try {
-      recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        'size': 'invisible',
-        'callback': (response) => {
+export const setupRecaptcha = async (containerId, forceReset = false) => {
+  try {
+    // Clear existing verifier if forceReset is true or if it exists
+    if (forceReset && recaptchaVerifier) {
+      try {
+        recaptchaVerifier.clear();
+        console.log('Existing reCAPTCHA verifier cleared');
+      } catch (err) {
+        console.error('Error clearing reCAPTCHA verifier:', err);
+      }
+      recaptchaVerifier = null;
+    }
+
+    if (!recaptchaVerifier) {
+      const container = document.getElementById(containerId);
+      if (!container) {
+        throw new Error('reCAPTCHA container not found');
+      }
+
+      // Remove any existing reCAPTCHA elements and scripts
+      container.innerHTML = ''; // Clear all child nodes
+      const existingScripts = container.querySelectorAll('script');
+      existingScripts.forEach(script => script.remove());
+      console.log('reCAPTCHA container cleared of existing elements and scripts');
+
+      // Create a new container element to ensure clean state
+      const newContainer = document.createElement('div');
+      newContainer.id = containerId;
+      container.parentNode.replaceChild(newContainer, container);
+      console.log('reCAPTCHA container replaced with new element');
+
+      recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+        size: 'invisible',
+        callback: (response) => {
           console.log('reCAPTCHA solved:', response);
         },
         'expired-callback': () => {
           console.log('reCAPTCHA expired, resetting...');
           recaptchaVerifier.clear();
           recaptchaVerifier = null;
+        },
+        'error-callback': (error) => {
+          console.error('reCAPTCHA error:', error);
+          recaptchaVerifier.clear();
+          recaptchaVerifier = null;
         }
       });
+
       console.log('reCAPTCHA verifier initialized');
-      return recaptchaVerifier.render().then(() => recaptchaVerifier);
-    } catch (error) {
-      console.error('reCAPTCHA initialization failed:', error);
-      throw new Error('Failed to initialize reCAPTCHA: ' + error.message);
+      await recaptchaVerifier.render();
+    } else {
+      console.log('Using existing reCAPTCHA verifier');
     }
+
+    return recaptchaVerifier;
+  } catch (error) {
+    console.error('reCAPTCHA initialization failed:', error);
+    recaptchaVerifier = null;
+    throw new Error('Failed to initialize reCAPTCHA: ' + error.message);
   }
-  return Promise.resolve(recaptchaVerifier);
 };
 
 // Send verification code to phone number
 export const sendPhoneVerificationCode = async (phoneNumber) => {
   try {
-    const verifier = await setupRecaptcha();
+    // Ensure fresh reCAPTCHA verifier
+    const verifier = await setupRecaptcha('recaptcha-container', true); // Force reset for new session
     const formattedPhoneNumber = phoneNumber.startsWith('+') 
       ? phoneNumber 
       : `+${phoneNumber}`; // Ensure phone number format with country code
@@ -71,10 +110,14 @@ export const sendPhoneVerificationCode = async (phoneNumber) => {
       verifier
     );
     
-    console.log('ConfirmationResult created:', confirmationResult);
+    console.log('New ConfirmationResult created:', confirmationResult);
     return confirmationResult;
   } catch (error) {
     console.error('Error sending phone verification code:', error);
+    if (recaptchaVerifier) {
+      recaptchaVerifier.clear();
+      recaptchaVerifier = null;
+    }
     switch (error.code) {
       case 'auth/invalid-phone-number':
         throw new Error('Nomor telepon tidak valid. Pastikan format benar (contoh: +6281234567890).');

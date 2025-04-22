@@ -1,6 +1,5 @@
 "use client";
 
-// pages/index.js
 import { useState, useRef, useEffect } from "react";
 import Head from "next/head";
 import NavbarAfterLogin from "../navbarAfterLogin/page";
@@ -8,11 +7,12 @@ import Footer from "../footer/page";
 import { Icon } from "@iconify/react";
 
 export default function Home() {
-  const [donationItems, setDonationItems] = useState([]); 
-  const [fileNames, setFileNames] = useState({}); 
-  const [isModalOpen, setIsModalOpen] = useState(false); 
-  const [selectedLocation, setSelectedLocation] = useState(null); 
+  const [donationItems, setDonationItems] = useState([]);
+  const [fileNames, setFileNames] = useState({});
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [geolocationError, setGeolocationError] = useState(null);
+  const [streetInput, setStreetInput] = useState(""); // State for street input
   const [formData, setFormData] = useState({
     namaLengkap: "",
     nomorTelpon: "",
@@ -20,12 +20,12 @@ export default function Home() {
     tempatPenampungan: "",
     cabangDropPoint: "",
     metodePengiriman: "",
-    items: [], 
-  }); 
-  const fileInputRefs = useRef({}); 
-  const mapRef = useRef(null); 
-  const mapInstanceRef = useRef(null); 
-  const scriptLoadedRef = useRef(false); 
+    items: [],
+  });
+  const fileInputRefs = useRef({});
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const scriptLoadedRef = useRef(false);
 
   // Function to handle file selection for a specific section
   const handleFileChange = (index, event) => {
@@ -51,13 +51,20 @@ export default function Home() {
   const toggleModal = () => {
     setIsModalOpen(!isModalOpen);
     setGeolocationError(null); // Reset error when modal opens/closes
+    if (!isModalOpen) {
+      setStreetInput(""); // Clear street input when opening modal
+    }
   };
 
   // Function to handle saving the location
   const handleSaveLocation = () => {
     if (selectedLocation) {
       console.log("Saved location:", selectedLocation);
-      // Add logic to save the location (e.g., send to backend or update form)
+      // Update formData with the street input or fallback to coordinates
+      setFormData((prev) => ({
+        ...prev,
+        alamatLengkap: streetInput || `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}`,
+      }));
     } else {
       console.log("No location selected");
     }
@@ -135,6 +142,19 @@ export default function Home() {
     }
   };
 
+  // Function to reverse geocode coordinates to street address
+  const reverseGeocode = (location, callback) => {
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ location }, (results, status) => {
+      if (status === "OK" && results[0]) {
+        callback(results[0].formatted_address);
+      } else {
+        console.error("Geocoding failed:", status);
+        callback(`Tidak dapat menemukan alamat untuk lokasi ini`);
+      }
+    });
+  };
+
   // Function to initialize or update the map
   const initMap = (initialLocation) => {
     if (!mapRef.current) return;
@@ -175,6 +195,10 @@ export default function Home() {
       });
 
       setSelectedLocation(clickedLocation);
+      // Reverse geocode the clicked location to get the street address
+      reverseGeocode(clickedLocation, (address) => {
+        setStreetInput(address);
+      });
       map.panTo(clickedLocation);
     });
 
@@ -191,6 +215,10 @@ export default function Home() {
         });
 
         setSelectedLocation(location);
+        // Reverse geocode the user's location to get the street address
+        reverseGeocode(location, (address) => {
+          setStreetInput(address);
+        });
         map.panTo(location);
       });
     };
@@ -201,7 +229,13 @@ export default function Home() {
     if (isModalOpen && mapRef.current) {
       const loadGoogleMapsScript = () => {
         if (scriptLoadedRef.current && window.google && window.google.maps) {
-          getUserLocation((location) => initMap(location));
+          getUserLocation((location) => {
+            initMap(location);
+            // Set initial street input with user's location address
+            reverseGeocode(location, (address) => {
+              setStreetInput(address);
+            });
+          });
           return;
         }
 
@@ -217,7 +251,13 @@ export default function Home() {
           };
 
           window.initMap = () => {
-            getUserLocation((location) => initMap(location));
+            getUserLocation((location) => {
+              initMap(location);
+              // Set initial street input with user's location address
+              reverseGeocode(location, (address) => {
+                setStreetInput(address);
+              });
+            });
           };
 
           document.head.appendChild(script);
@@ -521,7 +561,9 @@ export default function Home() {
                   <input
                     type="text"
                     className="w-full border border-gray-300 rounded-md p-2 text-gray-700"
-                    placeholder="Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit"
+                    value={streetInput}
+                    onChange={(e) => setStreetInput(e.target.value)}
+                    placeholder="Klik peta untuk memilih alamat"
                   />
                 </div>
 

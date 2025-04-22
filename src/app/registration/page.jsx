@@ -12,7 +12,7 @@ import {
   registerWithEmail,
   loginWithGoogle,
   onAuthStateChange,
-  setupRecaptcha,
+  // setupRecaptcha,
   sendPhoneVerificationCode,
 } from '../auth/auth';
 import { setConfirmationResult } from '../auth/authStore';
@@ -73,31 +73,31 @@ export default function Registration() {
   const passwordValue = watch("password");
 
   // Initialize reCAPTCHA
-  useEffect(() => {
-    let isMounted = true;
+  // useEffect(() => {
+  //   let isMounted = true;
 
-    const initializeRecaptcha = async () => {
-      if (document.getElementById('recaptcha-container')) {
-        try {
-          await setupRecaptcha();
-          console.log('reCAPTCHA initialized in Registration');
-        } catch (err) {
-          if (isMounted) {
-            setError('Gagal menginisialisasi reCAPTCHA: ' + err.message);
-          }
-        }
-      } else {
-        console.log('reCAPTCHA container not found, retrying...');
-        setTimeout(initializeRecaptcha, 100);
-      }
-    };
+  //   const initializeRecaptcha = async () => {
+  //     if (document.getElementById('recaptcha-container')) {
+  //       try {
+  //         await setupRecaptcha();
+  //         console.log('reCAPTCHA initialized in Registration');
+  //       } catch (err) {
+  //         if (isMounted) {
+  //           setError('Gagal menginisialisasi reCAPTCHA: ' + err.message);
+  //         }
+  //       }
+  //     } else {
+  //       console.log('reCAPTCHA container not found, retrying...');
+  //       setTimeout(initializeRecaptcha, 100);
+  //     }
+  //   };
 
-    initializeRecaptcha();
+  //   initializeRecaptcha();
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChange((currentUser) => {
@@ -182,7 +182,7 @@ export default function Registration() {
             <p className="text-red-500 text-center mb-4">{error}</p>
           )}
 
-          <div id="recaptcha-container" className="normal"></div>
+          <div id="recaptcha-container"></div>
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="flex gap-4 mb-4">

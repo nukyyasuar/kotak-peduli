@@ -1,6 +1,5 @@
 "use client";
 
-// pages/homepage.js
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,6 +10,20 @@ import { Icon } from "@iconify/react";
 import { useState, useEffect } from "react";
 
 export default function Home() {
+  // Simulate login state (replace with actual auth logic)
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check login status (e.g., from localStorage, session, or API)
+  useEffect(() => {
+    // Example: Check if a token exists in localStorage (replace with your auth logic)
+    const token = localStorage.getItem("authToken"); // Replace with actual token check
+    if (token) {
+      setIsLoggedIn(true);
+    } else {
+      setIsLoggedIn(false);
+    }
+  }, []);
+
   // Data testimonial
   const testimonials = [
     {
@@ -41,7 +54,7 @@ export default function Home() {
     const interval = setInterval(() => {
       setActiveIndex((prevIndex) => (prevIndex + 1) % testimonials.length);
     }, 5000); // Ganti setiap 5 detik
-    return () => clearInterval(interval); 
+    return () => clearInterval(interval);
   }, [testimonials.length]);
 
   // Fungsi untuk navigasi manual
@@ -57,36 +70,37 @@ export default function Home() {
 
   return (
     <>
-      <NavbarBeforeLogin />
+      {/* Conditionally render the navbar based on login status */}
+      {isLoggedIn ? <NavbarAfterLogin /> : <NavbarBeforeLogin />}
 
       {/* Hero Section */}
-<section className="relative w-full h-[600px]">
-  <Image
-    src="/Poor Child Landfill Hope.webp"
-    alt="Children collecting waste"
-    layout="fill"
-    objectFit="cover"
-    priority
-  />
-  <div className="absolute inset-0 flex items-start justify-end pt-8">
-    <div className="flex flex-col gap-4">
-      <div className="bg-[#5C3D15] bg-opacity-90 p-6 text-white mb-6">
-        <h2 className="text-3xl font-bold mb-2 whitespace-nowrap">
-          Dari bekas menjadi berkah.
-        </h2>
-        <p className="text-lg whitespace-nowrap">Mari bantu sesama demi Indonesia makmur</p>
-      </div>
-      <div className="bg-[#5C3D15] bg-opacity-90 p-6 text-white">
-        <h2 className="text-2xl font-bold mb-2 whitespace-nowrap">
-          Donasikan barang layak pakaimu
-        </h2>
-        <p className="text-sm whitespace-nowrap">
-          Apapun itu sangat berarti bagi mereka yang membutuhkan
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
+      <section className="relative w-full h-[600px]">
+        <Image
+          src="/Poor Child Landfill Hope.webp"
+          alt="Children collecting waste"
+          layout="fill"
+          objectFit="cover"
+          priority
+        />
+        <div className="absolute inset-0 flex items-start justify-end pt-8">
+          <div className="flex flex-col gap-4">
+            <div className="bg-[#5C3D15] bg-opacity-90 p-6 text-white mb-6">
+              <h2 className="text-3xl font-bold mb-2 whitespace-nowrap">
+                Dari bekas menjadi berkah.
+              </h2>
+              <p className="text-lg whitespace-nowrap">Mari bantu sesama demi Indonesia makmur</p>
+            </div>
+            <div className="bg-[#5C3D15] bg-opacity-90 p-6 text-white">
+              <h2 className="text-2xl font-bold mb-2 whitespace-nowrap">
+                Donasikan barang layak pakaimu
+              </h2>
+              <p className="text-sm whitespace-nowrap">
+                Apapun itu sangat berarti bagi mereka yang membutuhkan
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Benefits Section */}
       <section className="py-16 bg-white">
