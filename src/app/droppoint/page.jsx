@@ -5,10 +5,10 @@ import { FaSearch } from "react-icons/fa";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import NavbarAfterLoginAdmin from "../NavbarAfterLoginAdmin/page";
 import Footer from "../footer/page";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Home() {
-  // Sample data for the table
+  // State declarations
   const [dropPoints, setDropPoints] = useState([
     {
       nama: "Tempat Penampung A",
@@ -84,184 +84,234 @@ export default function Home() {
     },
   ]);
 
-  // State to manage which dropdown is open (using the index of the row)
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
-
-  // State to manage the modal visibility and the data being edited
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editData, setEditData] = useState(null);
-  const [isAdding, setIsAdding] = useState(false);
-
-  // State to manage the delete confirmation modal
+  const [isTambahModalOpen, setIsTambahModalOpen] = useState(false);
+  const [isUbahModalOpen, setIsUbahModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteIndex, setDeleteIndex] = useState(null);
-
-  // State for pagination
+  const [selectedDropPointIndex, setSelectedDropPointIndex] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // Maksimal 10 data per halaman
-
-  // State for search
-  const [searchTerm, setSearchTerm] = useState("");
+  const itemsPerPage = 10;
+  const dropdownRefs = useRef([]);
 
   // State for filters
-  const [filterCabang, setFilterCabang] = useState(false); // Default: Cabang tidak dipilih
-  const [filterDropPoint, setFilterDropPoint] = useState(false); // Default: Drop Point tidak dipilih
-  const [isTypeFilterActive, setIsTypeFilterActive] = useState(false); // Default: filter tipe tidak aktif
+  const [isCabang, setIsCabang] = useState(false);
+  const [isDropPoint, setIsDropPoint] = useState(false);
 
-  // Handle search input change
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value);
-    setCurrentPage(1); // Reset ke halaman 1 saat pencarian berubah
-  };
-
-  // Handle filter changes
-  const handleFilterCabangChange = (e) => {
-    setFilterCabang(e.target.checked);
-    if (e.target.checked || filterDropPoint) {
-      setIsTypeFilterActive(true); // Aktifkan filter tipe jika ada checkbox yang dipilih
-    } else {
-      setIsTypeFilterActive(false); // Nonaktifkan filter tipe jika tidak ada checkbox yang dipilih
-    }
-    setCurrentPage(1); // Reset ke halaman 1 saat filter berubah
-  };
-
-  const handleFilterDropPointChange = (e) => {
-    setFilterDropPoint(e.target.checked);
-    if (e.target.checked || filterCabang) {
-      setIsTypeFilterActive(true); // Aktifkan filter tipe jika ada checkbox yang dipilih
-    } else {
-      setIsTypeFilterActive(false); // Nonaktifkan filter tipe jika tidak ada checkbox yang dipilih
-    }
-    setCurrentPage(1); // Reset ke halaman 1 saat filter berubah
-  };
-
-  // Filter data berdasarkan kata kunci pencarian dan tipe (jika filter tipe aktif)
-  const filteredData = dropPoints.filter((point) => {
-    const matchesSearch = point.nama.toLowerCase().includes(searchTerm.toLowerCase());
-    if (!isTypeFilterActive) {
-      return matchesSearch; // Tampilkan semua data jika filter tipe tidak aktif
-    }
-    const matchesType =
-      (filterCabang && point.tipe === "Cabang") ||
-      (filterDropPoint && point.tipe === "Drop Point");
-    return matchesSearch && matchesType;
+  // State for form data
+  const [tambahFormData, setTambahFormData] = useState({
+    nama: "",
+    alamat: "",
+    telepon: "",
+    tipe: "",
   });
 
-  // Hitung total halaman berdasarkan data yang sudah difilter
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const [ubahFormData, setUbahFormData] = useState({
+    nama: "",
+    alamat: "",
+    telepon: "",
+    tipe: "",
+  });
 
-  // Ambil data untuk halaman saat ini dari data yang sudah difilter
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentData = filteredData.slice(startIndex, endIndex);
+  // Filter drop points
+  const filteredDropPoints = dropPoints.filter((point) => {
+    let matchesType = false;
+    if (!isCabang && !isDropPoint) matchesType = true;
+    else if (isCabang && isDropPoint) matchesType = true;
+    else if (isCabang) matchesType = point.tipe === "Cabang";
+    else if (isDropPoint) matchesType = point.tipe === "Drop Point";
 
-  // Function to toggle the dropdown for a specific row
+    const matchesSearch = searchQuery
+      ? point.nama.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+
+    return matchesType  && matchesSearch; //compressing
+  });
+
+  // Loading effect
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      console.log("Filtered Drop Points:", filteredDropPoints);
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, isCabang, isDropPoint, dropPoints]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRefs.current.every(
+          (ref) => ref && !ref.contains(event.target)
+        )
+      ) {
+        setOpenDropdownIndex(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentDropPoints = filteredDropPoints.slice(
+    indexOfFirstItem,
+    indexOfLastItem
+  );
+  const totalPages = Math.ceil(filteredDropPoints.length / itemsPerPage);
+
+  // Handlers
+  const handleFilterChange = (setter) => (value) => {
+    setter(value);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1);
+  };
+
   const toggleDropdown = (index) => {
     setOpenDropdownIndex(openDropdownIndex === index ? null : index);
   };
 
-  // Function to open the modal for adding new data
-  const openAddModal = () => {
-    setIsAdding(true);
-    setEditData({ nama: "", alamat: "", telepon: "", tipe: "" });
-    setIsModalOpen(true);
+  const toggleTambahModal = () => {
+    setIsTambahModalOpen(!isTambahModalOpen);
+    if (isTambahModalOpen) {
+      setTambahFormData({
+        nama: "",
+        alamat: "",
+        telepon: "",
+        tipe: "",
+      });
+    }
   };
 
-  // Function to open the modal with the selected row's data for editing
-  const openEditModal = (index) => {
-    setIsAdding(false);
-    setEditData({ ...dropPoints[index], index });
-    setIsModalOpen(true);
+  const toggleUbahModal = (index) => {
+    if (index !== null) {
+      const point = dropPoints[index];
+      setUbahFormData({
+        nama: point.nama,
+        alamat: point.alamat,
+        telepon: point.telepon,
+        tipe: point.tipe,
+      });
+      setSelectedDropPointIndex(index);
+    }
+    setIsUbahModalOpen(!isUbahModalOpen);
     setOpenDropdownIndex(null);
   };
 
-  // Function to open the delete confirmation modal
-  const openDeleteModal = (index) => {
-    setDeleteIndex(index);
-    setIsDeleteModalOpen(true);
+  const toggleDeleteModal = (index) => {
+    setSelectedDropPointIndex(index);
+    setIsDeleteModalOpen(!isDeleteModalOpen);
     setOpenDropdownIndex(null);
   };
 
-  // Function to handle form input changes
-  const handleInputChange = (e) => {
+  const handleTambahInputChange = (e) => {
     const { name, value } = e.target;
-    setEditData((prev) => ({ ...prev, [name]: value }));
+    setTambahFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Function to handle form submission (for both adding and editing)
-  const handleSubmit = (e) => {
+  const handleTambahSubmit = (e) => {
     e.preventDefault();
-    if (isAdding) {
-      const newDropPoint = {
-        nama: editData.nama,
-        alamat: editData.alamat,
-        telepon: editData.telepon,
-        tipe: editData.tipe,
-      };
-      setDropPoints([...dropPoints, newDropPoint]);
-    } else {
-      const updatedDropPoints = [...dropPoints];
-      updatedDropPoints[editData.index] = {
-        nama: editData.nama,
-        alamat: editData.alamat,
-        telepon: editData.telepon,
-        tipe: editData.tipe,
-      };
-      setDropPoints(updatedDropPoints);
-    }
-    setIsModalOpen(false);
-    setEditData(null);
-    setIsAdding(false);
+    setIsLoading(true);
+    const newDropPoint = {
+      nama: tambahFormData.nama || "Contoh: Tempat Penampung",
+      alamat: tambahFormData.alamat || "Contoh: Jl. Lorem ipsum...",
+      telepon: tambahFormData.telepon || "+6281212312312",
+      tipe: tambahFormData.tipe || "Drop Point",
+    };
+    setDropPoints((prev) => [...prev, newDropPoint]);
+    toggleTambahModal();
+    setTimeout(() => setIsLoading(false), 500);
   };
 
-  // Function to handle deletion
-  const handleDelete = () => {
-    const updatedDropPoints = dropPoints.filter((_, i) => i !== deleteIndex);
-    setDropPoints(updatedDropPoints);
-    setIsDeleteModalOpen(false);
-    setDeleteIndex(null);
+  const handleUbahInputChange = (e) => {
+    const { name, value } = e.target;
+    setUbahFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    // Hitung ulang total halaman berdasarkan data yang sudah difilter
-    const filteredAfterDelete = updatedDropPoints.filter((point) => {
-      const matchesSearch = point.nama.toLowerCase().includes(searchTerm.toLowerCase());
-      if (!isTypeFilterActive) {
-        return matchesSearch;
-      }
-      const matchesType =
-        (filterCabang && point.tipe === "Cabang") ||
-        (filterDropPoint && point.tipe === "Drop Point");
-      return matchesSearch && matchesType;
+  const handleUbahSubmit = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    const updatedDropPoint = {
+      nama: ubahFormData.nama,
+      alamat: ubahFormData.alamat,
+      telepon: ubahFormData.telepon,
+      tipe: ubahFormData.tipe,
+    };
+    setDropPoints((prev) => {
+      const updatedDropPoints = [...prev];
+      updatedDropPoints[selectedDropPointIndex] = updatedDropPoint;
+      return updatedDropPoints;
     });
-    const newTotalPages = Math.ceil(filteredAfterDelete.length / itemsPerPage);
-    if (currentPage > newTotalPages && newTotalPages > 0) {
-      setCurrentPage(newTotalPages);
-    } else if (newTotalPages === 0) {
-      setCurrentPage(1);
-    }
+    toggleUbahModal(null);
+    setTimeout(() => setIsLoading(false), 500);
   };
 
-  // Pagination functions
-  const goToPage = (page) => {
-    setCurrentPage(page);
+  const handleDelete = () => {
+    setIsLoading(true);
+    setDropPoints((prev) =>
+      prev.filter((_, i) => i !== selectedDropPointIndex)
+    );
+    setIsDeleteModalOpen(false);
+    setSelectedDropPointIndex(null);
+    setTimeout(() => {
+      setIsLoading(false);
+      const newTotalPages = Math.ceil(
+        filteredDropPoints.length / itemsPerPage
+      );
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      } else if (newTotalPages === 0) {
+        setCurrentPage(1);
+      }
+    }, 500);
+  };
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
     setOpenDropdownIndex(null);
   };
 
-  const goToPreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-      setOpenDropdownIndex(null);
-    }
-  };
+  // Spinner component
+  const Spinner = () => (
+    <div className="flex justify-center items-center py-8">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#4A2C2A] border-t-transparent"></div>
+    </div>
+  );
 
-  const goToNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-      setOpenDropdownIndex(null);
+  // Calculate dropdown position
+  const getDropdownPosition = (index) => {
+    const button = dropdownRefs.current[index];
+    if (!button) return { top: 'top-8', transform: '' };
+
+    const rect = button.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const dropdownHeight = 80; // Approximate height of dropdown (adjust as needed)
+
+    // If dropdown would extend beyond bottom of viewport, open upwards
+    if (rect.bottom + dropdownHeight > viewportHeight) {
+      return {
+        top: 'bottom-full mb-2',
+        transform: 'translateY(-100%)',
+      };
     }
+    // Otherwise, open downwards
+    return {
+      top: 'top-8',
+      transform: '',
+    };
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f4e9] font-sans">
+    <div className="min-h-screen bg-[#F5E9D4] font-sans">
       <Head>
         <title>Drop Point - Kotak Peduli</title>
         <meta name="description" content="Drop Point page for Kotak Peduli" />
@@ -272,259 +322,384 @@ export default function Home() {
       <NavbarAfterLoginAdmin />
 
       {/* Main Content */}
-      <main className="max-w-5xl mx-auto mt-8 p-6 bg-white shadow-md rounded-lg min-w-[1024px]">
-        <h1 className="text-3xl font-bold mb-6 text-gray-900">
+      <main className="px-8 py-6">
+        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A]">
           CABANG & DROP POINT
         </h1>
 
         {/* Search and Filter */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative">
+        <div className="flex justify-between items-center mb-6 text-black">
+          <div className="relative w-64">
             <input
               type="text"
               placeholder="Cari berdasarkan nama"
-              value={searchTerm}
+              value={searchQuery}
               onChange={handleSearchChange}
-              className="border border-gray-300 rounded-lg py-2 px-4 pl-10 focus:outline-none focus:ring-2 focus:ring-gray-300 w-64"
+              className="w-full p-2 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] text-sm"
             />
-            <FaSearch className="absolute left-3 top-3 text-gray-400" />
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#4A2C2A] w-5 h-5" />
           </div>
-          <div className="flex space-x-3">
-            <label className="flex items-center space-x-2">
+          <div className="flex items-center space-x-6">
+            <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={filterCabang}
-                onChange={handleFilterCabangChange}
-                className="form-checkbox h-5 w-5 text-[#4a3e2a]"
+                checked={isCabang}
+                onChange={(e) =>
+                  handleFilterChange(setIsCabang)(e.target.checked)
+                }
+                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
               />
-              <span className="text-gray-600">Cabang</span>
+              <span className="text-[#4A2C2A] text-sm font-medium">
+                Cabang
+              </span>
             </label>
-            <label className="flex items-center space-x-2">
+            <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={filterDropPoint}
-                onChange={handleFilterDropPointChange}
-                className="form-checkbox h-5 w-5 text-[#4a3e2a]"
+                checked={isDropPoint}
+                onChange={(e) =>
+                  handleFilterChange(setIsDropPoint)(e.target.checked)
+                }
+                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
               />
-              <span className="text-gray-600">Drop Point</span>
+              <span className="text-[#4A2C2A] text-sm font-medium">
+                Drop Point
+              </span>
             </label>
             <button
-              onClick={openAddModal}
-              className="bg-[#4a3e2a] text-white rounded-lg py-2 px-4 hover:bg-[#3a2e1a]"
+              onClick={toggleTambahModal}
+              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm"
             >
-              TAMBAH POS
+              Tambah Pos
             </button>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm text-gray-600">
-                  Nama
-                </th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm text-gray-600">
-                  Alamat
-                </th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm text-gray-600">
-                  No. Telepon
-                </th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm text-gray-600">
-                  Tipe
-                </th>
-                <th className="text-left py-3 px-4 uppercase font-semibold text-sm text-gray-600">
-                  Menu
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentData.map((point, index) => (
-                <tr key={index} className="border-t border-gray-200 relative">
-                  <td className="py-3 px-4 text-gray-800">{point.nama}</td>
-                  <td className="py-3 px-4 text-gray-600">{point.alamat}</td>
-                  <td className="py-3 px-4 text-gray-800">{point.telepon}</td>
-                  <td className="py-3 px-4 text-gray-800">{point.tipe}</td>
-                  <td className="py-3 px-4">
-                    <button
-                      onClick={() => toggleDropdown(index)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      <BsThreeDotsVertical />
-                    </button>
-                    {/* Dropdown Menu */}
-                    {openDropdownIndex === index && (
-                      <div className="absolute right-4 top-12 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                        <ul className="py-1">
-                          <li>
-                            <button
-                              onClick={() => openEditModal(startIndex + index)}
-                              className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
-                            >
-                              Ubah Data
-                            </button>
-                          </li>
-                          <li>
-                            <button
-                              onClick={() => openDeleteModal(startIndex + index)}
-                              className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
-                            >
-                              Hapus Data
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {/* Tambah Modal */}
+        {isTambahModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">
+                Tambah Pos
+              </h2>
+              <form onSubmit={handleTambahSubmit}>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                    Nama
+                  </label>
+                  <input
+                    type="text"
+                    name="nama"
+                    value={tambahFormData.nama}
+                    onChange={handleTambahInputChange}
+                    placeholder="Contoh: Tempat Penampung"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                    Alamat Lengkap
+                  </label>
+                  <textarea
+                    name="alamat"
+                    value={tambahFormData.alamat}
+                    onChange={handleTambahInputChange}
+                    placeholder="Contoh: Jl. Lorem ipsum..."
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    rows="3"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                    No. Telepon
+                  </label>
+                  <input
+                    type="text"
+                    name="telepon"
+                    value={tambahFormData.telepon}
+                    onChange={handleTambahInputChange}
+                    placeholder="Contoh: +6281212312312"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                    Tipe
+                  </label>
+                  <select
+                    name="tipe"
+                    value={tambahFormData.tipe}
+                    onChange={handleTambahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                  >
+                    <option value="" disabled>
+                      Pilih tipe tempat
+                    </option>
+                    <option value="Cabang">Cabang</option>
+                    <option value="Drop Point">Drop Point</option>
+                  </select>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    type="submit"
+                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                  >
+                    Tambah Pos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleTambahModal}
+                    className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
-        {/* Pagination */}
-        <div className="flex justify-center mt-6 space-x-2">
-          <button
-            onClick={goToPreviousPage}
-            disabled={currentPage === 1}
-            className={`border border-gray-300 rounded-lg py-2 px-4 text-gray-600 hover:bg-gray-100 ${
-              currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            {"< Previous"}
-          </button>
+        {/* Ubah Modal */}
+        {isUbahModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">
+                Ubah Informasi Pos
+              </h2>
+              <form onSubmit={handleUbahSubmit}>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                    Nama
+                  </label>
+                  <input
+                    type="text"
+                    name="nama"
+                    value={ubahFormData.nama}
+                    onChange={handleUbahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                    Alamat Lengkap
+                  </label>
+                  <textarea
+                    name="alamat"
+                    value={ubahFormData.alamat}
+                    onChange={handleUbahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    rows="3"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                    No. Telepon
+                  </label>
+                  <input
+                    type="text"
+                    name="telepon"
+                    value={ubahFormData.telepon}
+                    onChange={handleUbahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                    Tipe
+                  </label>
+                  <select
+                    name="tipe"
+                    value={ubahFormData.tipe}
+                    onChange={handleUbahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                  >
+                    <option value="" disabled>
+                      Pilih tipe tempat
+                    </option>
+                    <option value="Cabang">Cabang</option>
+                    <option value="Drop Point">Drop Point</option>
+                  </select>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    type="submit"
+                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                  >
+                    Simpan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleUbahModal(null)}
+                    className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
-          {/* Tombol nomor halaman */}
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-            <button
-              key={page}
-              onClick={() => goToPage(page)}
-              className={`border border-gray-300 rounded-lg py-2 px-4 ${
-                currentPage === page
-                  ? "bg-[#4a3e2a] text-white"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-            >
-              {page}
-            </button>
-          ))}
-
-          <button
-            onClick={goToNextPage}
-            disabled={currentPage === totalPages}
-            className={`border border-gray-300 rounded-lg py-2 px-4 text-gray-600 hover:bg-gray-100 ${
-              currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            {"Next >"}
-          </button>
-        </div>
-      </main>
-
-      {/* Modal for Adding/Editing Data */}
-      {isModalOpen && (
-        <div className="fixed inset-0 backdrop-brightness-50 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-            <h2 className="text-xl font-bold mb-4">{isAdding ? "TAMBAH POS" : "UBAH DATA"}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Nama</label>
-                <input
-                  type="text"
-                  name="nama"
-                  value={editData?.nama || ""}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  placeholder="Contoh: Tempat Penampung B"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Alamat Lengkap</label>
-                <textarea
-                  name="alamat"
-                  value={editData?.alamat || ""}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  placeholder="Contoh: Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit"
-                  rows="3"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">No. Telepon</label>
-                <input
-                  type="text"
-                  name="telepon"
-                  value={editData?.telepon || ""}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                  placeholder="Contoh: +6281212312312"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-gray-700 mb-2">Tipe</label>
-                <select
-                  name="tipe"
-                  value={editData?.tipe || ""}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-gray-300"
-                >
-                  <option value="" disabled>
-                    Pilih tipe tempat yang sesuai
-                  </option>
-                  <option value="Cabang">Cabang</option>
-                  <option value="Drop Point">Drop Point</option>
-                </select>
-              </div>
-              <div className="flex justify-end space-x-3">
+        {/* Delete Confirmation Modal */}
+        {isDeleteModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+              <h2 className="text-lg font-semibold text-red-600 mb-4">
+                Hapus Pos
+              </h2>
+              <p className="text-sm text-[#4A2C2A] mb-6">
+                Apakah Anda yakin ingin menghapus data ini? Data yang telah
+                dihapus tidak dapat dikembalikan lagi.
+              </p>
+              <div className="flex space-x-3">
                 <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="border border-gray-300 rounded-lg py-2 px-4 text-gray-600 hover:bg-gray-100"
+                  onClick={handleDelete}
+                  className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                >
+                  Konfirmasi
+                </button>
+                <button
+                  onClick={() => toggleDeleteModal(null)}
+                  className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
                 >
                   Batal
                 </button>
-                <button
-                  type="submit"
-                  className="bg-[#4a3e2a] text-white rounded-lg py-2 px-4 hover:bg-[#3a2e1a]"
-                >
-                  {isAdding ? "Tambah Pos" : "Simpan Perubahan"}
-                </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal for Delete Confirmation */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 backdrop-brightness-50 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 shadow-lg">
-            <h2 className="text-xl font-bold mb-4">Hapus Cabang</h2>
-            <p className="text-gray-700 mb-2">
-              Apakah Anda yakin ingin menghapus data ini? Data yang telah dihapus
-              tidak dapat dikembalikan lagi.
-            </p>
-            <p className="text-gray-700 mb-4 font-semibold">menghapusnya?</p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => handleDelete()}
-                className="bg-[#4a3e2a] text-white rounded-lg py-2 px-4 hover:bg-[#3a2e1a]"
-              >
-                Konfirmasi
-              </button>
-              <button
-                onClick={() => setIsDeleteModalOpen(false)}
-                className="border border-gray-300 rounded-lg py-2 px-4 text-gray-600 hover:bg-gray-100"
-              >
-                Batal
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Footer */}
+        {/* Table */}
+        <div className="bg-white rounded-lg shadow-md">
+          {isLoading ? (
+            <Spinner />
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-[#F5E9D4] text-[#4A2C2A] font-semibold">
+                  <th className="p-3 w-1/5">NAMA</th>
+                  <th className="p-3 w-2/5">ALAMAT</th>
+                  <th className="p-3 w-1/5">NO. TELEPON</th>
+                  <th className="p-3 w-1/5">TIPE</th>
+                  <th className="p-3 w-1/12">MENU</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentDropPoints.length > 0 ? (
+                  currentDropPoints.map((point, index) => {
+                    const dropdownPosition = getDropdownPosition(index);
+                    return (
+                      <tr
+                        key={index}
+                        className="border-t border-gray-200"
+                      >
+                        <td className="p-3 text-black">{point.nama}</td>
+                        <td className="p-3 text-black">{point.alamat}</td>
+                        <td className="p-3 text-black">{point.telepon}</td>
+                        <td className="p-3 text-black">{point.tipe}</td>
+                        <td className="p-3 relative">
+                          <button
+                            ref={(el) =>
+                              (dropdownRefs.current[index] = el)
+                            }
+                            onClick={() => toggleDropdown(index)}
+                            className="text-[#4A2C2A] hover:text-[#8B5A2B]"
+                            aria-label="Menu"
+                          >
+                            <BsThreeDotsVertical className="w-5 h-5" />
+                          </button>
+                          {openDropdownIndex === index && (
+                            <div
+                              className={`absolute right-4 ${dropdownPosition.top} bg-white border border-gray-200 rounded-lg shadow-md z-50 min-w-[120px]`}
+                              style={{ transform: dropdownPosition.transform }}
+                            >
+                              <ul className="text-sm text-[#4A2C2A]">
+                                <li
+                                  onClick={() =>
+                                    toggleUbahModal(
+                                      indexOfFirstItem + index
+                                    )
+                                  }
+                                  className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                                >
+                                  Ubah Data
+                                </li>
+                                <li
+                                  onClick={() =>
+                                    toggleDeleteModal(
+                                      indexOfFirstItem + index
+                                    )
+                                  }
+                                  className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                                >
+                                  Hapus Data
+                                </li>
+                              </ul>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="5"
+                      className="p-3 text-center text-black"
+                    >
+                      Tidak ada pos yang sesuai dengan pencarian.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {!isLoading && (
+          <div className="flex justify-end mt-4 space-x-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm ${
+                currentPage === 1
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-[#8B5A2B] hover:text-white"
+              }`}
+            >
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+              (page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    currentPage === page
+                      ? "bg-[#4A2C2A] text-white"
+                      : "border border-gray-300 text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                  }`}
+                >
+                  {page}
+                </button>
+              )
+            )}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm ${
+                currentPage === totalPages
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-[#8B5A2B] hover:text-white"
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </main>
+
       <Footer />
     </div>
   );

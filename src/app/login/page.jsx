@@ -65,15 +65,15 @@ export default function Login() {
     }
   });
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChange((currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        router.push('/homepage');
-      }
-    });
-    return () => unsubscribe();
-  }, [router]);
+  // useEffect(() => {
+  //   const unsubscribe = onAuthStateChange((currentUser) => {
+  //     setUser(currentUser);
+  //     if (currentUser) {
+  //       router.push('/');
+  //     }
+  //   });
+  //   return () => unsubscribe();
+  // }, [router]);
 
   const onSubmit = async (data) => {
     setError('');

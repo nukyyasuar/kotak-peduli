@@ -1,5 +1,3 @@
-'use client'
-
 import { initializeApp } from 'firebase/app';
 import { 
   getAuth, 
@@ -36,45 +34,80 @@ let recaptchaVerifier;
 
 export const setupRecaptcha = () => {
   if (!recaptchaVerifier) {
-    recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      'size': 'invisible',
-      'callback': (response) => {
-        // reCAPTCHA solved - allows SMS sending
-      },
-      'expired-callback': () => {
-        // Response expired. Reset reCAPTCHA
-        recaptchaVerifier.clear();
-        recaptchaVerifier = null;
-      }
-    });
+    try {
+      recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible',
+        'callback': (response) => {
+          console.log('reCAPTCHA solved:', response);
+        },
+        'expired-callback': () => {
+          console.log('reCAPTCHA expired, resetting...');
+          recaptchaVerifier.clear();
+          recaptchaVerifier = null;
+        }
+      });
+      console.log('reCAPTCHA verifier initialized');
+      return recaptchaVerifier.render().then(() => recaptchaVerifier);
+    } catch (error) {
+      console.error('reCAPTCHA initialization failed:', error);
+      throw new Error('Failed to initialize reCAPTCHA: ' + error.message);
+    }
   }
-  return recaptchaVerifier;
+  return Promise.resolve(recaptchaVerifier);
 };
 
 // Send verification code to phone number
 export const sendPhoneVerificationCode = async (phoneNumber) => {
-  
-    const verifier = setupRecaptcha();
+  try {
+    const verifier = await setupRecaptcha();
     const formattedPhoneNumber = phoneNumber.startsWith('+') 
       ? phoneNumber 
       : `+${phoneNumber}`; // Ensure phone number format with country code
     
+    console.log('Sending OTP to:', formattedPhoneNumber);
     const confirmationResult = await signInWithPhoneNumber(
       auth,
       formattedPhoneNumber,
       verifier
     );
     
+    console.log('ConfirmationResult created:', confirmationResult);
     return confirmationResult;
+  } catch (error) {
+    console.error('Error sending phone verification code:', error);
+    switch (error.code) {
+      case 'auth/invalid-phone-number':
+        throw new Error('Nomor telepon tidak valid. Pastikan format benar (contoh: +6281234567890).');
+      case 'auth/too-many-requests':
+        throw new Error('Terlalu banyak permintaan. Coba lagi nanti.');
+      case 'auth/quota-exceeded':
+        throw new Error('Kuota SMS terlampaui. Hubungi dukungan.');
+      default:
+        throw new Error('Gagal mengirim kode OTP: ' + error.message);
+    }
   }
+};
 
 // Verify OTP code
 export const verifyPhoneCode = async (confirmationResult, verificationCode) => {
   try {
+    if (!confirmationResult || typeof confirmationResult.confirm !== 'function') {
+      throw new Error('Invalid confirmation result. Please request a new OTP.');
+    }
+    console.log('Verifying OTP code:', verificationCode);
     const result = await confirmationResult.confirm(verificationCode);
+    console.log('OTP verification successful, user:', result.user);
     return result.user;
   } catch (error) {
-    throw new Error(error.message);
+    console.error('Error verifying OTP code:', error);
+    switch (error.code) {
+      case 'auth/invalid-verification-code':
+        throw new Error('Kode OTP tidak valid.');
+      case 'auth/session-expired':
+        throw new Error('Sesi OTP telah kedaluwarsa. Silakan minta kode baru.');
+      default:
+        throw new Error('Gagal memverifikasi OTP: ' + error.message);
+    }
   }
 };
 
@@ -116,7 +149,6 @@ export const loginWithEmail = async (email, password) => {
       throw new Error(result.message || 'Login failed');
     }
 
-    // Store token or user data in localStorage (adjust based on backend response)
     localStorage.setItem('authToken', result.token || result.accessToken);
     return result.user || result;
   } catch (error) {
@@ -138,14 +170,14 @@ export const registerWithEmail = async ({email, password, firstName, lastName, p
       phoneNumber
     });
 
-    console.log(raw);
+    console.log('Registering user:', raw);
 
     const requestOptions = {
       method: "POST",
       headers: myHeaders,
       body: raw,
       redirect: "follow",
-      credentials: 'include' // Include cookies in the request
+      credentials: 'include'
     };
 
     const response = await fetch("http://localhost:5000/auth/register", requestOptions);
@@ -155,7 +187,6 @@ export const registerWithEmail = async ({email, password, firstName, lastName, p
       throw new Error(result.message || 'Registration failed');
     }
 
-    // Optionally store token if registration auto-logs in
     if (result.token || result.accessToken) {
       localStorage.setItem('authToken', result.token || result.accessToken);
     }
@@ -168,7 +199,6 @@ export const registerWithEmail = async ({email, password, firstName, lastName, p
 // Logout
 export const logout = async () => {
   try {
-    // Optionally call a logout endpoint
     const myHeaders = new Headers();
     myHeaders.append("Content-Type", "application/json");
     myHeaders.append("Authorization", `Bearer ${localStorage.getItem('authToken')}`);
@@ -186,7 +216,7 @@ export const logout = async () => {
   }
 };
 
-// Check auth state (replace Firebase's onAuthStateChange)
+// Check auth state
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, callback);
-}
+};

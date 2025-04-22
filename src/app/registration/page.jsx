@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
@@ -15,6 +15,7 @@ import {
   setupRecaptcha,
   sendPhoneVerificationCode,
 } from '../auth/auth';
+import { setConfirmationResult } from '../auth/authStore';
 
 // Define validation schema with Yup
 const registrationSchema = Yup.object().shape({
@@ -73,20 +74,29 @@ export default function Registration() {
 
   // Initialize reCAPTCHA
   useEffect(() => {
-    const initializeRecaptcha = () => {
+    let isMounted = true;
+
+    const initializeRecaptcha = async () => {
       if (document.getElementById('recaptcha-container')) {
         try {
-          setupRecaptcha();
+          await setupRecaptcha();
           console.log('reCAPTCHA initialized in Registration');
         } catch (err) {
-          setError('Gagal menginisialisasi reCAPTCHA: ' + err.message);
+          if (isMounted) {
+            setError('Gagal menginisialisasi reCAPTCHA: ' + err.message);
+          }
         }
       } else {
         console.log('reCAPTCHA container not found, retrying...');
         setTimeout(initializeRecaptcha, 100);
       }
     };
+
     initializeRecaptcha();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -106,9 +116,8 @@ export default function Registration() {
       });
       console.log('Registration successful:', result);
       const confirmation = await sendPhoneVerificationCode(formattedPhoneNumber);
-      console.log('OTP sent, navigating to OTP page');
-      // Simpan confirmationResult di sessionStorage
-      sessionStorage.setItem('otpConfirmation', JSON.stringify(confirmation));
+      console.log('OTP sent, storing confirmation in authStore');
+      setConfirmationResult(confirmation); // Store in authStore
       reset();
       router.push(`/otplogin?phone=${encodeURIComponent(formattedPhoneNumber)}`);
     } catch (err) {
@@ -172,12 +181,6 @@ export default function Registration() {
           {error && (
             <p className="text-red-500 text-center mb-4">{error}</p>
           )}
-
-          {/* {user && (
-            <p className="text-green-500 text-center mb-4">
-              Anda sudah login sebagai {user.email}. Ingin menggunakan akun lain?
-            </p>
-          )} */}
 
           <div id="recaptcha-container" className="normal"></div>
 

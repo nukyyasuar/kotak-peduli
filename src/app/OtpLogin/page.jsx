@@ -1,10 +1,11 @@
-'use client'
+'use client';
 
-import Image from "next/image";
-import Head from "next/head";
-import { useState, useEffect } from "react";
-import { verifyPhoneCode, sendPhoneVerificationCode, setupRecaptcha } from '../auth/auth';
-import { useRouter, useSearchParams } from "next/navigation";
+import Image from 'next/image';
+import Head from 'next/head';
+import { useState, useEffect } from 'react';
+import { setupRecaptcha, verifyPhoneCode, sendPhoneVerificationCode } from '../auth/auth';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getConfirmationResult, clearConfirmationResult } from '../auth/authStore';
 
 export default function OtpLogin() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -12,45 +13,38 @@ export default function OtpLogin() {
   const [timer, setTimer] = useState(60);
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
-  const [phoneNumber, setPhoneNumber] = useState(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const phoneNumber = searchParams.get('phone') || 'nomor telepon anda';
 
-  // Initialize reCAPTCHA and handle phone number
   useEffect(() => {
+    let isMounted = true;
+
     const initializeRecaptcha = async () => {
-      if (document.getElementById('recaptcha-container')) {
-        try {
-          await setupRecaptcha();
-          console.log('reCAPTCHA initialized in OtpLogin');
-        } catch (err) {
-          console.error('reCAPTCHA initialization failed:', err);
-          setError('Gagal menginisialisasi reCAPTCHA. Silakan muat ulang halaman.');
+      try {
+        await setupRecaptcha();
+        console.log('reCAPTCHA initialized in OtpLogin');
+      } catch (err) {
+        if (isMounted) {
+          setError('Gagal menginisialisasi reCAPTCHA: ' + err.message);
         }
-      } else {
-        console.log('reCAPTCHA container not found, retrying...');
-        setTimeout(initializeRecaptcha, 100);
       }
     };
+
     initializeRecaptcha();
 
-    const phone = searchParams.get('phone');
-    if (phone) {
-      const decodedPhone = decodeURIComponent(phone);
-      if (/^\+62[8][0-9]{8,11}$/.test(decodedPhone)) {
-        setPhoneNumber(decodedPhone);
-        sendInitialOtp(decodedPhone);
-      } else {
-        setError('Nomor telepon tidak valid. Silakan daftar ulang.');
-        setTimeout(() => router.push('/registration'), 2000);
-      }
+    const confirmation = getConfirmationResult();
+    if (confirmation && typeof confirmation.confirm === 'function') {
+      setConfirmationResult(confirmation);
     } else {
-      setError('Nomor telepon tidak ditemukan. Silakan daftar ulang.');
-      setTimeout(() => router.push('/registration'), 2000);
+      setError('Tidak ada permintaan verifikasi ditemukan. Silakan daftar ulang.');
     }
-  }, [searchParams, router]);
 
-  // Countdown timer logic
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   useEffect(() => {
     let interval;
     if (isTimerRunning && timer > 0) {
@@ -63,55 +57,18 @@ export default function OtpLogin() {
     return () => clearInterval(interval);
   }, [isTimerRunning, timer]);
 
-  const sendInitialOtp = async (phone, retryCount = 0) => {
-    setError('');
-    if (!document.getElementById('recaptcha-container')) {
-      setError('reCAPTCHA container tidak ditemukan. Silakan muat ulang halaman.');
-      return;
-    }
-    try {
-      const confirmation = await sendPhoneVerificationCode(phone);
-      setConfirmationResult(confirmation);
-      console.log('Initial OTP sent to:', phone);
-    } catch (err) {
-      console.error('Error sending initial OTP:', err);
-      if (retryCount < 2 && err.code !== 'auth/quota-exceeded' && err.code !== 'auth/invalid-phone-number') {
-        console.log('Retrying OTP send, attempt:', retryCount + 1);
-        setTimeout(() => sendInitialOtp(phone, retryCount + 1), 1000);
-      } else {
-        switch (err.code) {
-          case 'auth/invalid-phone-number':
-            setError('Nomor telepon tidak valid. Silakan daftar ulang.');
-            setTimeout(() => router.push('/registration'), 2000);
-            break;
-          case 'auth/quota-exceeded':
-            setError('Kuota SMS telah habis. Silakan hubungi dukungan atau gunakan nomor pengujian.');
-            break;
-          case 'auth/too-many-requests':
-            setError('Terlalu banyak permintaan. Silakan coba lagi nanti.');
-            break;
-          case 'auth/error-code:-39':
-            setError('Masalah dengan verifikasi keamanan. Silakan coba kirim ulang kode atau muat ulang halaman.');
-            break;
-          default:
-            setError(err.message || 'Gagal mengirim OTP. Silakan coba kirim ulang.');
-        }
-      }
-    }
-  };
-
   const handleOtpChange = (element, index) => {
-    const value = element.value;
-    const newOtp = [...otp];
+    if (isNaN(element.value)) return;
 
-    newOtp[index] = value;
+    const newOtp = [...otp];
+    newOtp[index] = element.value;
     setOtp(newOtp);
 
-    if (value && element.nextSibling) {
+    if (element.value && element.nextSibling) {
       element.nextSibling.focus();
     }
 
-    if (!value && element.previousSibling && (element.value === '' || event.key === 'Backspace')) {
+    if (!element.value && element.previousSibling && (element.value === '' || event.key === 'Backspace')) {
       element.previousSibling.focus();
     }
   };
@@ -137,34 +94,28 @@ export default function OtpLogin() {
       return;
     }
 
-    if (!confirmationResult) {
-      setError('Tidak ada permintaan verifikasi. Silakan coba kirim ulang kode.');
+    if (!confirmationResult || typeof confirmationResult.confirm !== 'function') {
+      setError('Tidak ada permintaan verifikasi ditemukan. Silakan daftar ulang.');
       return;
     }
 
     try {
-      console.log('Attempting to verify OTP with confirmationResult:', confirmationResult);
       const user = await verifyPhoneCode(confirmationResult, code);
-      console.log('User signed in:', user);
+      console.log('OTP verification successful:', user);
+      clearConfirmationResult();
       alert('Verifikasi berhasil!');
       router.push('/login');
     } catch (err) {
-      console.error('Error verifying OTP:', err);
+      console.error('OTP verification error:', err);
       switch (err.code) {
         case 'auth/invalid-verification-code':
-          setError('Kode OTP salah. Silakan masukkan kode yang benar.');
+          setError('Kode OTP salah');
           break;
         case 'auth/session-expired':
           setError('Sesi OTP telah kedaluwarsa. Silakan minta kode baru.');
           break;
-        case 'auth/error-code:-39':
-          setError('Masalah dengan verifikasi keamanan. Silakan coba kirim ulang kode atau muat ulang halaman.');
-          break;
-        case 'auth/network-request-failed':
-          setError('Gagal terhubung ke server. Periksa koneksi internet Anda.');
-          break;
         default:
-          setError(err.message || 'Gagal memverifikasi OTP. Silakan coba lagi.');
+          setError(err.message || 'Gagal memverifikasi OTP');
       }
     }
   };
@@ -172,36 +123,27 @@ export default function OtpLogin() {
   const handleResendOtp = async () => {
     setError('');
     if (!phoneNumber) {
-      setError('Nomor telepon tidak ditemukan. Silakan daftar ulang.');
-      setTimeout(() => router.push('/registration'), 2000);
+      setError('Nomor telepon tidak tersedia. Silakan daftar ulang.');
       return;
     }
-    if (!document.getElementById('recaptcha-container')) {
-      setError('reCAPTCHA container tidak ditemukan. Silakan muat ulang halaman.');
-      return;
-    }
+
     try {
       const confirmation = await sendPhoneVerificationCode(phoneNumber);
       setConfirmationResult(confirmation);
       setTimer(60);
       setIsTimerRunning(true);
       setOtp(['', '', '', '', '', '']);
-      console.log('OTP resent to:', phoneNumber);
+      alert('Kode OTP baru telah dikirim.');
     } catch (err) {
-      console.error('Error resending OTP:', err);
       switch (err.code) {
         case 'auth/invalid-phone-number':
-          setError('Nomor telepon tidak valid. Silakan daftar ulang.');
-          setTimeout(() => router.push('/registration'), 2000);
+          setError('Format nomor telepon salah');
           break;
         case 'auth/too-many-requests':
           setError('Terlalu banyak permintaan. Silakan coba lagi nanti.');
           break;
         case 'auth/quota-exceeded':
-          setError('Kuota SMS telah habis. Silakan hubungi dukungan.');
-          break;
-        case 'auth/error-code:-39':
-          setError('Masalah dengan verifikasi keamanan. Silakan muat ulang halaman.');
+          setError('Kuota SMS telah habis. Hubungi dukungan.');
           break;
         default:
           setError(err.message || 'Gagal mengirim ulang OTP');
@@ -247,11 +189,11 @@ export default function OtpLogin() {
 
         <div className="w-1/2 p-6 flex flex-col justify-center">
           <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Verifikasi OTP</h2>
-
+          
           <p className="text-gray-600 text-base mb-4 text-center">
-            Masukkan kode OTP yang telah dikirimkan ke {phoneNumber || 'nomor telepon anda'}
+            Masukkan kode OTP yang telah dikirimkan ke {phoneNumber}
           </p>
-
+          
           <div className="flex space-x-2 mb-4 justify-center">
             {otp.map((data, index) => (
               <input
@@ -266,14 +208,20 @@ export default function OtpLogin() {
                   color: data ? '#131010' : '#000',
                   outlineColor: data ? '#131010' : '#C2C2C2',
                 }}
+                aria-label={`OTP digit ${index + 1}`}
+                aria-required="true"
+                autoComplete="one-time-code"
               />
             ))}
           </div>
 
-          <div id="recaptcha-container" className="normal"></div>
+          <div id="recaptcha-container" className="hidden"></div>
 
           <button
-            onClick={handleVerifyOtp}
+            onClick={() => {
+              console.log('Konfirmasi clicked');
+              handleVerifyOtp();
+            }}
             className="w-full bg-[#F5A623] text-white py-2 rounded-md hover:bg-[#e69520] transition-colors text-sm"
           >
             Konfirmasi

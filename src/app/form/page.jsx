@@ -3,69 +3,243 @@
 // pages/index.js
 import { useState, useRef, useEffect } from "react";
 import Head from "next/head";
-import Image from "next/image";
-import NavbarBeforeLogin from "../navbarBeforeLogin/page";
 import NavbarAfterLogin from "../navbarAfterLogin/page";
 import Footer from "../footer/page";
-import { Icon } from "@iconify/react"; // Import Iconify
+import { Icon } from "@iconify/react";
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [fileName, setFileName] = useState(""); // State to store the selected file name
-  const [isModalOpen, setIsModalOpen] = useState(false); // State to control modal visibility
-  const fileInputRef = useRef(null); // Ref to access the hidden file input
-  const mapRef = useRef(null); // Ref for the map container
+  const [donationItems, setDonationItems] = useState([]); 
+  const [fileNames, setFileNames] = useState({}); 
+  const [isModalOpen, setIsModalOpen] = useState(false); 
+  const [selectedLocation, setSelectedLocation] = useState(null); 
+  const [geolocationError, setGeolocationError] = useState(null);
+  const [formData, setFormData] = useState({
+    namaLengkap: "",
+    nomorTelpon: "",
+    alamatLengkap: "",
+    tempatPenampungan: "",
+    cabangDropPoint: "",
+    metodePengiriman: "",
+    items: [], 
+  }); 
+  const fileInputRefs = useRef({}); 
+  const mapRef = useRef(null); 
+  const mapInstanceRef = useRef(null); 
+  const scriptLoadedRef = useRef(false); 
 
-  // Function to handle file selection
-  const handleFileChange = (event) => {
+  // Function to handle file selection for a specific section
+  const handleFileChange = (index, event) => {
     const file = event.target.files[0];
     if (file) {
-      setFileName(file.name); // Update the displayed file name
+      setFileNames((prev) => ({ ...prev, [index]: file.name }));
+      setFormData((prev) => {
+        const updatedItems = [...prev.items];
+        updatedItems[index] = { ...updatedItems[index], file };
+        return { ...prev, items: updatedItems };
+      });
     }
   };
 
-  // Function to trigger the file input click
-  const handleFileButtonClick = () => {
-    fileInputRef.current.click(); // Programmatically trigger the hidden file input
+  // Function to trigger the file input click for a specific section
+  const handleFileButtonClick = (index) => {
+    if (fileInputRefs.current[index]) {
+      fileInputRefs.current[index].click();
+    }
   };
 
   // Function to open/close the modal
   const toggleModal = () => {
     setIsModalOpen(!isModalOpen);
+    setGeolocationError(null); // Reset error when modal opens/closes
   };
 
-  // Function to initialize the Google Map
+  // Function to handle saving the location
+  const handleSaveLocation = () => {
+    if (selectedLocation) {
+      console.log("Saved location:", selectedLocation);
+      // Add logic to save the location (e.g., send to backend or update form)
+    } else {
+      console.log("No location selected");
+    }
+    toggleModal();
+  };
+
+  // Function to add a new "Jenis Barang Donasi" section (up to 2)
+  const addDonationItem = () => {
+    if (donationItems.length < 2) {
+      setDonationItems([...donationItems, {}]);
+      setFormData((prev) => ({
+        ...prev,
+        items: [...prev.items, { event: "", jumlah: "", berat: "", file: null }],
+      }));
+    }
+  };
+
+  // Function to remove a specific "Jenis Barang Donasi" section
+  const removeDonationItem = (index) => {
+    setDonationItems(donationItems.filter((_, i) => i !== index));
+    setFileNames((prev) => {
+      const updated = { ...prev };
+      delete updated[index];
+      return updated;
+    });
+    setFormData((prev) => {
+      const updatedItems = prev.items.filter((_, i) => i !== index);
+      return { ...prev, items: updatedItems };
+    });
+  };
+
+  // Function to handle form submission
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log("Form submitted:", formData);
+    // Add logic to send formData to backend API
+  };
+
+  // Function to handle input changes for donation items
+  const handleItemChange = (index, field, value) => {
+    setFormData((prev) => {
+      const updatedItems = [...prev.items];
+      updatedItems[index] = { ...updatedItems[index], [field]: value };
+      return { ...prev, items: updatedItems };
+    });
+  };
+
+  // Function to get user's current location
+  const getUserLocation = (callback) => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const userLocation = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          };
+          setGeolocationError(null);
+          callback(userLocation);
+        },
+        (error) => {
+          console.error("Geolocation error:", error.message);
+          setGeolocationError("Gagal mendapatkan lokasi. Menggunakan lokasi default (Jakarta).");
+          callback({ lat: -6.2088, lng: 106.8456 });
+        },
+        {
+          timeout: 10000,
+          enableHighAccuracy: true,
+          maximumAge: 0,
+        }
+      );
+    } else {
+      console.error("Geolocation is not supported by this browser.");
+      setGeolocationError("Geolocation tidak didukung oleh browser Anda.");
+      callback({ lat: -6.2088, lng: 106.8456 });
+    }
+  };
+
+  // Function to initialize or update the map
+  const initMap = (initialLocation) => {
+    if (!mapRef.current) return;
+
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+        center: initialLocation,
+        zoom: 15,
+      });
+    } else {
+      mapInstanceRef.current.setCenter(initialLocation);
+    }
+
+    const map = mapInstanceRef.current;
+
+    let currentMarker = new google.maps.Marker({
+      position: initialLocation,
+      map: map,
+      title: "Your Location",
+    });
+
+    setSelectedLocation(initialLocation);
+
+    map.addListener("click", (event) => {
+      const clickedLocation = {
+        lat: event.latLng.lat(),
+        lng: event.latLng.lng(),
+      };
+
+      if (currentMarker) {
+        currentMarker.setMap(null);
+      }
+
+      currentMarker = new google.maps.Marker({
+        position: clickedLocation,
+        map: map,
+        title: "Selected Location",
+      });
+
+      setSelectedLocation(clickedLocation);
+      map.panTo(clickedLocation);
+    });
+
+    window.resetToUserLocation = () => {
+      getUserLocation((location) => {
+        if (currentMarker) {
+          currentMarker.setMap(null);
+        }
+
+        currentMarker = new google.maps.Marker({
+          position: location,
+          map: map,
+          title: "Your Location",
+        });
+
+        setSelectedLocation(location);
+        map.panTo(location);
+      });
+    };
+  };
+
+  // Load Google Maps script and initialize map
   useEffect(() => {
     if (isModalOpen && mapRef.current) {
       const loadGoogleMapsScript = () => {
-        const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap`;
-        script.async = true;
-        document.head.appendChild(script);
+        if (scriptLoadedRef.current && window.google && window.google.maps) {
+          getUserLocation((location) => initMap(location));
+          return;
+        }
 
-        window.initMap = () => {
-          const location = { lat: -6.2088, lng: 106.8456 }; // Default location (Jakarta, Indonesia)
-          const map = new google.maps.Map(mapRef.current, {
-            center: location,
-            zoom: 15,
-          });
+        if (!scriptLoadedRef.current) {
+          scriptLoadedRef.current = true;
+          const script = document.createElement("script");
+          script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBTJ0RDz8V6qAOZARcoMaVttH1Rco05I60&callback=initMap`;
+          script.async = true;
+          script.defer = true;
+          script.onerror = () => {
+            console.error("Failed to load Google Maps script");
+            scriptLoadedRef.current = false;
+          };
 
-          // Add a marker at the default location
-          new google.maps.Marker({
-            position: location,
-            map: map,
-            title: "Selected Location",
-          });
-        };
+          window.initMap = () => {
+            getUserLocation((location) => initMap(location));
+          };
+
+          document.head.appendChild(script);
+        }
       };
 
-      // Load the Google Maps script only if the modal is open
       loadGoogleMapsScript();
     }
+
+    return () => {
+      if (window.google && window.google.maps) {
+        google.maps.event.clearInstanceListeners(window);
+      }
+      if (!isModalOpen) {
+        window.initMap = null;
+        window.resetToUserLocation = null;
+      }
+    };
   }, [isModalOpen]);
 
   return (
-    <div className="flex flex-col h-screen bg-white">
+    <div className="flex flex-col bg-white">
       <Head>
         <title>Beri Barang - Donasi Barang</title>
         <meta name="description" content="Platform donasi barang bekas" />
@@ -83,121 +257,254 @@ export default function Home() {
           & tempat penampung yang dituju
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <div>
-            <h3 className="text-lg font-bold mb-2 text-[#000000]">Informasi Donatur</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block mb-1 font-bold text-[#000000]">
-                  Nama Lengkap
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
-                  defaultValue="Matthew Emmanuel"
-                />
-              </div>
+        <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <div>
+              <h3 className="text-lg font-bold mb-2 text-[#000000]">Informasi Donatur</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block mb-1 font-bold text-[#000000]">
+                    Nama Lengkap
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
+                    value={formData.namaLengkap}
+                    onChange={(e) =>
+                      setFormData({ ...formData, namaLengkap: e.target.value })
+                    }
+                    placeholder="Matthew Emmanuel"
+                  />
+                </div>
 
-              <div>
-                <label className="block mb-1 font-bold text-[#000000]">
-                  Nomor Telpon (Whatsapp)
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
-                  defaultValue="+62812468751243"
-                />
-              </div>
+                <div>
+                  <label className="block mb-1 font-bold text-[#000000]">
+                    Nomor Telpon (Whatsapp)
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
+                    value={formData.nomorTelpon}
+                    onChange={(e) =>
+                      setFormData({ ...formData, nomorTelpon: e.target.value })
+                    }
+                    placeholder="+62812468751243"
+                  />
+                </div>
 
-              <div>
-                <label className="block mb-1 font-bold text-[#000000]">
-                  Alamat Lengkap{" "}
-                  <span
-                    className="text-[#F0BB78] text-xs cursor-pointer underline"
+                <div>
+                  <label className="block mb-1 font-bold text-[#000000]">
+                    Alamat Lengkap{" "}
+                    <span className="text-[#F0BB78] text-xs underline">
+                      simpan sebagai rumah?
+                    </span>
+                  </label>
+                  <input
+                    className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
+                    value={formData.alamatLengkap}
+                    onChange={(e) =>
+                      setFormData({ ...formData, alamatLengkap: e.target.value })
+                    }
                     onClick={toggleModal}
-                  >
-                    simpan sebagai rumah?
-                  </span>
-                </label>
-                <input
-                  className="w-full border border-gray-300 rounded-md p-2 text-[#C2C2C2]"
-                  defaultValue="Jl. Tanah Air, Blok A, No. 1, Alam Sutera"
-                />
+                    placeholder="Jl. Tanah Air, Blok A, No. 1, Alam Sutera"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold mb-2 text-[#000000]">Tujuan Donasi</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block mb-1 font-bold text-[#000000]">
+                    Tempat Penampungan
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
+                      value={formData.tempatPenampungan}
+                      onChange={(e) =>
+                        setFormData({ ...formData, tempatPenampungan: e.target.value })
+                      }
+                    >
+                      <option value="">Pilih tempat penampung tujuan donasi</option>
+                      {/* Add options from backend endpoint */}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                      <Icon icon="mdi:chevron-down" className="h-5 w-5" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-bold text-gray-700">
+                    Cabang / Drop Point
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
+                      value={formData.cabangDropPoint}
+                      onChange={(e) =>
+                        setFormData({ ...formData, cabangDropPoint: e.target.value })
+                      }
+                    >
+                      <option value="">Pilih cabang atau drop point (jika tersedia)</option>
+                      {/* Add options from backend endpoint */}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                      <Icon icon="mdi:chevron-down" className="h-5 w-5" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-bold text-gray-700">
+                    Metode Pengiriman
+                  </label>
+                  <div className="relative">
+                    <select
+                      className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
+                      value={formData.metodePengiriman}
+                      onChange={(e) =>
+                        setFormData({ ...formData, metodePengiriman: e.target.value })
+                      }
+                    >
+                      <option value="">Pilih metode pengiriman barang</option>
+                      {/* Add options from backend endpoint */}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                      <Icon icon="mdi:chevron-down" className="h-5 w-5" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div>
-            <h3 className="text-lg font-bold mb-2 text-[#000000]">Tujuan Donasi</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block mb-1 font-bold text-[#000000]">
-                  Tempat Penampungan
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
-                    defaultValue="Pilih tempat penampung tujuan donasi"
-                  >
-                    <option>Pilih tempat penampung tujuan donasi</option>
-                    {/* Add options from backend endpoint */}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  </div>
-                </div>
-              </div>
+          <div className="mb-8">
+            <h3 className="text-lg font-bold mb-4 text-[#000000]">Jenis Barang Donasi</h3>
 
-              <div>
-                <label className="block mb-1 font-bold text-gray-700">
-                  Cabang / Drop Point
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
-                    defaultValue="Pilih cabang atau drop point (jika tersedia)"
-                  >
-                    <option>Pilih cabang atau drop point (jika tersedia)</option>
-                    {/* Add options from backend endpoint */}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+            {/* Render multiple "Jenis Barang Donasi" sections */}
+            {donationItems.map((_, index) => (
+              <div key={index} className="bg-[#FFF7E6] p-4 rounded-md mb-4">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex-1 mr-2">
+                    <label className="block mb-1 font-bold text-gray-700">
+                      Event
+                    </label>
+                    <div className="relative">
+                      <select
+                        className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
+                        value={formData.items[index]?.event || ""}
+                        onChange={(e) =>
+                          handleItemChange(index, "event", e.target.value)
+                        }
+                      >
+                        <option value="">Pilih event tujuan donasi (jika tersedia)</option>
+                        {/* Add options from backend endpoint */}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <Icon icon="mdi:chevron-down" className="h-5 w-5" />
+                      </div>
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    className="bg-red-500 text-white rounded-full h-8 w-8 flex items-center justify-center"
+                    onClick={() => removeDonationItem(index)}
+                  >
+                    <Icon icon="mdi:close" className="h-5 w-5" />
+                  </button>
                 </div>
-              </div>
 
-              <div>
-                <label className="block mb-1 font-bold text-gray-700">
-                  Metode Pengiriman
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none border border-gray-300 rounded-md py-2 px-4 pr-8 text-gray-400 bg-white focus:outline-none"
-                    defaultValue="Pilih metode pengiriman barang"
-                  >
-                    <option>Pilih metode pengiriman barang</option>
-                    {/* Add options from backend endpoint */}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <div className="flex justify-between items-center mb-4">
+                  <div className="flex-1 mr-2">
+                    <label className="block mb-1 font-bold text-gray-700">
+                      Jumlah Barang
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-md p-2 text-gray-700"
+                      value={formData.items[index]?.jumlah || ""}
+                      onChange={(e) =>
+                        handleItemChange(index, "jumlah", e.target.value)
+                      }
+                      placeholder="Contoh: 20"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block mb-1 font-bold text-gray-700">
+                      Total Berat Barang (kg)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        className="w-full border border-gray-300 rounded-md p-2 text-gray-700 pr-10"
+                        value={formData.items[index]?.berat || ""}
+                        onChange={(e) =>
+                          handleItemChange(index, "berat", e.target.value)
+                        }
+                        placeholder="Contoh: 10"
+                      />
+                      <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-700">
+                        kg
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center">
+                  <div className="flex-1 mr-2">
+                    <label className="block mb-1 font-bold text-gray-700">
+                      Foto Barang
+                    </label>
+                    <input
+                      type="file"
+                      ref={(el) => (fileInputRefs.current[index] = el)}
+                      className="hidden"
+                      accept=".jpg,.png"
+                      onChange={(e) => handleFileChange(index, e)}
+                    />
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        className="w-full border border-gray-300 rounded-md p-2 text-gray-700"
+                        value={fileNames[index] || ".jpg, .png"}
+                        readOnly
+                      />
+                      <button
+                        type="button"
+                        className="ml-2 bg-gray-200 text-gray-700 py-2 px-4 rounded-md"
+                        onClick={() => handleFileButtonClick(index)}
+                      >
+                        Pilih file
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            ))}
+
+            {/* Show "Tambah Jenis Barang" button only if less than 2 sections */}
+            {donationItems.length < 2 && (
+              <button
+                type="button"
+                className="flex items-center bg-[#F0BB78] text-[#543A14] py-2 px-4 rounded-md font-bold hover:bg-amber-200"
+                onClick={addDonationItem}
+              >
+                <Icon icon="mdi:plus" className="mr-2 h-5 w-5" />
+                Tambah Jenis Barang
+              </button>
+            )}
           </div>
-        </div>
 
-        <div className="mb-8">
-          <h3 className="text-lg font-bold mb-4 text-[#000000]">Jenis Barang Donasi</h3>
           <button
-            className="flex items-center bg-[#F0BB78] text-[#543A14] py-2 px-4 rounded-md font-bold hover:bg-amber-200"
-            onClick={() => setSelectedCategory("")}
+            type="submit"
+            className="w-full bg-amber-800 text-white py-3 rounded-md font-bold"
           >
-            <Icon icon="mdi:plus" className="mr-2 h-5 w-5" /> {/* Add Iconify plus icon */}
-            Tambah Jenis Barang
+            Kirim
           </button>
-        </div>
-
-        <button className="w-full bg-amber-800 text-white py-3 rounded-md font-bold">
-          Kirim
-        </button>
+        </form>
       </main>
 
       {/* Modal for "Simpan sebagai rumah?" */}
@@ -237,15 +544,24 @@ export default function Home() {
                     ref={mapRef}
                     className="border border-gray-300 rounded-md h-40 w-full"
                   />
+                  {geolocationError && (
+                    <p className="mt-2 text-sm text-red-600">{geolocationError}</p>
+                  )}
+                  <button
+                    className="mt-2 flex items-center bg-[#F0BB78] text-[#543A14] py-1 px-3 rounded-md font-bold hover:bg-amber-200"
+                    onClick={() => window.resetToUserLocation()}
+                  >
+                    <Icon icon="mdi:map-marker" className="mr-1 h-5 w-5" />
+                    Kembali ke Lokasi Saya
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Footer section for buttons */}
-            <div className=" p-4 flex justify-end space-x-3 rounded-b-lg bg-transparent">
+            <div className="p-4 flex justify-end space-x-3 rounded-b-lg bg-transparent">
               <button
                 className="flex-1 bg-[#F0BB78] text-[#543A14] py-2 rounded-md font-bold"
-                onClick={toggleModal}
+                onClick={handleSaveLocation}
               >
                 Simpan
               </button>
