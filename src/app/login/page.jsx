@@ -47,6 +47,7 @@ export default function Login() {
   const [user, setUser] = useState(null);
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // New loading state
   const router = useRouter();
 
   const { 
@@ -77,6 +78,7 @@ export default function Login() {
 
   const onSubmit = async (data) => {
     setError('');
+    setIsLoading(true); // Start loading
     try {
       if (isLogin) {
         await loginWithEmail(data.email, data.password);
@@ -93,27 +95,35 @@ export default function Login() {
       router.push('/homepage');
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
   const handleGoogleLogin = async () => {
+    setError('');
+    setIsLoading(true); // Start loading
     try {
-      setError('');
       await loginWithGoogle();
       router.push('/homepage');
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
   const handleLogout = async () => {
+    setError('');
+    setIsLoading(true); // Start loading
     try {
-      setError('');
       await logout();
       setUser(null);
       reset();
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsLoading(false); // Stop loading
     }
   };
 
@@ -129,15 +139,15 @@ export default function Login() {
         <div className="w-full md:w-1/2 mb-6 md:mb-0">
           <div className="p-4">
             <div className="absolute top-0 left-0 cursor-pointer">
-                    <div className="flex items-center">
-                      <Image
-                        src="/Main Design Skripsi Frame 431.webp"
-                        alt="Beri Barang Logo"
-                        width={188}
-                        height={80}
-                      />
-                    </div>
-                  </div>
+              <div className="flex items-center">
+                <Image
+                  src="/Main Design Skripsi Frame 431.webp"
+                  alt="Beri Barang Logo"
+                  width={188}
+                  height={80}
+                />
+              </div>
+            </div>
             <div className="bg-[#FDF6E7] rounded-2xl p-4">
               <div className="relative h-80 w-full">
                 <Image
@@ -171,8 +181,9 @@ export default function Login() {
                 <button
                   onClick={handleLogout}
                   className="text-sm text-gray-600 hover:text-amber-600 underline"
+                  disabled={isLoading}
                 >
-                  Gunakan akun lain
+                  {isLoading ? 'Memproses...' : 'Gunakan akun lain'}
                 </button>
               </div>
             )}
@@ -190,6 +201,7 @@ export default function Login() {
                       }`}
                       placeholder="Masukkan nama depan"
                       {...register('firstName')}
+                      disabled={isLoading}
                     />
                     {errors.firstName && (
                       <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
@@ -206,6 +218,7 @@ export default function Login() {
                       }`}
                       placeholder="Masukkan nama belakang"
                       {...register('lastName')}
+                      disabled={isLoading}
                     />
                     {errors.lastName && (
                       <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
@@ -222,6 +235,7 @@ export default function Login() {
                       }`}
                       placeholder="+6281234567890"
                       {...register('phoneNumber')}
+                      disabled={isLoading}
                     />
                     {errors.phoneNumber && (
                       <p className="text-red-500 text-sm mt-1">{errors.phoneNumber.message}</p>
@@ -240,6 +254,7 @@ export default function Login() {
                   }`}
                   placeholder="example@email.com"
                   {...register('email')}
+                  disabled={isLoading}
                 />
                 {errors.email && (
                   <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
@@ -256,6 +271,7 @@ export default function Login() {
                   }`}
                   placeholder="Masukkan minimum 6 karakter"
                   {...register('password')}
+                  disabled={isLoading}
                 />
                 {errors.password && (
                   <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
@@ -264,9 +280,36 @@ export default function Login() {
               
               <button
                 type="submit"
-                className="w-full bg-[#F2CB92] hover:bg-amber-400 transition text-black py-3 px-4 rounded-lg font-medium mb-4"
+                className="w-full bg-[#F2CB92] hover:bg-amber-400 transition text-black py-3 chase:animate-pulse px-4 rounded-lg font-medium mb-4 flex items-center justify-center"
+                disabled={isLoading}
               >
-                {isLogin ? 'Masuk' : 'Buat Akun'}
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 mr-2 text-black"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Memproses...
+                  </>
+                ) : (
+                  isLogin ? 'Masuk' : 'Buat Akun'
+                )}
               </button>
               
               <div className="flex items-center justify-center mb-4">
@@ -279,15 +322,45 @@ export default function Login() {
                 type="button"
                 onClick={handleGoogleLogin}
                 className="w-full flex items-center justify-center border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium mb-4"
+                disabled={isLoading}
               >
-                <FcGoogle size={20} />
-                <span className='ml-2 font-bold'>Google</span>
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="animate-spin h-5 w-5 mr-2 text-gray-700"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle size={20} />
+                    <span className='ml-2 font-bold'>Google</span>
+                  </>
+                )}
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}
                 className="w-full text-center text-sm text-gray-600 hover:text-amber-600"
+                disabled={isLoading}
               >
                 {isLogin ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
               </button>

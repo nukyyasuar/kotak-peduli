@@ -3,11 +3,11 @@
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
-import NavbarBeforeLogin from "../navbarBeforeLogin/page";
-import NavbarAfterLogin from "../navbarAfterLogin/page";
-import Footer from "../footer/page";
 import { Icon } from "@iconify/react";
 import { useState, useEffect } from "react";
+import Footer from "../footer/page";
+import NavbarBeforeLogin from "../navbarBeforeLogin/page";
+import NavbarAfterLogin from "../navbarAfterLogin/page";
 
 export default function Home() {
   // Simulate login state (replace with actual auth logic)
@@ -88,7 +88,9 @@ export default function Home() {
               <h2 className="text-3xl font-bold mb-2 whitespace-nowrap">
                 Dari bekas menjadi berkah.
               </h2>
-              <p className="text-lg whitespace-nowrap">Mari bantu sesama demi Indonesia makmur</p>
+              <p className="text-lg whitespace-nowrap">
+                Mari bantu sesama demi Indonesia makmur
+              </p>
             </div>
             <div className="bg-[#5C3D15] bg-opacity-90 p-6 text-white">
               <h2 className="text-2xl font-bold mb-2 whitespace-nowrap">
@@ -510,7 +512,7 @@ export default function Home() {
         </div>
       </section>
 
-      <Footer />
+      <Footer/>
     </>
   );
 }

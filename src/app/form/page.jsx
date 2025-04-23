@@ -12,7 +12,9 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [geolocationError, setGeolocationError] = useState(null);
-  const [streetInput, setStreetInput] = useState(""); // State for street input
+  const [streetInput, setStreetInput] = useState("");
+  const [isLocating, setIsLocating] = useState(false);
+  const [mapError, setMapError] = useState(null);
   const [formData, setFormData] = useState({
     namaLengkap: "",
     nomorTelpon: "",
@@ -25,6 +27,8 @@ export default function Home() {
   const fileInputRefs = useRef({});
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const streetInputRef = useRef(null);
+  const autocompleteRef = useRef(null);
   const scriptLoadedRef = useRef(false);
 
   // Function to handle file selection for a specific section
@@ -50,9 +54,20 @@ export default function Home() {
   // Function to open/close the modal
   const toggleModal = () => {
     setIsModalOpen(!isModalOpen);
-    setGeolocationError(null); // Reset error when modal opens/closes
+    setGeolocationError(null);
+    setMapError(null);
     if (!isModalOpen) {
-      setStreetInput(""); // Clear street input when opening modal
+      setStreetInput("");
+    } else {
+      // Reset map instance when closing modal
+      if (mapInstanceRef.current) {
+        google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+        mapInstanceRef.current = null;
+      }
+      if (window.currentMarker) {
+        window.currentMarker.setMap(null);
+        window.currentMarker = null;
+      }
     }
   };
 
@@ -60,7 +75,6 @@ export default function Home() {
   const handleSaveLocation = () => {
     if (selectedLocation) {
       console.log("Saved location:", selectedLocation);
-      // Update formData with the street input or fallback to coordinates
       setFormData((prev) => ({
         ...prev,
         alamatLengkap: streetInput || `Lat: ${selectedLocation.lat.toFixed(6)}, Lng: ${selectedLocation.lng.toFixed(6)}`,
@@ -112,65 +126,89 @@ export default function Home() {
     });
   };
 
-  // Function to get user's current location
+  // Function to get user's current location with high accuracy
   const getUserLocation = (callback) => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const userLocation = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          };
-          setGeolocationError(null);
-          callback(userLocation);
-        },
-        (error) => {
-          console.error("Geolocation error:", error.message);
-          setGeolocationError("Gagal mendapatkan lokasi. Menggunakan lokasi default (Jakarta).");
-          callback({ lat: -6.2088, lng: 106.8456 });
-        },
-        {
-          timeout: 10000,
-          enableHighAccuracy: true,
-          maximumAge: 0,
-        }
-      );
-    } else {
-      console.error("Geolocation is not supported by this browser.");
+    if (!navigator.geolocation) {
       setGeolocationError("Geolocation tidak didukung oleh browser Anda.");
-      callback({ lat: -6.2088, lng: 106.8456 });
+      callback({ lat: -6.2088, lng: 106.8456 }); // Fallback to Jakarta
+      return;
     }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userLocation = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        };
+        setGeolocationError(null);
+        setIsLocating(false);
+        callback(userLocation);
+      },
+      (error) => {
+        setIsLocating(false);
+        let errorMessage;
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Izin lokasi ditolak. Silakan aktifkan izin lokasi.";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Lokasi tidak tersedia. Menggunakan lokasi default.";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Waktu untuk mendapatkan lokasi habis.";
+            break;
+          default:
+            errorMessage = "Terjadi kesalahan saat mendapatkan lokasi.";
+        }
+        setGeolocationError(errorMessage);
+        callback({ lat: -6.2088, lng: 106.8456 }); // Fallback to Jakarta
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
   // Function to reverse geocode coordinates to street address
   const reverseGeocode = (location, callback) => {
+    if (!window.google || !window.google.maps) {
+      console.error("Google Maps API not available for geocoding");
+      callback("Tidak dapat menemukan alamat");
+      return;
+    }
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ location }, (results, status) => {
       if (status === "OK" && results[0]) {
         callback(results[0].formatted_address);
       } else {
         console.error("Geocoding failed:", status);
-        callback(`Tidak dapat menemukan alamat untuk lokasi ini`);
+        callback("Tidak dapat menemukan alamat untuk lokasi ini");
       }
     });
   };
 
   // Function to initialize or update the map
   const initMap = (initialLocation) => {
-    if (!mapRef.current) return;
-
-    if (!mapInstanceRef.current) {
-      mapInstanceRef.current = new google.maps.Map(mapRef.current, {
-        center: initialLocation,
-        zoom: 15,
-      });
-    } else {
-      mapInstanceRef.current.setCenter(initialLocation);
+    if (!mapRef.current || !window.google || !window.google.maps) {
+      console.error("Map container or Google Maps API not available");
+      setMapError("Gagal memuat peta. Silakan coba lagi nanti.");
+      return;
     }
+
+    mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+      center: initialLocation,
+      zoom: 15,
+      mapTypeControl: false,
+      streetViewControl: false,
+    });
 
     const map = mapInstanceRef.current;
 
-    let currentMarker = new google.maps.Marker({
+    window.currentMarker = new google.maps.Marker({
       position: initialLocation,
       map: map,
       title: "Your Location",
@@ -184,102 +222,184 @@ export default function Home() {
         lng: event.latLng.lng(),
       };
 
-      if (currentMarker) {
-        currentMarker.setMap(null);
+      if (window.currentMarker) {
+        window.currentMarker.setMap(null);
       }
 
-      currentMarker = new google.maps.Marker({
+      window.currentMarker = new google.maps.Marker({
         position: clickedLocation,
         map: map,
         title: "Selected Location",
       });
 
       setSelectedLocation(clickedLocation);
-      // Reverse geocode the clicked location to get the street address
       reverseGeocode(clickedLocation, (address) => {
         setStreetInput(address);
       });
       map.panTo(clickedLocation);
     });
-
-    window.resetToUserLocation = () => {
-      getUserLocation((location) => {
-        if (currentMarker) {
-          currentMarker.setMap(null);
-        }
-
-        currentMarker = new google.maps.Marker({
-          position: location,
-          map: map,
-          title: "Your Location",
-        });
-
-        setSelectedLocation(location);
-        // Reverse geocode the user's location to get the street address
-        reverseGeocode(location, (address) => {
-          setStreetInput(address);
-        });
-        map.panTo(location);
-      });
-    };
   };
 
-  // Load Google Maps script and initialize map
-  useEffect(() => {
-    if (isModalOpen && mapRef.current) {
-      const loadGoogleMapsScript = () => {
-        if (scriptLoadedRef.current && window.google && window.google.maps) {
-          getUserLocation((location) => {
-            initMap(location);
-            // Set initial street input with user's location address
-            reverseGeocode(location, (address) => {
-              setStreetInput(address);
-            });
-          });
-          return;
-        }
-
-        if (!scriptLoadedRef.current) {
-          scriptLoadedRef.current = true;
-          const script = document.createElement("script");
-          script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBTJ0RDz8V6qAOZARcoMaVttH1Rco05I60&callback=initMap`;
-          script.async = true;
-          script.defer = true;
-          script.onerror = () => {
-            console.error("Failed to load Google Maps script");
-            scriptLoadedRef.current = false;
-          };
-
-          window.initMap = () => {
-            getUserLocation((location) => {
-              initMap(location);
-              // Set initial street input with user's location address
-              reverseGeocode(location, (address) => {
-                setStreetInput(address);
-              });
-            });
-          };
-
-          document.head.appendChild(script);
-        }
-      };
-
-      loadGoogleMapsScript();
+  // Function to update map with new location
+  const updateMapWithLocation = (location) => {
+    if (!mapInstanceRef.current || !window.google || !window.google.maps) {
+      console.error("Map instance or Google Maps API not available");
+      setMapError("Gagal memperbarui peta. Silakan coba lagi.");
+      return;
     }
 
-    return () => {
-      if (window.google && window.google.maps) {
-        google.maps.event.clearInstanceListeners(window);
-      }
-      if (!isModalOpen) {
-        window.initMap = null;
-        window.resetToUserLocation = null;
-      }
+    mapInstanceRef.current.setCenter(location);
+
+    if (window.currentMarker) {
+      window.currentMarker.setMap(null);
+    }
+
+    window.currentMarker = new google.maps.Marker({
+      position: location,
+      map: mapInstanceRef.current,
+      title: "Lokasi Anda",
+    });
+
+    setSelectedLocation(location);
+
+    reverseGeocode(location, (address) => {
+      setStreetInput(address);
+    });
+  };
+
+  // Function to reset to user location
+  window.resetToUserLocation = () => {
+    getUserLocation((location) => {
+      updateMapWithLocation(location);
+      console.log(`Lokasi ditemukan dengan akurasi ${location.accuracy} meter`);
+    });
+  };
+
+  // Function to initialize Autocomplete
+  const initAutocomplete = () => {
+    if (!streetInputRef.current) {
+      console.error("Street input reference is not set");
+      setMapError("Input alamat tidak ditemukan.");
+      return;
+    }
+    if (!window.google || !window.google.maps.places) {
+      console.error("Google Maps Places API is not available");
+      setMapError("Gagal memuat fitur pencarian alamat. Silakan masukkan alamat secara manual.");
+      return;
+    }
+
+    console.log("Initializing Autocomplete...");
+    try {
+      autocompleteRef.current = new google.maps.places.Autocomplete(streetInputRef.current, {
+        types: ["address"],
+        componentRestrictions: { country: "id" },
+        fields: ["formatted_address", "geometry"],
+      });
+
+      autocompleteRef.current.addListener("place_changed", () => {
+        const place = autocompleteRef.current.getPlace();
+        console.log("Place selected:", place);
+        if (place.geometry) {
+          const location = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          };
+          setStreetInput(place.formatted_address);
+          setSelectedLocation(location);
+
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.setCenter(location);
+            if (window.currentMarker) {
+              window.currentMarker.setMap(null);
+            }
+            window.currentMarker = new google.maps.Marker({
+              position: location,
+              map: mapInstanceRef.current,
+              title: "Selected Location",
+            });
+          }
+        } else {
+          console.error("No geometry available for selected place");
+        }
+      });
+    } catch (error) {
+      console.error("Failed to initialize Autocomplete:", error);
+      setMapError("Gagal menginisialisasi pencarian alamat. Silakan masukkan alamat secara manual.");
+    }
+  };
+
+  // Load Google Maps script
+  useEffect(() => {
+    if (scriptLoadedRef.current || (window.google && window.google.maps && window.google.maps.places)) {
+      console.log("Google Maps API already loaded");
+      return;
+    }
+
+    scriptLoadedRef.current = true;
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBTJ0RDz8V6qAOZARcoMaVttH1Rco05I60&libraries=places&callback=initGoogleMaps`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = () => {
+      console.error("Failed to load Google Maps script. Check API key, billing, and network.");
+      setMapError("Gagal memuat Google Maps. Periksa koneksi internet atau hubungi admin.");
+      scriptLoadedRef.current = false;
     };
+
+    window.initGoogleMaps = () => {
+      console.log("Google Maps API loaded successfully");
+      setMapError(null); // Clear any previous errors
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+      scriptLoadedRef.current = false;
+      delete window.initGoogleMaps;
+    };
+  }, []);
+
+  // Initialize map and autocomplete when modal opens
+  useEffect(() => {
+    if (!isModalOpen) return;
+
+    if (!window.google || !window.google.maps || !window.google.maps.places) {
+      console.log("Waiting for Google Maps Places API...");
+      setMapError("Menunggu Google Maps dimuat...");
+      return;
+    }
+
+    getUserLocation((location) => {
+      initMap(location);
+      reverseGeocode(location, (address) => {
+        setStreetInput(address);
+      });
+      initAutocomplete();
+    });
   }, [isModalOpen]);
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        google.maps.event.clearInstanceListeners(mapInstanceRef.current);
+        mapInstanceRef.current = null;
+      }
+      if (autocompleteRef.current) {
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
+      }
+      if (window.currentMarker) {
+        window.currentMarker.setMap(null);
+        window.currentMarker = null;
+      }
+      window.resetToUserLocation = null;
+    };
+  }, []);
+
   return (
-    <div className="flex flex-col bg-white">
+    <div className="flex flex-col min-h-screen bg-white">
       <Head>
         <title>Beri Barang - Donasi Barang</title>
         <meta name="description" content="Platform donasi barang bekas" />
@@ -368,7 +488,6 @@ export default function Home() {
                       }
                     >
                       <option value="">Pilih tempat penampung tujuan donasi</option>
-                      {/* Add options from backend endpoint */}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                       <Icon icon="mdi:chevron-down" className="h-5 w-5" />
@@ -389,7 +508,6 @@ export default function Home() {
                       }
                     >
                       <option value="">Pilih cabang atau drop point (jika tersedia)</option>
-                      {/* Add options from backend endpoint */}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                       <Icon icon="mdi:chevron-down" className="h-5 w-5" />
@@ -410,7 +528,6 @@ export default function Home() {
                       }
                     >
                       <option value="">Pilih metode pengiriman barang</option>
-                      {/* Add options from backend endpoint */}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                       <Icon icon="mdi:chevron-down" className="h-5 w-5" />
@@ -424,7 +541,6 @@ export default function Home() {
           <div className="mb-8">
             <h3 className="text-lg font-bold mb-4 text-[#000000]">Jenis Barang Donasi</h3>
 
-            {/* Render multiple "Jenis Barang Donasi" sections */}
             {donationItems.map((_, index) => (
               <div key={index} className="bg-[#FFF7E6] p-4 rounded-md mb-4">
                 <div className="flex justify-between items-center mb-4">
@@ -441,7 +557,6 @@ export default function Home() {
                         }
                       >
                         <option value="">Pilih event tujuan donasi (jika tersedia)</option>
-                        {/* Add options from backend endpoint */}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                         <Icon icon="mdi:chevron-down" className="h-5 w-5" />
@@ -525,7 +640,6 @@ export default function Home() {
               </div>
             ))}
 
-            {/* Show "Tambah Jenis Barang" button only if less than 2 sections */}
             {donationItems.length < 2 && (
               <button
                 type="button"
@@ -547,7 +661,6 @@ export default function Home() {
         </form>
       </main>
 
-      {/* Modal for "Simpan sebagai rumah?" */}
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 bg-opacity-50 z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md flex flex-col">
@@ -560,10 +673,11 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
+                    ref={streetInputRef}
                     className="w-full border border-gray-300 rounded-md p-2 text-gray-700"
                     value={streetInput}
                     onChange={(e) => setStreetInput(e.target.value)}
-                    placeholder="Klik peta untuk memilih alamat"
+                    placeholder="Masukkan nama jalan atau klik peta"
                   />
                 </div>
 
@@ -586,15 +700,19 @@ export default function Home() {
                     ref={mapRef}
                     className="border border-gray-300 rounded-md h-40 w-full"
                   />
+                  {mapError && (
+                    <p className="mt-2 text-sm text-red-600">{mapError}</p>
+                  )}
                   {geolocationError && (
                     <p className="mt-2 text-sm text-red-600">{geolocationError}</p>
                   )}
                   <button
                     className="mt-2 flex items-center bg-[#F0BB78] text-[#543A14] py-1 px-3 rounded-md font-bold hover:bg-amber-200"
-                    onClick={() => window.resetToUserLocation()}
+                    onClick={() => window.resetToUserLocation && window.resetToUserLocation()}
+                    disabled={isLocating}
                   >
                     <Icon icon="mdi:map-marker" className="mr-1 h-5 w-5" />
-                    Kembali ke Lokasi Saya
+                    {isLocating ? "Mencari Lokasi..." : "Kembali ke Lokasi Saya"}
                   </button>
                 </div>
               </div>

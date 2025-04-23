@@ -9,15 +9,13 @@ import { useForm } from "react-hook-form";
 import * as Yup from 'yup';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
-  registerWithEmail,
   loginWithGoogle,
   onAuthStateChange,
-  // setupRecaptcha,
   sendPhoneVerificationCode,
 } from '../auth/auth';
 import { setConfirmationResult } from '../auth/authStore';
 
-// Define validation schema with Yup
+// Validation schema remains unchanged
 const registrationSchema = Yup.object().shape({
   firstName: Yup.string()
     .required('Nama depan tidak boleh kosong')
@@ -47,6 +45,7 @@ const registrationSchema = Yup.object().shape({
 export default function Registration() {
   const [error, setError] = useState('');
   const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const {
@@ -72,33 +71,6 @@ export default function Registration() {
   const emailValue = watch("email");
   const passwordValue = watch("password");
 
-  // Initialize reCAPTCHA
-  // useEffect(() => {
-  //   let isMounted = true;
-
-  //   const initializeRecaptcha = async () => {
-  //     if (document.getElementById('recaptcha-container')) {
-  //       try {
-  //         await setupRecaptcha();
-  //         console.log('reCAPTCHA initialized in Registration');
-  //       } catch (err) {
-  //         if (isMounted) {
-  //           setError('Gagal menginisialisasi reCAPTCHA: ' + err.message);
-  //         }
-  //       }
-  //     } else {
-  //       console.log('reCAPTCHA container not found, retrying...');
-  //       setTimeout(initializeRecaptcha, 100);
-  //     }
-  //   };
-
-  //   initializeRecaptcha();
-
-  //   return () => {
-  //     isMounted = false;
-  //   };
-  // }, []);
-
   useEffect(() => {
     const unsubscribe = onAuthStateChange((currentUser) => {
       setUser(currentUser);
@@ -108,21 +80,29 @@ export default function Registration() {
 
   const onSubmit = async (data) => {
     setError('');
+    setIsLoading(true);
     try {
       const formattedPhoneNumber = '+62' + data.phoneNumber;
-      const result = await registerWithEmail({
-        ...data,
-        phoneNumber: formattedPhoneNumber
-      });
-      console.log('Registration successful:', result);
+
+      // Store registration data temporarily in localStorage
+      localStorage.setItem('pendingRegistration', JSON.stringify({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: formattedPhoneNumber,
+        email: data.email,
+        password: data.password,
+      }));
+
+      // Send OTP for phone verification
       const confirmation = await sendPhoneVerificationCode(formattedPhoneNumber);
-      console.log('OTP sent, storing confirmation in authStore');
-      setConfirmationResult(confirmation); // Store in authStore
+      setConfirmationResult(confirmation);
       reset();
       router.push(`/otplogin?phone=${encodeURIComponent(formattedPhoneNumber)}`);
     } catch (err) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Terjadi kesalahan saat mendaftar');
+      console.error('Error during OTP sending:', err);
+      setError(err.message || 'Terjadi kesalahan saat mengirim OTP');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -136,6 +116,7 @@ export default function Registration() {
     }
   };
 
+  // JSX remains unchanged
   return (
     <div className="min-h-screen bg-white flex">
       <Head>
@@ -284,9 +265,36 @@ export default function Registration() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-[#F0BB78] text-white font-bold rounded-md transition duration-200"
+              className="w-full py-3 bg-[#F0BB78] text-white font-bold rounded-md transition duration-200 flex items-center justify-center"
+              disabled={isLoading}
             >
-              Buat Akun
+              {isLoading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 mr-2 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Memproses...
+                </>
+              ) : (
+                'Buat Akun'
+              )}
             </button>
 
             <div className="flex items-center my-6">
