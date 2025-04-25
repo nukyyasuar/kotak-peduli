@@ -5,9 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { useState, useEffect } from "react";
-import Footer from "../footer/page";
-import NavbarBeforeLogin from "../navbarBeforeLogin/page";
-import NavbarAfterLogin from "../navbarAfterLogin/page";
+import Footer from "../../components/footer";
+import NavbarBeforeLogin from "../../components/navbarBeforeLogin";
+import NavbarAfterLogin from "../../components/navbarAfterLogin";
 
 export default function Home() {
   // Simulate login state (replace with actual auth logic)

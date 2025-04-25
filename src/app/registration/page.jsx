@@ -15,7 +15,7 @@ import {
 } from '../auth/auth';
 import { setConfirmationResult } from '../auth/authStore';
 
-// Validation schema remains unchanged
+// Validation schema
 const registrationSchema = Yup.object().shape({
   firstName: Yup.string()
     .required('Nama depan tidak boleh kosong')
@@ -27,9 +27,7 @@ const registrationSchema = Yup.object().shape({
     .matches(/^[A-Za-z\s]+$/, 'Nama belakang hanya boleh berisi huruf dan spasi'),
   phoneNumber: Yup.string()
     .required('Nomor telepon tidak boleh kosong')
-    .min(9, 'Nomor telepon harus berisi minimal 9 digit')
-    .max(13, 'Nomor telepon tidak boleh lebih dari 13 digit')
-    .matches(/^[8][0-9]*$/, 'Nomor telepon harus diawali dengan angka ‘8’'),
+    .matches(/^[8][0-9]{8,11}$/, 'Nomor telepon harus diawali dengan angka ‘8’ dan berisi 9–12 digit'),
   email: Yup.string()
     .required('Email tidak boleh kosong')
     .email('Format email salah. Masukkan format email yang valid (contoh: user@example.com)'),
@@ -78,26 +76,74 @@ export default function Registration() {
     return () => unsubscribe();
   }, []);
 
+  const isValidPhoneNumber = (phone) => {
+    return phone && phone.startsWith('+62') && phone.length >= 12 && phone.length <= 15;
+  };
+
+  const saveRegistrationData = (data) => {
+    try {
+      localStorage.setItem('registrationData', JSON.stringify(data));
+      const storedData = JSON.parse(localStorage.getItem('registrationData'));
+      if (!storedData || !storedData.email || !storedData.password || !storedData.phoneNumber) {
+        throw new Error('Gagal menyimpan data registrasi ke localStorage.');
+      }
+      console.log('Successfully stored registrationData:', storedData);
+      return true;
+    } catch (err) {
+      console.error('Error saving registrationData:', err);
+      throw new Error('Gagal menyimpan data registrasi: ' + err.message);
+    }
+  };
+
   const onSubmit = async (data) => {
     setError('');
     setIsLoading(true);
     try {
       const formattedPhoneNumber = '+62' + data.phoneNumber;
 
-      // Store registration data temporarily in localStorage
-      localStorage.setItem('pendingRegistration', JSON.stringify({
+      if (!isValidPhoneNumber(formattedPhoneNumber)) {
+        throw new Error('Nomor telepon tidak valid. Pastikan nomor diawali dengan 8 dan berisi 9–12 digit.');
+      }
+
+      const registrationData = {
         firstName: data.firstName,
         lastName: data.lastName,
         phoneNumber: formattedPhoneNumber,
         email: data.email,
         password: data.password,
-      }));
+      };
 
-      // Send OTP for phone verification
+      // Validate registrationData before storing
+      if (!registrationData.email || !registrationData.password || !registrationData.phoneNumber) {
+        throw new Error('Data registrasi tidak lengkap. Silakan isi semua kolom.');
+      }
+
+      console.log('Preparing to store registrationData:', registrationData);
+
+      // Attempt to save registrationData with retry
+      let attempts = 0;
+      const maxAttempts = 3;
+      while (attempts < maxAttempts) {
+        try {
+          if (saveRegistrationData(registrationData)) {
+            break;
+          }
+        } catch (err) {
+          attempts++;
+          console.warn(`Attempt ${attempts} failed to save registrationData:`, err);
+          if (attempts === maxAttempts) {
+            throw new Error('Gagal menyimpan data registrasi setelah beberapa percobaan.');
+          }
+          await new Promise(resolve => setTimeout(resolve, 100)); // Brief delay before retry
+        }
+      }
+
       const confirmation = await sendPhoneVerificationCode(formattedPhoneNumber);
       setConfirmationResult(confirmation);
+      console.log('Confirmation result stored:', confirmation);
+
       reset();
-      router.push(`/otplogin?phone=${encodeURIComponent(formattedPhoneNumber)}`);
+      router.push('/otplogin');
     } catch (err) {
       console.error('Error during OTP sending:', err);
       setError(err.message || 'Terjadi kesalahan saat mengirim OTP');
@@ -116,7 +162,6 @@ export default function Registration() {
     }
   };
 
-  // JSX remains unchanged
   return (
     <div className="min-h-screen bg-white flex">
       <Head>
@@ -251,7 +296,7 @@ export default function Registration() {
                 {...register("password")}
                 type="password"
                 id="password"
-                placeholder="Masukkan minimum 6 karakter"
+                placeholder="Masukkan minimum 8 karakter"
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-1 focus:ring-amber-500 outline-1"
                 style={{
                   color: passwordValue?.length > 0 ? '#131010' : '#C2C2C2',

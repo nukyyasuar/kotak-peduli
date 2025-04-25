@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Head from 'next/head';
 import { useState, useEffect, useRef } from 'react';
 import { setupRecaptcha, verifyPhoneCode, sendPhoneVerificationCode } from '../auth/auth';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { getConfirmationResult, clearConfirmationResult } from '../auth/authStore';
 import { registerWithEmail } from '../auth/auth';
 
@@ -15,9 +15,9 @@ export default function OtpLogin() {
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResendLoading, setIsResendLoading] = useState(false);
+  const [registrationData, setRegistrationData] = useState(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const phoneNumber = searchParams.get('phone') || 'nomor telepon anda';
   const recaptchaContainerRef = useRef(null);
   const inputRefs = useRef([]);
 
@@ -44,17 +44,44 @@ export default function OtpLogin() {
     return () => {
       isMounted = false;
     };
-  }, [recaptchaContainerRef]);
-
-  // Check confirmation result
-  useEffect(() => {
-    const confirmation = getConfirmationResult();
-    if (confirmation && typeof confirmation.confirm === 'function') {
-      setConfirmationResult(confirmation);
-    } else {
-      setError('Tidak ada permintaan verifikasi ditemukan. Silakan daftar ulang.');
-    }
   }, []);
+
+  // Load and validate registration data after hydration
+  useEffect(() => {
+    const loadRegistrationData = () => {
+      try {
+        const storedData = localStorage.getItem('registrationData');
+        console.log('Raw localStorage registrationData:', storedData);
+        const parsedData = storedData ? JSON.parse(storedData) : {};
+        console.log('Parsed registrationData:', parsedData);
+        setRegistrationData(parsedData);
+
+        const confirmation = getConfirmationResult();
+        if (confirmation && typeof confirmation.confirm === 'function') {
+          setConfirmationResult(confirmation);
+          console.log('Confirmation result set:', confirmation);
+        } else {
+          setError('Tidak ada permintaan verifikasi ditemukan. Silakan minta kode baru.');
+          console.log('No valid confirmation result found');
+        }
+
+        // Only redirect if registrationData is completely missing
+        if (!parsedData || Object.keys(parsedData).length === 0) {
+          setError('Data registrasi tidak ditemukan. Silakan daftar ulang.');
+          console.log('No registration data found, redirecting to registration');
+          router.push('/registration');
+        }
+      } catch (err) {
+        console.error('Error loading registrationData:', err);
+        setError('Gagal memuat data registrasi. Silakan daftar ulang.');
+        router.push('/registration');
+      }
+    };
+
+    // Delay to ensure client-side hydration
+    const timeout = setTimeout(loadRegistrationData, 100);
+    return () => clearTimeout(timeout);
+  }, [router]);
 
   // Timer for resend OTP
   useEffect(() => {
@@ -99,18 +126,30 @@ export default function OtpLogin() {
   };
 
   const handleVerifyOtp = async () => {
+    console.log('Verifying OTP with registrationData:', registrationData);
+    console.log('Confirmation Result:', confirmationResult);
     setError('');
     setIsLoading(true);
     const code = otp.join('');
     if (!code || code.length !== 6) {
       setError('Masukkan 6 digit kode OTP');
       setIsLoading(false);
+      console.log('Invalid OTP length:', code);
       return;
     }
 
     if (!confirmationResult || typeof confirmationResult.confirm !== 'function') {
-      setError('Tidak ada permintaan verifikasi ditemukan. Silakan daftar ulang.');
+      setError('Sesi verifikasi tidak valid. Silakan minta kode baru.');
       setIsLoading(false);
+      console.log('Invalid confirmation result');
+      return;
+    }
+
+    if (!registrationData || Object.keys(registrationData).length === 0) {
+      setError('Data registrasi tidak ditemukan. Silakan daftar ulang.');
+      setIsLoading(false);
+      console.log('No registration data available for verification');
+      router.push('/registration');
       return;
     }
 
@@ -118,38 +157,44 @@ export default function OtpLogin() {
       const user = await verifyPhoneCode(confirmationResult, code);
       console.log('OTP verification successful:', user);
 
-      const pendingRegistration = JSON.parse(localStorage.getItem('pendingRegistration'));
-      if (!pendingRegistration) {
-        setError('Data pendaftaran tidak ditemukan. Silakan daftar ulang.');
-        setIsLoading(false);
-        return;
+      const idToken = await user.getIdToken();
+      console.log('ID Token:', idToken);
+
+      const { email, password, firstName, lastName, phoneNumber } = registrationData;
+
+      // Require only email and password, provide defaults for others
+      if (!email || !password) {
+        console.warn('Missing critical registration data:', { email, password });
+        throw new Error('Data registrasi tidak lengkap (email atau password hilang). Silakan daftar ulang.');
       }
 
       const registrationResult = await registerWithEmail({
-        firstName: pendingRegistration.firstName,
-        lastName: pendingRegistration.lastName,
-        phoneNumber: pendingRegistration.phoneNumber,
-        email: pendingRegistration.email,
-        password: pendingRegistration.password,
+        email,
+        password,
+        firstName: firstName || '',
+        lastName: lastName || '',
+        phoneNumber: phoneNumber || '',
+        idToken,
       });
+
       console.log('Registration successful:', registrationResult);
 
-      localStorage.removeItem('pendingRegistration');
+      localStorage.removeItem('registrationData');
       clearConfirmationResult();
 
       alert('Pendaftaran berhasil!');
       router.push('/login');
     } catch (err) {
       console.error('Error during OTP verification or registration:', err);
-      switch (err.code) {
-        case 'auth/invalid-verification-code':
-          setError('Kode OTP salah');
-          break;
-        case 'auth/session-expired':
-          setError('Sesi OTP telah kedaluwarsa. Silakan minta kode baru.');
-          break;
-        default:
-          setError(err.message || 'Gagal memverifikasi OTP atau mendaftar');
+      if (err.code === 'auth/invalid-verification-code') {
+        setError('Kode OTP salah. Silakan coba lagi.');
+      } else if (err.code === 'auth/session-expired') {
+        setError('Sesi OTP telah kedaluwarsa. Silakan minta kode baru.');
+      } else if (err.message.includes('Data registrasi tidak lengkap')) {
+        setError(err.message);
+        router.push('/registration');
+      } else {
+        setError('Gagal memverifikasi OTP: ' + err.message);
       }
     } finally {
       setIsLoading(false);
@@ -157,9 +202,18 @@ export default function OtpLogin() {
   };
 
   const handleResendOtp = async () => {
+    console.log('Resending OTP with registrationData:', registrationData);
     setError('');
-    if (!phoneNumber) {
-      setError('Nomor telepon tidak tersedia. Silakan daftar ulang.');
+    setIsResendLoading(true);
+
+    const phoneNumber = registrationData?.phoneNumber || '';
+    const isValidPhoneNumber = phoneNumber && phoneNumber.startsWith('+62') && phoneNumber.length >= 12 && phoneNumber.length <= 15;
+
+    if (!phoneNumber || !isValidPhoneNumber) {
+      setError('Nomor telepon tidak valid atau tidak ditemukan. Silakan daftar ulang.');
+      setIsResendLoading(false);
+      console.log('Invalid phone number for resend:', phoneNumber);
+      router.push('/registration');
       return;
     }
 
@@ -168,8 +222,7 @@ export default function OtpLogin() {
       clearConfirmationResult();
 
       if (!recaptchaContainerRef.current) {
-        setError('reCAPTCHA container tidak ditemukan.');
-        return;
+        throw new Error('reCAPTCHA container tidak ditemukan.');
       }
 
       await setupRecaptcha(recaptchaContainerRef.current.id, true);
@@ -177,25 +230,27 @@ export default function OtpLogin() {
 
       const confirmation = await sendPhoneVerificationCode(phoneNumber);
       setConfirmationResult(confirmation);
+      console.log('New confirmation result set:', confirmation);
       setTimer(60);
       setIsTimerRunning(true);
       setOtp(['', '', '', '', '', '']);
       alert('Kode OTP baru telah dikirim.');
     } catch (err) {
       console.error('Resend OTP error:', err);
-      switch (err.code) {
-        case 'auth/invalid-phone-number':
-          setError('Format nomor telepon salah');
-          break;
-        case 'auth/too-many-requests':
-          setError('Terlalu banyak permintaan. Silakan coba lagi nanti.');
-          break;
-        case 'auth/quota-exceeded':
-          setError('Kuota SMS telah habis. Hubungi dukungan.');
-          break;
-        default:
-          setError(err.message || 'Gagal mengirim ulang OTP');
+      if (err.message.includes('reCAPTCHA has already been rendered')) {
+        setError('Gagal menginisialisasi reCAPTCHA. Silakan coba lagi atau muat ulang halaman.');
+      } else if (err.code === 'auth/invalid-phone-number') {
+        setError('Nomor telepon tidak valid. Silakan daftar ulang.');
+        router.push('/registration');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Terlalu banyak permintaan. Coba lagi nanti.');
+      } else if (err.code === 'auth/quota-exceeded') {
+        setError('Kuota SMS telah habis. Hubungi dukungan.');
+      } else {
+        setError('Gagal mengirim ulang OTP: ' + err.message);
       }
+    } finally {
+      setIsResendLoading(false);
     }
   };
 
@@ -209,7 +264,7 @@ export default function OtpLogin() {
     <div className="min-h-screen bg-white flex items-center justify-center">
       <Head>
         <title>Verifikasi OTP - Beri Barang</title>
-        <meta name="description" content="Verifikasi OTP untuk donasi di Beri Barang" />
+        <meta name="description" content="Verifikasi OTP untuk donasi selamat datang di Beri Barang" />
       </Head>
 
       <div className="absolute top-0 left-0 cursor-pointer">
@@ -239,7 +294,7 @@ export default function OtpLogin() {
           <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Verifikasi OTP</h2>
 
           <p className="text-gray-600 text-base mb-4 text-center">
-            Masukkan kode OTP yang telah dikirimkan ke {phoneNumber}
+            Masukkan kode OTP yang telah dikirimkan ke {registrationData?.phoneNumber || 'nomor telepon anda'}
           </p>
 
           <div className="flex space-x-2 mb-4 justify-center">
@@ -286,12 +341,19 @@ export default function OtpLogin() {
 
           <button
             onClick={handleResendOtp}
-            disabled={isTimerRunning}
-            className={`w-full mt-2 px-7 py-2 text-[#131010] text-xs border border-[#F0BB78] rounded-md transition-colors font-bold ${
-              isTimerRunning ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
+            disabled={isTimerRunning || isResendLoading}
+            className={`w-full mt-2 px-7 py-2 text-[#131010] text-xs border border-[#F0BB78] rounded-md transition Von-colors font-bold ${
+              isTimerRunning || isResendLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'
             }`}
           >
-            Kirim Ulang Kode ({formatTimer(timer)})
+            {isResendLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-[#F0BB78] border-t-transparent rounded-full animate-spin"></div>
+                <span className="ml-2">Mengirim...</span>
+              </div>
+            ) : (
+              `Kirim Ulang Kode (${formatTimer(timer)})`
+            )}
           </button>
 
           {error && <p className="text-red-500 mt-2 text-sm text-center">{error}</p>}

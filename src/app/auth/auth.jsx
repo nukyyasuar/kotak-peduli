@@ -34,7 +34,6 @@ let recaptchaVerifier = null;
 
 export const setupRecaptcha = async (containerId, forceReset = false) => {
   try {
-    // Clear existing verifier if forceReset is true or if it exists
     if (forceReset && recaptchaVerifier) {
       try {
         recaptchaVerifier.clear();
@@ -51,33 +50,31 @@ export const setupRecaptcha = async (containerId, forceReset = false) => {
         throw new Error('reCAPTCHA container not found');
       }
 
-      // Remove any existing reCAPTCHA elements and scripts
-      container.innerHTML = ''; // Clear all child nodes
-      const existingScripts = container.querySelectorAll('script');
+      // Clear container and remove existing reCAPTCHA elements
+      container.innerHTML = '';
+      const existingScripts = document.querySelectorAll('script[src*="recaptcha"]');
       existingScripts.forEach(script => script.remove());
-      console.log('reCAPTCHA container cleared of existing elements and scripts');
+      console.log('Cleared existing reCAPTCHA scripts and container content');
 
-      // Create a new container element to ensure clean state
+      // Ensure container is clean
       const newContainer = document.createElement('div');
       newContainer.id = containerId;
       container.parentNode.replaceChild(newContainer, container);
-      console.log('reCAPTCHA container replaced with new element');
+      console.log('Replaced reCAPTCHA container with new element');
 
       recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
         size: 'invisible',
-        callback: (response) => {
-          console.log('reCAPTCHA solved:', response);
+        callback: () => {
+          console.log('reCAPTCHA solved');
         },
         'expired-callback': () => {
-          console.log('reCAPTCHA expired, resetting...');
-          recaptchaVerifier.clear();
+          console.log('reCAPTCHA expired');
           recaptchaVerifier = null;
         },
         'error-callback': (error) => {
           console.error('reCAPTCHA error:', error);
-          recaptchaVerifier.clear();
           recaptchaVerifier = null;
-        }
+        },
       });
 
       console.log('reCAPTCHA verifier initialized');
@@ -94,15 +91,23 @@ export const setupRecaptcha = async (containerId, forceReset = false) => {
   }
 };
 
+// Validate phone number format
+const isValidPhoneNumber = (phone) => {
+  return phone && phone.startsWith('+') && phone.length >= 12 && phone.length <= 15;
+};
+
 // Send verification code to phone number
 export const sendPhoneVerificationCode = async (phoneNumber) => {
   try {
-    // Ensure fresh reCAPTCHA verifier
-    const verifier = await setupRecaptcha('recaptcha-container', true); // Force reset for new session
+    const verifier = await setupRecaptcha('recaptcha-container', true);
     const formattedPhoneNumber = phoneNumber.startsWith('+') 
       ? phoneNumber 
-      : `+${phoneNumber}`; // Ensure phone number format with country code
+      : `+${phoneNumber}`;
     
+    if (!isValidPhoneNumber(formattedPhoneNumber)) {
+      throw new Error('Nomor telepon tidak valid. Pastikan format benar (contoh: +6281234567890).');
+    }
+
     console.log('Sending OTP to:', formattedPhoneNumber);
     const confirmationResult = await signInWithPhoneNumber(
       auth,
@@ -158,7 +163,7 @@ export const verifyPhoneCode = async (confirmationResult, verificationCode) => {
 export const loginWithGoogle = async () => {
   try {
     googleProvider.setCustomParameters({
-      prompt: 'select_account', // Forces Google account chooser
+      prompt: 'select_account',
     });
     const result = await signInWithPopup(auth, googleProvider);
     return result.user;
@@ -200,37 +205,38 @@ export const loginWithEmail = async (email, password) => {
 };
 
 // Register with email using API endpoint
-export const registerWithEmail = async ({email, password, firstName, lastName, phoneNumber}) => {
+export const registerWithEmail = async ({ email, password, firstName, lastName, phoneNumber, idToken }) => {
   try {
     const myHeaders = new Headers();
-    myHeaders.append("Content-Type", "application/json");
+    myHeaders.append('Content-Type', 'application/json');
 
     const raw = JSON.stringify({
       email,
       password,
       firstName,
       lastName,
-      phoneNumber
+      phoneNumber,
+      idToken,
     });
 
     console.log('Registering user:', raw);
 
     const requestOptions = {
-      method: "POST",
+      method: 'POST',
       headers: myHeaders,
       body: raw,
-      redirect: "follow",
-      credentials: 'include'
+      redirect: 'follow',
+      credentials: 'include',
     };
 
-    const response = await fetch("http://localhost:5000/auth/register", requestOptions);
+    const response = await fetch('http://localhost:5000/auth/register', requestOptions);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Registration failed');
     }
 
-    if (result.token || result.accessToken) {
+    if (result.warning || result.accessToken) {
       localStorage.setItem('authToken', result.token || result.accessToken);
     }
     return result.user || result;
