@@ -319,7 +319,7 @@ export default function Home() {
       </Head>
 
       {/* Navigation Bar */}
-      <NavbarAfterLoginAdmin />
+      {/* <NavbarAfterLoginAdmin /> */}
 
       {/* Main Content */}
       <main className="px-8 py-6">

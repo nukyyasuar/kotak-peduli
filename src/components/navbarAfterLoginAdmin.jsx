@@ -11,7 +11,7 @@ export default function navbarAfterLogin() {
         <Link href="/">
           <div className="flex items-center space-x-2 cursor-pointer">
             <Image
-              src="/Main Desain Skripsi Group 430.webp" // Pastikan path ke logo sesuai
+              src="/Kotak Peduli.webp" 
               alt="Kotak Peduli Logo"
               width={40}
               height={40}

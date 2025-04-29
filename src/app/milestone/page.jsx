@@ -6,9 +6,9 @@ import { useState, useEffect } from "react";
 import Footer from "../footer/page";
 import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
+import NavbarAfterLogin from "../../components/navbarAfterLogin";
 
 export default function Home() {
-  // State declarations
   const [isAktif, setIsAktif] = useState(false);
   const [isSelesai, setIsSelesai] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,46 +22,28 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const eventsPerPage = 10;
 
-  // State for form data
   const [tambahFormData, setTambahFormData] = useState({
     nama: "",
     alamat: "",
     akhirPenerimaan: "",
-    barang: {
-      pakaian: false,
-      elektronik: false,
-      mainan: false,
-      buku: false,
-    },
+    barang: { pakaian: false, elektronik: false, mainan: false, buku: false },
   });
 
   const [ubahFormData, setUbahFormData] = useState({
     nama: "",
     alamat: "",
     akhirPenerimaan: "",
-    barang: {
-      pakaian: false,
-      elektronik: false,
-      mainan: false,
-      buku: false,
-    },
+    barang: { pakaian: false, elektronik: false, mainan: false, buku: false },
   });
 
-  // Generate sample event data
   const generateEvents = (count) => {
     const events = [];
-    const itemsList = ["Pakaian", "Buku", "Makanan", "Elektronik"];
     for (let i = 1; i <= count; i++) {
       events.push({
         name: `Banjir di Bekasi ${i}`,
-        address:
-          i % 2 === 0
-            ? "JL. Lorem Ipsum No. X, Bekasi..."
-            : "Bekasi, Jawa Barat",
+        address: i % 2 === 0 ? "JL. Lorem Ipsum No. X, Bekasi..." : "Bekasi, Jawa Barat",
         endDate: "20/03/2025",
-        items: itemsList
-          .slice(0, Math.floor(Math.random() * itemsList.length) + 1)
-          .join(", "),
+        items: "Pakaian, Buku, Mainan, Elektronik",
         status: i % 3 === 0 ? "Selesai" : "Aktif",
       });
     }
@@ -70,7 +52,6 @@ export default function Home() {
 
   const [events, setEvents] = useState(generateEvents(20));
 
-  // Filter events
   const filteredEvents = events.filter((event) => {
     let matchesStatus = false;
     if (!isAktif && !isSelesai) matchesStatus = true;
@@ -85,7 +66,6 @@ export default function Home() {
     return matchesStatus && matchesSearch;
   });
 
-  // Loading effect and filtered events logging
   useEffect(() => {
     setIsLoading(true);
     const timer = setTimeout(() => {
@@ -95,13 +75,11 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchQuery, isAktif, isSelesai, events]);
 
-  // Pagination logic
   const indexOfLastEvent = currentPage * eventsPerPage;
   const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
   const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent);
   const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
 
-  // Handlers
   const handleFilterChange = (setter) => (value) => {
     setter(value);
     setCurrentPage(1);
@@ -193,7 +171,7 @@ export default function Home() {
       name: tambahFormData.nama || "Contoh: Banjir Bekasi",
       address: tambahFormData.alamat || "Contoh: Jl. Lorem ipsum...",
       endDate: tambahFormData.akhirPenerimaan || "20/03/2025",
-      items: selectedItems || "Pakaian, Buku, Makanan, Elektronik",
+      items: selectedItems || "Pakaian, Buku, Mainan, Elektronik",
       status: "Aktif",
     };
     setEvents((prev) => [...prev, newEvent]);
@@ -224,7 +202,7 @@ export default function Home() {
       name: ubahFormData.nama,
       address: ubahFormData.alamat,
       endDate: ubahFormData.akhirPenerimaan,
-      items: selectedItems || "Pakaian, Buku, Makanan, Elektronik",
+      items: selectedItems || "Pakaian, Buku, Mainan, Elektronik",
       status: events[selectedEventIndex].status,
     };
     setEvents((prev) => {
@@ -240,7 +218,6 @@ export default function Home() {
     setCurrentPage(pageNumber);
   };
 
-  // Spinner component
   const Spinner = () => (
     <div className="flex justify-center items-center py-8">
       <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#4A2C2A] border-t-transparent"></div>
@@ -249,55 +226,24 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#F5E9D4] font-sans">
-      <Head>
-        <title>Kotak Peduli - Event</title>
-        <meta name="description" content="Event page for Kotak Peduli" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
 
-      <header className="flex justify-between items-center px-6 py-4 bg-[#F5E9D4] border-b border-gray-200">
-        <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2">
-            <Image src="/logo.png" alt="Kotak Peduli Logo" width={30} height={30} />
-            <span className="text-lg font-semibold text-[#4A2C2A] tracking-wide">
-              KOTAK PEDULI
-            </span>
-          </div>
-          <nav className="flex space-x-6">
-            <a href="#" className="text-[#4A2C2A] text-sm hover:text-[#8B5A2B]">
-              Barang Donasi
-            </a>
-            <a href="#" className="text-[#4A2C2A] text-sm font-bold border-b-2 border-[#4A2C2A]">
-              Event
-            </a>
-            <a href="#" className="text-[#4A2C2A] text-sm hover:text-[#8B5A2B]">
-              Pos
-            </a>
-            <a href="#" className="text-[#4A2C2A] text-sm hover:text-[#8B5A2B]">
-              Administrator
-            </a>
-          </nav>
-        </div>
-        <div>
-          <Image src="/profile.png" alt="Profile" width={24} height={24} className="rounded-full" />
-        </div>
-      </header>
+      <NavbarAfterLogin/>
 
       <main className="px-8 py-6">
-        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A]">EVENT</h1>
+        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Event</h1>
 
-        <div className="flex justify-between items-center mb-6 text-black">
+        <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="Cari berdasarkan nama event"
+              placeholder="Search courses"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="w-full p-2 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] text-sm"
+              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm"
             />
             <Icon
               icon="mdi:magnify"
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#4A2C2A] w-5 h-5"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#C2C2C2] w-5 h-5"
             />
           </div>
           <div className="flex items-center space-x-6">
@@ -321,7 +267,7 @@ export default function Home() {
             </label>
             <button
               onClick={toggleTambahModal}
-              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm"
+              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm uppercase"
             >
               Tambah Event
             </button>
@@ -565,13 +511,13 @@ export default function Home() {
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-[#F5E9D4] text-[#4A2C2A] font-semibold">
-                  <th className="p-3 w-1/6">NAMA</th>
-                  <th className="p-3 w-1/4">ALAMAT</th>
-                  <th className="p-3 w-1/6">AKHIR PENERIMAAN</th>
-                  <th className="p-3 w-1/4">JENIS BARANG</th>
-                  <th className="p-3 w-1/6">STATUS</th>
-                  <th className="p-3 w-1/12">MENU</th>
+                <tr className="bg-white text-[#4A2C2A] font-semibold uppercase">
+                  <th className="p-3 w-1/6">Nama</th>
+                  <th className="p-3 w-1/4">Alamat</th>
+                  <th className="p-3 w-1/6">Akhir Penerimaan</th>
+                  <th className="p-3 w-1/4">Jenis Barang</th>
+                  <th className="p-3 w-1/6">Status</th>
+                  <th className="p-3 w-1/12">Menu</th>
                 </tr>
               </thead>
               <tbody>
@@ -639,7 +585,7 @@ export default function Home() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm ${
+              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
                 currentPage === 1
                   ? "opacity-50 cursor-not-allowed"
                   : "hover:bg-[#8B5A2B] hover:text-white"
@@ -654,7 +600,7 @@ export default function Home() {
                 className={`px-3 py-1 rounded-lg text-sm ${
                   currentPage === page
                     ? "bg-[#4A2C2A] text-white"
-                    : "border border-gray-300 text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                    : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
                 }`}
               >
                 {page}
@@ -663,7 +609,7 @@ export default function Home() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm ${
+              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
                 currentPage === totalPages
                   ? "opacity-50 cursor-not-allowed"
                   : "hover:bg-[#8B5A2B] hover:text-white"

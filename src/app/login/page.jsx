@@ -47,7 +47,8 @@ export default function Login() {
   const [user, setUser] = useState(null);
   const [error, setError] = useState('');
   const [isLogin, setIsLogin] = useState(true);
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isFormLoading, setIsFormLoading] = useState(false); // Loading state for form submission
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false); // Loading state for Google login
   const router = useRouter();
 
   const { 
@@ -78,7 +79,7 @@ export default function Login() {
 
   const onSubmit = async (data) => {
     setError('');
-    setIsLoading(true); // Start loading
+    setIsFormLoading(true); // Start form loading
     try {
       if (isLogin) {
         await loginWithEmail(data.email, data.password);
@@ -96,26 +97,26 @@ export default function Login() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsFormLoading(false); // Stop form loading
     }
   };
 
   const handleGoogleLogin = async () => {
     setError('');
-    setIsLoading(true); // Start loading
+    setIsGoogleLoading(true); // Start Google loading
     try {
       await loginWithGoogle();
       router.push('/homepage');
     } catch (err) {
       setError(err.message);
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsGoogleLoading(false); // Stop Google loading
     }
   };
 
   const handleLogout = async () => {
     setError('');
-    setIsLoading(true); // Start loading
+    setIsFormLoading(true); // Start form loading for logout
     try {
       await logout();
       setUser(null);
@@ -123,7 +124,7 @@ export default function Login() {
     } catch (err) {
       setError(err.message);
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsFormLoading(false); // Stop form loading
     }
   };
 
@@ -181,9 +182,9 @@ export default function Login() {
                 <button
                   onClick={handleLogout}
                   className="text-sm text-gray-600 hover:text-amber-600 underline"
-                  disabled={isLoading}
+                  disabled={isFormLoading}
                 >
-                  {isLoading ? 'Memproses...' : 'Gunakan akun lain'}
+                  {isFormLoading ? 'Memproses...' : 'Gunakan akun lain'}
                 </button>
               </div>
             )}
@@ -201,7 +202,7 @@ export default function Login() {
                       }`}
                       placeholder="Masukkan nama depan"
                       {...register('firstName')}
-                      disabled={isLoading}
+                      disabled={isFormLoading}
                     />
                     {errors.firstName && (
                       <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
@@ -218,7 +219,7 @@ export default function Login() {
                       }`}
                       placeholder="Masukkan nama belakang"
                       {...register('lastName')}
-                      disabled={isLoading}
+                      disabled={isFormLoading}
                     />
                     {errors.lastName && (
                       <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
@@ -235,7 +236,7 @@ export default function Login() {
                       }`}
                       placeholder="+6281234567890"
                       {...register('phoneNumber')}
-                      disabled={isLoading}
+                      disabled={isFormLoading}
                     />
                     {errors.phoneNumber && (
                       <p className="text-red-500 text-sm mt-1">{errors.phoneNumber.message}</p>
@@ -254,7 +255,7 @@ export default function Login() {
                   }`}
                   placeholder="example@email.com"
                   {...register('email')}
-                  disabled={isLoading}
+                  disabled={isFormLoading}
                 />
                 {errors.email && (
                   <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
@@ -271,7 +272,7 @@ export default function Login() {
                   }`}
                   placeholder="Masukkan minimum 6 karakter"
                   {...register('password')}
-                  disabled={isLoading}
+                  disabled={isFormLoading}
                 />
                 {errors.password && (
                   <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
@@ -281,9 +282,9 @@ export default function Login() {
               <button
                 type="submit"
                 className="w-full bg-[#F2CB92] hover:bg-amber-400 transition text-black py-3 chase:animate-pulse px-4 rounded-lg font-medium mb-4 flex items-center justify-center"
-                disabled={isLoading}
+                disabled={isFormLoading}
               >
-                {isLoading ? (
+                {isFormLoading ? (
                   <>
                     <svg
                       className="animate-spin h-5 w-5 mr-2 text-black"
@@ -322,9 +323,9 @@ export default function Login() {
                 type="button"
                 onClick={handleGoogleLogin}
                 className="w-full flex items-center justify-center border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium mb-4"
-                disabled={isLoading}
+                disabled={isGoogleLoading}
               >
-                {isLoading ? (
+                {isGoogleLoading ? (
                   <>
                     <svg
                       className="animate-spin h-5 w-5 mr-2 text-gray-700"
@@ -355,12 +356,11 @@ export default function Login() {
                   </>
                 )}
               </button>
-
               <button
                 type="button"
                 onClick={() => setIsLogin(!isLogin)}
                 className="w-full text-center text-sm text-gray-600 hover:text-amber-600"
-                disabled={isLoading}
+                disabled={isFormLoading || isGoogleLoading}
               >
                 {isLogin ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
               </button>
