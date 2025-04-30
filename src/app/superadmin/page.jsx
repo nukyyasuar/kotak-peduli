@@ -146,7 +146,7 @@ export default function Superadmin() {
       <NavbarAfterLogin />
 
       {/* Summary Cards Section */}
-      <section className="mb-10 p-7">
+      <section className="container mx-auto px-6 p-7">
         <h1 className="text-[28px] font-bold mb-6 uppercase tracking-wide text-[#131010] text-center">
           Ringkasan Data
         </h1>
@@ -167,164 +167,167 @@ export default function Superadmin() {
       </section>
 
       {/* Table Section */}
-      <section className="bg-[#FFF0DC] rounded-lg shadow p-6">
-        <h2 className="text-[22px] font-bold mb-4 text-center uppercase tracking-wide text-[#131010]">
-          Tempat Penampung
-        </h2>
-        <div className="relative">
-          <div className="flex justify-between items-center mb-4">
-            <div className="relative w-64">
-              <input
-                type="text"
-                placeholder="Search courses"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                className="border border-gray-300 rounded-lg px-4 py-1.5 w-full focus:outline-none focus:ring-2 focus:ring-[#5C4033] bg-white placeholder-gray-400 pl-10"
-              />
-              <Icon
-                icon="mdi:magnify"
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#232323]"
-              />
-            </div>
-            <div className="space-x-4 flex items-center">
-              <label className="flex items-center space-x-2">
+      <section className="bg-[#FFF0DC] w-full">
+        <div className="container mx-auto px-6 py-7">
+          <h2 className="text-[22px] font-bold mb-4 text-center uppercase tracking-wide text-[#131010]">
+            Tempat Penampung
+          </h2>
+          <div className="relative">
+            <div className="flex justify-between items-center mb-6 text-[#c2c2c2]">
+              <div className="relative w-64">
                 <input
-                  type="checkbox"
-                  checked={filterStatus.includes("Disetujui")}
-                  onChange={() => handleFilterChange("Disetujui")}
-                  className="form-checkbox h-5 w-5 text-[#5C4033] focus:ring-[#5C4033]"
+                  type="text"
+                  placeholder="Search courses"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm"
                 />
-                <span className="text-sm font-medium text-[#232323]">Disetujui</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={filterStatus.includes("Ditolak")}
-                  onChange={() => handleFilterChange("Ditolak")}
-                  className="form-checkbox h-5 w-5 text-[#5C4033] focus:ring-[#5C4033]"
+                <Icon
+                  icon="mdi:magnify"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#C2C2C2] w-5 h-5"
                 />
-                <span className="text-sm font-medium text-[#232323]">Ditolak</span>
-              </label>
+              </div>
+              <div className="space-x-4 flex items-center">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filterStatus.includes("Disetujui")}
+                    onChange={() => handleFilterChange("Disetujui")}
+                    className="form-checkbox h-5 w-5 text-[#5C4033] focus:ring-[#5C4033]"
+                  />
+                  <span className="text-sm font-medium text-[#232323]">Disetujui</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={filterStatus.includes("Ditolak")}
+                    onChange={() => handleFilterChange("Ditolak")}
+                    className="form-checkbox h-5 w-5 text-[#5C4033] focus:ring-[#5C4033]"
+                  />
+                  <span className="text-sm font-medium text-[#232323]">Ditolak</span>
+                </label>
+              </div>
             </div>
-          </div>
 
-          {/* Table */}
-          <div className="bg-white shadow rounded-lg overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-white">
-                  <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                    Nama
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                    Email
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                    No Telepon
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                    Penjemputan
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                    Status
-                  </th>
-                  <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                    Menu
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentShelters.map((shelter, index) => (
-                  <tr key={shelter.id} className="border-t">
-                    <td className="px-4 py-2 text-sm text-[#232323]">{shelter.nama}</td>
-                    <td className="px-4 py-2 text-sm text-[#232323]">{shelter.email}</td>
-                    <td className="px-4 py-2 text-sm text-[#232323]">{shelter.noTelepon}</td>
-                    <td className="px-4 py-2 text-sm text-[#232323]">{shelter.penjemputan}</td>
-                    <td
-                      className={`px-4 py-2 text-sm text-[#232323] ${
-                        shelter.status === "Disetujui" ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {shelter.status}
-                    </td>
-                    <td className="px-4 py-2 relative">
-                      <button
-                        onClick={() => toggleDropdown(index)}
-                        className="text-[#232323] focus:outline-none"
-                      >
-                        <Icon
-                          icon="mdi:dots-vertical"
-                          className="w-5 h-5"
-                        />
-                      </button>
-                      {openDropdownIndex === index && (
-                        <div className="absolute right-2 mt-2 w-32 bg-white border rounded-lg shadow-lg z-10">
-                          <ul className="text-[#232323] text-sm">
-                            <li
-                              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                              onClick={() => openDetailModal(shelter)}
-                            >
-                              Lihat Detail
-                            </li>
-                            <li
-                              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                              onClick={() => openApproveConfirmModal(shelter)}
-                            >
-                              Setujui
-                            </li>
-                            <li
-                              className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                              onClick={() => openRejectConfirmModal(shelter)}
-                            >
-                              Tolak
-                            </li>
-                          </ul>
-                        </div>
-                      )}
-                    </td>
+            {/* Table */}
+            <div className="bg-white shadow rounded-lg overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="bg-white">
+                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                      Nama
+                    </th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                      Email
+                    </th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                      No Telepon
+                    </th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                      Penjemputan
+                    </th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                      Status
+                    </th>
+                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                      Menu
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {currentShelters.map((shelter, index) => (
+                    <tr key={shelter.id} className="border-t">
+                      <td className="px-4 py-2 text-sm text-[#232323]">{shelter.nama}</td>
+                      <td className="px-4 py-2 text-sm text-[#232323]">{shelter.email}</td>
+                      <td className="px-4 py-2 text-sm text-[#232323]">{shelter.noTelepon}</td>
+                      <td className="px-4 py-2 text-sm text-[#232323]">{shelter.penjemputan}</td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            shelter.status === "Disetujui"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {shelter.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 relative">
+                        <button
+                          onClick={() => toggleDropdown(index)}
+                          className="text-[#232323] focus:outline-none"
+                        >
+                          <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
+                        </button>
+                        {openDropdownIndex === index && (
+                          <div className="absolute right-2 mt-2 w-32 bg-white border rounded-lg shadow-lg z-10">
+                            <ul className="text-[#232323] text-sm">
+                              <li
+                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={() => openDetailModal(shelter)}
+                              >
+                                Lihat Detail
+                              </li>
+                              <li
+                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={() => openApproveConfirmModal(shelter)}
+                              >
+                                Setujui
+                              </li>
+                              <li
+                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                onClick={() => openRejectConfirmModal(shelter)}
+                              >
+                                Tolak
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Pagination */}
-          <div className="flex justify-center mt-4 space-x-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 text-sm ${
-                currentPage === 1
-                  ? "text-[#232323] cursor-not-allowed"
-                  : "text-[#232323] hover:text-gray-900"
-              }`}
-            >
-              Previous
-            </button>
-            {[...Array(totalPages)].map((_, index) => (
+            {/* Pagination */}
+            <div className="flex justify-end mt-4 space-x-2">
               <button
-                key={index + 1}
-                onClick={() => handlePageChange(index + 1)}
-                className={`px-3 py-1 text-sm border rounded ${
-                  currentPage === index + 1
-                    ? "bg-[#5C4033] text-[#232323] border-[#5C4033]"
-                    : "border-gray-300 text-[#232323] hover:bg-gray-100"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
+                  currentPage === 1
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-[#8B5A2B] hover:text-white"
                 }`}
               >
-                {index + 1}
+                Previous
               </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1 text-sm ${
-                currentPage === totalPages
-                  ? "text-gray-400 cursor-not-allowed"
-                  : "text-[#232323] hover:text-gray-900"
-              }`}
-            >
-              Next
-            </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    currentPage === page
+                      ? "bg-[#4A2C2A] text-white"
+                      : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
+                  currentPage === totalPages
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-[#8B5A2B] hover:text-white"
+                }`}
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -339,10 +342,7 @@ export default function Superadmin() {
                 onClick={closeDetailModal}
                 className="text-[#232323] hover:text-gray-600 focus:outline-none"
               >
-                <Icon
-                  icon="mdi:close"
-                  className="w-6 h-6"
-                />
+                <Icon icon="mdi:close" className="w-6 h-6" />
               </button>
             </div>
 

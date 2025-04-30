@@ -229,7 +229,7 @@ export default function Home() {
 
       <NavbarAfterLogin/>
 
-      <main className="px-8 py-6">
+      <main className="px-8 py-6"> {/*container mx-auto px-6*/}
         <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Event</h1>
 
         <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
@@ -267,7 +267,7 @@ export default function Home() {
             </label>
             <button
               onClick={toggleTambahModal}
-              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm uppercase"
+              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-bold hover:bg-[#8B5A2B]"
             >
               Tambah Event
             </button>
@@ -511,7 +511,7 @@ export default function Home() {
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-white text-[#4A2C2A] font-semibold uppercase">
+                <tr className="bg-white text-[#4A2C2A] font-bold">
                   <th className="p-3 w-1/6">Nama</th>
                   <th className="p-3 w-1/4">Alamat</th>
                   <th className="p-3 w-1/6">Akhir Penerimaan</th>

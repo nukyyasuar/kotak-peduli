@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
 import Head from "next/head";
-import { FaSearch } from "react-icons/fa";
-import { BsThreeDotsVertical } from "react-icons/bs";
-import NavbarAfterLoginAdmin from "../NavbarAfterLoginAdmin/page";
+import { Icon } from "@iconify/react";
+import NavbarAfterLogin from "../../components/navbarAfterLogin"; // Use the same navbar as Event
 import Footer from "../footer/page";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   // State declarations
@@ -93,7 +92,6 @@ export default function Home() {
   const [selectedDropPointIndex, setSelectedDropPointIndex] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  const dropdownRefs = useRef([]);
 
   // State for filters
   const [isCabang, setIsCabang] = useState(false);
@@ -126,7 +124,7 @@ export default function Home() {
       ? point.nama.toLowerCase().includes(searchQuery.toLowerCase())
       : true;
 
-    return matchesType  && matchesSearch; //compressing
+    return matchesType && matchesSearch;
   });
 
   // Loading effect
@@ -138,23 +136,6 @@ export default function Home() {
     }, 500);
     return () => clearTimeout(timer);
   }, [searchQuery, isCabang, isDropPoint, dropPoints]);
-
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        dropdownRefs.current.every(
-          (ref) => ref && !ref.contains(event.target)
-        )
-      ) {
-        setOpenDropdownIndex(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -264,9 +245,7 @@ export default function Home() {
     setSelectedDropPointIndex(null);
     setTimeout(() => {
       setIsLoading(false);
-      const newTotalPages = Math.ceil(
-        filteredDropPoints.length / itemsPerPage
-      );
+      const newTotalPages = Math.ceil(filteredDropPoints.length / itemsPerPage);
       if (currentPage > newTotalPages && newTotalPages > 0) {
         setCurrentPage(newTotalPages);
       } else if (newTotalPages === 0) {
@@ -280,35 +259,12 @@ export default function Home() {
     setOpenDropdownIndex(null);
   };
 
-  // Spinner component
+  // Spinner component (same as Event)
   const Spinner = () => (
     <div className="flex justify-center items-center py-8">
       <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#4A2C2A] border-t-transparent"></div>
     </div>
   );
-
-  // Calculate dropdown position
-  const getDropdownPosition = (index) => {
-    const button = dropdownRefs.current[index];
-    if (!button) return { top: 'top-8', transform: '' };
-
-    const rect = button.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const dropdownHeight = 80; // Approximate height of dropdown (adjust as needed)
-
-    // If dropdown would extend beyond bottom of viewport, open upwards
-    if (rect.bottom + dropdownHeight > viewportHeight) {
-      return {
-        top: 'bottom-full mb-2',
-        transform: 'translateY(-100%)',
-      };
-    }
-    // Otherwise, open downwards
-    return {
-      top: 'top-8',
-      transform: '',
-    };
-  };
 
   return (
     <div className="min-h-screen bg-[#F5E9D4] font-sans">
@@ -318,26 +274,27 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* Navigation Bar */}
-      {/* <NavbarAfterLoginAdmin /> */}
+      <NavbarAfterLogin />
 
-      {/* Main Content */}
       <main className="px-8 py-6">
-        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A]">
-          CABANG & DROP POINT
+        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">
+          Cabang & Drop Point
         </h1>
 
         {/* Search and Filter */}
-        <div className="flex justify-between items-center mb-6 text-black">
+        <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="Cari berdasarkan nama"
+              placeholder="Search courses"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="w-full p-2 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] text-sm"
+              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm"
             />
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#4A2C2A] w-5 h-5" />
+            <Icon
+              icon="mdi:magnify"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#C2C2C2] w-5 h-5"
+            />
           </div>
           <div className="flex items-center space-x-6">
             <label className="flex items-center space-x-2 cursor-pointer">
@@ -349,9 +306,7 @@ export default function Home() {
                 }
                 className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
               />
-              <span className="text-[#4A2C2A] text-sm font-medium">
-                Cabang
-              </span>
+              <span className="text-[#4A2C2A] text-sm font-medium">Cabang</span>
             </label>
             <label className="flex items-center space-x-2 cursor-pointer">
               <input
@@ -368,7 +323,7 @@ export default function Home() {
             </label>
             <button
               onClick={toggleTambahModal}
-              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm"
+              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm uppercase"
             >
               Tambah Pos
             </button>
@@ -400,13 +355,13 @@ export default function Home() {
                   <label className="block text-sm text-[#4A2C2A] mb-1">
                     Alamat Lengkap
                   </label>
-                  <textarea
+                  <input
+                    type="text"
                     name="alamat"
                     value={tambahFormData.alamat}
                     onChange={handleTambahInputChange}
                     placeholder="Contoh: Jl. Lorem ipsum..."
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                    rows="3"
                   />
                 </div>
                 <div className="mb-4">
@@ -483,12 +438,12 @@ export default function Home() {
                   <label className="block text-sm text-[#4A2C2A] mb-1">
                     Alamat Lengkap
                   </label>
-                  <textarea
+                  <input
+                    type="text"
                     name="alamat"
                     value={ubahFormData.alamat}
                     onChange={handleUbahInputChange}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                    rows="3"
                   />
                 </div>
                 <div className="mb-4">
@@ -570,83 +525,77 @@ export default function Home() {
         )}
 
         {/* Table */}
-        <div className="bg-white rounded-lg shadow-md">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {isLoading ? (
             <Spinner />
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-[#F5E9D4] text-[#4A2C2A] font-semibold">
-                  <th className="p-3 w-1/5">NAMA</th>
-                  <th className="p-3 w-2/5">ALAMAT</th>
-                  <th className="p-3 w-1/5">NO. TELEPON</th>
-                  <th className="p-3 w-1/5">TIPE</th>
-                  <th className="p-3 w-1/12">MENU</th>
+                <tr className="bg-white text-[#4A2C2A] font-semibold uppercase">
+                  <th className="p-3 w-1/5">Nama</th>
+                  <th className="p-3 w-2/5">Alamat</th>
+                  <th className="p-3 w-1/5">No. Telepon</th>
+                  <th className="p-3 w-1/5">Tipe</th>
+                  <th className="p-3 w-1/12">Menu</th>
                 </tr>
               </thead>
               <tbody>
                 {currentDropPoints.length > 0 ? (
-                  currentDropPoints.map((point, index) => {
-                    const dropdownPosition = getDropdownPosition(index);
-                    return (
-                      <tr
-                        key={index}
-                        className="border-t border-gray-200"
-                      >
-                        <td className="p-3 text-black">{point.nama}</td>
-                        <td className="p-3 text-black">{point.alamat}</td>
-                        <td className="p-3 text-black">{point.telepon}</td>
-                        <td className="p-3 text-black">{point.tipe}</td>
-                        <td className="p-3 relative">
-                          <button
-                            ref={(el) =>
-                              (dropdownRefs.current[index] = el)
-                            }
-                            onClick={() => toggleDropdown(index)}
-                            className="text-[#4A2C2A] hover:text-[#8B5A2B]"
-                            aria-label="Menu"
-                          >
-                            <BsThreeDotsVertical className="w-5 h-5" />
-                          </button>
-                          {openDropdownIndex === index && (
-                            <div
-                              className={`absolute right-4 ${dropdownPosition.top} bg-white border border-gray-200 rounded-lg shadow-md z-50 min-w-[120px]`}
-                              style={{ transform: dropdownPosition.transform }}
-                            >
-                              <ul className="text-sm text-[#4A2C2A]">
-                                <li
-                                  onClick={() =>
-                                    toggleUbahModal(
-                                      indexOfFirstItem + index
-                                    )
-                                  }
-                                  className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
-                                >
-                                  Ubah Data
-                                </li>
-                                <li
-                                  onClick={() =>
-                                    toggleDeleteModal(
-                                      indexOfFirstItem + index
-                                    )
-                                  }
-                                  className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
-                                >
-                                  Hapus Data
-                                </li>
-                              </ul>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
+                  currentDropPoints.map((point, index) => (
+                    <tr key={index} className="border-t border-gray-200">
+                      <td className="p-3 text-black">{point.nama}</td>
+                      <td className="p-3 text-black">{point.alamat}</td>
+                      <td className="p-3 text-black">{point.telepon}</td>
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            point.tipe === "Cabang"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
+                          {point.tipe}
+                        </span>
+                      </td>
+                      <td className="p-3 relative">
+                        <button
+                          onClick={() => toggleDropdown(index)}
+                          className="text-[#4A2C2A] hover:text-[#8B5A2B]"
+                          aria-label="Menu"
+                        >
+                          <Icon
+                            icon="mdi:dots-vertical"
+                            className="w-5 h-5"
+                          />
+                        </button>
+                        {openDropdownIndex === index && (
+                          <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
+                            <ul className="text-sm text-[#4A2C2A]">
+                              <li
+                                onClick={() =>
+                                  toggleUbahModal(indexOfFirstItem + index)
+                                }
+                                className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                              >
+                                Ubah Data
+                              </li>
+                              <li
+                                onClick={() =>
+                                  toggleDeleteModal(indexOfFirstItem + index)
+                                }
+                                className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                              >
+                                Hapus Data
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
                 ) : (
                   <tr>
-                    <td
-                      colSpan="5"
-                      className="p-3 text-center text-black"
-                    >
+                    <td colSpan="5" className="p-3 text-center text-black">
                       Tidak ada pos yang sesuai dengan pencarian.
                     </td>
                   </tr>
@@ -662,7 +611,7 @@ export default function Home() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm ${
+              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
                 currentPage === 1
                   ? "opacity-50 cursor-not-allowed"
                   : "hover:bg-[#8B5A2B] hover:text-white"
@@ -670,25 +619,23 @@ export default function Home() {
             >
               Previous
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-              (page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    currentPage === page
-                      ? "bg-[#4A2C2A] text-white"
-                      : "border border-gray-300 text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
-                  }`}
-                >
-                  {page}
-                </button>
-              )
-            )}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  currentPage === page
+                    ? "bg-[#4A2C2A] text-white"
+                    : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm ${
+              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
                 currentPage === totalPages
                   ? "opacity-50 cursor-not-allowed"
                   : "hover:bg-[#8B5A2B] hover:text-white"

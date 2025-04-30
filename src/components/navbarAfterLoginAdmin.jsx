@@ -13,10 +13,9 @@ export default function navbarAfterLogin() {
             <Image
               src="/Kotak Peduli.webp" 
               alt="Kotak Peduli Logo"
-              width={40}
-              height={40}
+              width={80}
+              height={80}
             />
-            <span className="font-bold text-[#4A2C2A] text-lg">Kotak Peduli</span>
           </div>
         </Link>
 

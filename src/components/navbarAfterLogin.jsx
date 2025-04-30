@@ -12,10 +12,10 @@ export default function navbarAfterLogin() {
               {/* Logo */}
               <div className="flex items-center cursor-pointer">
                 <Image 
-                  src="/Main Desain Skripsi Frame 431.webp"  
+                  src="/Kotak Peduli.webp"  
                   alt="Kotak Peduli Logo"
-                  width={100} 
-                  height={100} 
+                  width={80} 
+                  height={80} 
                 />
               </div>
     

@@ -1,14 +1,13 @@
-'use client'
+"use client";
 
 import Head from "next/head";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import Footer from "../footer/page";
-import NavbarAfterLoginAdmin from "../navbarAfterLoginAdmin/page";
-import { useState } from "react";
+import NavbarAfterLoginAdmin from "../../components/navbarAfterLoginAdmin";
 import { Icon } from "@iconify/react";
 
 export default function AdminPage() {
-  // Static data for the table
+  // Static admin data
   const [admins, setAdmins] = useState([
     {
       nama: "Matthew Emmanuel",
@@ -38,61 +37,29 @@ export default function AdminPage() {
       penempatan: "Cabang Bekasi",
       role: "Admin Cabang/Drop Point",
     },
-    {
-      nama: "Matthew Emmanuel",
-      email: "matthew.emmanuel@email.com",
-      noTelepon: "+6281212312312",
-      penempatan: "Cabang Bekasi",
-      role: "Admin Utama",
-    },
-    {
-      nama: "Matthew Emmanuel",
-      email: "matthew.emmanuel@email.com",
-      noTelepon: "+6281212312312",
-      penempatan: "Cabang Bekasi",
-      role: "Admin Utama",
-    },
-    {
-      nama: "Matthew Emmanuel",
-      email: "matthew.emmanuel@email.com",
-      noTelepon: "+6281212312312",
-      penempatan: "Cabang Bekasi",
-      role: "Admin Utama",
-    },
-    {
-      nama: "Matthew Emmanuel",
-      email: "matthew.emmanuel@email.com",
-      noTelepon: "+6281212312312",
-      penempatan: "Cabang Bekasi",
-      role: "Admin Utama",
-    },
   ]);
 
-  // Pagination state
+  // State for filters
+  const [isAdminUtama, setIsAdminUtama] = useState(false);
+  const [isAdminDonasi, setIsAdminDonasi] = useState(false);
+  const [isAdminEvent, setIsAdminEvent] = useState(false);
+  const [isAdminCabang, setIsAdminCabang] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // State for filter dropdown visibility
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  // State for selected filters
-  const [selectedFilters, setSelectedFilters] = useState({
-    adminUtama: false,
-    adminDonasi: false,
-    adminEvent: false,
-    adminCabang: false,
-  });
+  // State for modals and dropdowns
+  const [isTambahModalOpen, setIsTambahModalOpen] = useState(false);
+  const [isUbahModalOpen, setIsUbahModalOpen] = useState(false);
+  const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
+  const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
+  const [selectedAdminIndex, setSelectedAdminIndex] = useState(null);
 
-  // State for search query
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // State for menu dropdown visibility and selected row
-  const [menuOpen, setMenuOpen] = useState(null);
-
-  // State for add/edit modal visibility and form data
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editIndex, setEditIndex] = useState(null);
-  const [formData, setFormData] = useState({
+  // State for form data
+  const [tambahFormData, setTambahFormData] = useState({
     nama: "",
     email: "",
     noTelepon: "",
@@ -100,14 +67,16 @@ export default function AdminPage() {
     role: "",
   });
 
-  // State for role dropdown in form
-  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [ubahFormData, setUbahFormData] = useState({
+    nama: "",
+    email: "",
+    noTelepon: "",
+    penempatan: "",
+    role: "",
+  });
 
   // State for custom roles
   const [customRoles, setCustomRoles] = useState([]);
-
-  // State for create role modal visibility and role form data
-  const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
   const [newRoleData, setNewRoleData] = useState({
     name: "",
     permissions: {
@@ -119,195 +88,170 @@ export default function AdminPage() {
     },
   });
 
-  // Toggle filter dropdown
-  const toggleFilter = () => {
-    setIsFilterOpen(!isFilterOpen);
+  // Filter admins based on role and search query
+  const filteredAdmins = admins.filter((admin) => {
+    let matchesRole = false;
+    if (!isAdminUtama && !isAdminDonasi && !isAdminEvent && !isAdminCabang) {
+      matchesRole = true;
+    } else {
+      matchesRole =
+        (isAdminUtama && admin.role === "Admin Utama") ||
+        (isAdminDonasi && admin.role === "Admin Donasi") ||
+        (isAdminEvent && admin.role === "Admin Event") ||
+        (isAdminCabang && admin.role === "Admin Cabang/Drop Point") ||
+        customRoles.includes(admin.role);
+    }
+
+    const matchesSearch = searchQuery
+      ? admin.nama.toLowerCase().includes(searchQuery.toLowerCase())
+      : true;
+
+    return matchesRole && matchesSearch;
+  });
+
+  // Loading effect for filtering
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery, isAdminUtama, isAdminDonasi, isAdminEvent, isAdminCabang, admins]);
+
+  // Pagination logic
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredAdmins.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredAdmins.length / itemsPerPage);
+
+  // Handlers
+  const handleFilterChange = (setter) => (value) => {
+    setter(value);
+    setCurrentPage(1);
   };
 
-  // Handle filter checkbox change
-  const handleFilterChange = (filter) => {
-    setSelectedFilters((prev) => ({
-      ...prev,
-      [filter]: !prev[filter],
-    }));
-  };
-
-  // Handle search input change
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
+    setCurrentPage(1);
   };
 
-  // Toggle menu dropdown for a specific row
-  const toggleMenu = (index) => {
-    setMenuOpen(menuOpen === index ? null : index);
+  const toggleDropdown = (index) => {
+    setOpenDropdownIndex(openDropdownIndex === index ? null : index);
   };
 
-  // Open add modal
-  const openAddModal = () => {
-    setFormData({
-      nama: "",
-      email: "",
-      noTelepon: "",
-      penempatan: "",
-      role: "",
-    });
-    setIsAddModalOpen(true);
-  };
-
-  // Open edit modal
-  const openEditModal = (index) => {
-    setEditIndex(index);
-    setFormData(admins[index]);
-    setIsEditModalOpen(true);
-    setMenuOpen(null);
-  };
-
-  // Close add/edit modal
-  const closeModal = () => {
-    setIsAddModalOpen(false);
-    setIsEditModalOpen(false);
-    setEditIndex(null);
-  };
-
-  // Handle form input change for add/edit
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  // Handle form submission for adding a new admin
-  const handleAddSubmit = (e) => {
-    e.preventDefault();
-    setAdmins([...admins, formData]);
-    closeModal();
-  };
-
-  // Handle form submission for editing an admin
-  const handleEditSubmit = (e) => {
-    e.preventDefault();
-    const updatedAdmins = [...admins];
-    updatedAdmins[editIndex] = formData;
-    setAdmins(updatedAdmins);
-    closeModal();
-  };
-
-  // Toggle role dropdown in form
-  const toggleRoleDropdown = () => {
-    setIsRoleDropdownOpen(!isRoleDropdownOpen);
-  };
-
-  // Handle role selection
-  const handleRoleSelect = (role) => {
-    if (role === "Buat Role Baru") {
-      setIsCreateRoleModalOpen(true);
-      setIsRoleDropdownOpen(false);
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        role,
-      }));
-      setIsRoleDropdownOpen(false);
+  const toggleTambahModal = () => {
+    setIsTambahModalOpen(!isTambahModalOpen);
+    if (isTambahModalOpen) {
+      setTambahFormData({
+        nama: "",
+        email: "",
+        noTelepon: "",
+        penempatan: "",
+        role: "",
+      });
     }
   };
 
-  // Handle input change for create role form
+  const toggleUbahModal = (index) => {
+    if (index !== null) {
+      const admin = admins[index];
+      setUbahFormData({
+        nama: admin.nama,
+        email: admin.email,
+        noTelepon: admin.noTelepon,
+        penempatan: admin.penempatan,
+        role: admin.role,
+      });
+      setSelectedAdminIndex(index);
+    }
+    setIsUbahModalOpen(!isUbahModalOpen);
+    setOpenDropdownIndex(null);
+  };
+
+  const toggleCreateRoleModal = () => {
+    setIsCreateRoleModalOpen(!isCreateRoleModalOpen);
+    if (isCreateRoleModalOpen) {
+      setNewRoleData({
+        name: "",
+        permissions: {
+          barangDonasi: false,
+          melihatDataDonasi: false,
+          mengaturTanggalPenjemputan: false,
+          mengubahStatusDonasi: false,
+          mengaturTanggalPengiriman: false,
+        },
+      });
+    }
+  };
+
+  const handleTambahInputChange = (e) => {
+    const { name, value } = e.target;
+    setTambahFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleUbahInputChange = (e) => {
+    const { name, value } = e.target;
+    setUbahFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRoleSelect = (role) => {
+    if (role === "Buat Role Baru") {
+      toggleCreateRoleModal();
+    } else {
+      setTambahFormData((prev) => ({ ...prev, role }));
+      setUbahFormData((prev) => ({ ...prev, role }));
+    }
+  };
+
   const handleNewRoleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     if (type === "checkbox") {
       setNewRoleData((prev) => ({
         ...prev,
-        permissions: {
-          ...prev.permissions,
-          [name]: checked,
-        },
+        permissions: { ...prev.permissions, [name]: checked },
       }));
     } else {
-      setNewRoleData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+      setNewRoleData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
-  // Handle create role form submission
+  const handleTambahSubmit = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setAdmins((prev) => [...prev, tambahFormData]);
+    toggleTambahModal();
+    setTimeout(() => setIsLoading(false), 500);
+  };
+
+  const handleUbahSubmit = (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setAdmins((prev) => {
+      const updatedAdmins = [...prev];
+      updatedAdmins[selectedAdminIndex] = ubahFormData;
+      return updatedAdmins;
+    });
+    toggleUbahModal(null);
+    setTimeout(() => setIsLoading(false), 500);
+  };
+
   const handleCreateRoleSubmit = (e) => {
     e.preventDefault();
-    setCustomRoles([...customRoles, newRoleData.name]);
-    setFormData((prev) => ({
-      ...prev,
-      role: newRoleData.name,
-    }));
-    setIsCreateRoleModalOpen(false);
-    setNewRoleData({
-      name: "",
-      permissions: {
-        barangDonasi: false,
-        melihatDataDonasi: false,
-        mengaturTanggalPenjemputan: false,
-        mengubahStatusDonasi: false,
-        mengaturTanggalPengiriman: false,
-      },
-    });
+    setCustomRoles((prev) => [...prev, newRoleData.name]);
+    setTambahFormData((prev) => ({ ...prev, role: newRoleData.name }));
+    setUbahFormData((prev) => ({ ...prev, role: newRoleData.name }));
+    toggleCreateRoleModal();
   };
 
-  // Close create role modal
-  const closeCreateRoleModal = () => {
-    setIsCreateRoleModalOpen(false);
-    setNewRoleData({
-      name: "",
-      permissions: {
-        barangDonasi: false,
-        melihatDataDonasi: false,
-        mengaturTanggalPenjemputan: false,
-        mengubahStatusDonasi: false,
-        mengaturTanggalPengiriman: false,
-      },
-    });
+  const handleDelete = (index) => {
+    setAdmins((prev) => prev.filter((_, i) => i !== index));
+    setOpenDropdownIndex(null);
   };
 
-  // Apply filters and search to the admin data
-  const filteredAdmins = admins
-    .filter((admin) => {
-      // Apply role filters
-      if (
-        !selectedFilters.adminUtama &&
-        !selectedFilters.adminDonasi &&
-        !selectedFilters.adminEvent &&
-        !selectedFilters.adminCabang
-      ) {
-        return true; // Show all if no filters are selected
-      }
-      return (
-        (selectedFilters.adminUtama && admin.role === "Admin Utama") ||
-        (selectedFilters.adminDonasi && admin.role === "Admin Donasi") ||
-        (selectedFilters.adminEvent && admin.role === "Admin Event") ||
-        (selectedFilters.adminCabang && admin.role === "Admin Cabang/Drop Point")
-      );
-    })
-    .filter((admin) => {
-      // Apply search filter
-      if (!searchQuery) return true; // Show all if search query is empty
-      return admin.nama.toLowerCase().includes(searchQuery.toLowerCase());
-    });
-
-  // Pagination logic
-  const totalItems = filteredAdmins.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = filteredAdmins.slice(startIndex, endIndex);
-
-  // Handle page change
-  const handlePageChange = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
   };
 
-  // Spinner component
   const Spinner = () => (
     <div className="flex justify-center items-center py-8">
       <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#4A2C2A] border-t-transparent"></div>
@@ -322,110 +266,84 @@ export default function AdminPage() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* Navigation Bar */}
       <NavbarAfterLoginAdmin />
 
-      {/* Main Content */}
       <main className="px-8 py-6">
-        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A]">ADMINISTRATOR</h1>
+        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Administrator</h1>
 
-        <div className="flex justify-between items-center mb-6 text-black">
+        <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="Cari berdasarkan nama"
+              placeholder="Search Course"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="w-full p-2 pl-10 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] text-sm"
+              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm text-black"
             />
             <Icon
               icon="mdi:magnify"
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#4A2C2A] w-5 h-5"
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#C2C2C2] w-5 h-5"
             />
           </div>
           <div className="flex items-center space-x-6">
-            <div className="relative">
-              <button
-                onClick={toggleFilter}
-                className="px-4 py-1.5 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4] flex items-center"
-              >
-                Filter <Icon icon="mdi:chevron-down" className="ml-2 w-5 h-5" />
-              </button>
-              {isFilterOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-4 z-10">
-                  <label className="flex items-center space-x-2 mb-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="adminUtama"
-                      checked={selectedFilters.adminUtama}
-                      onChange={() => handleFilterChange("adminUtama")}
-                      className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Admin Utama</span>
-                  </label>
-                  <label className="flex items-center space-x-2 mb-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="adminDonasi"
-                      checked={selectedFilters.adminDonasi}
-                      onChange={() => handleFilterChange("adminDonasi")}
-                      className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Admin Donasi</span>
-                  </label>
-                  <label className="flex items-center space-x-2 mb-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="adminEvent"
-                      checked={selectedFilters.adminEvent}
-                      onChange={() => handleFilterChange("adminEvent")}
-                      className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Admin Event</span>
-                  </label>
-                  <label className="flex items-center space-x-2 mb-4 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id="adminCabang"
-                      checked={selectedFilters.adminCabang}
-                      onChange={() => handleFilterChange("adminCabang")}
-                      className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Admin Cabang/Drop Point</span>
-                  </label>
-                  <button
-                    onClick={toggleFilter}
-                    className="w-full py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
-                  >
-                    Terapkan Filter
-                  </button>
-                </div>
-              )}
-            </div>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAdminUtama}
+                onChange={(e) => handleFilterChange(setIsAdminUtama)(e.target.checked)}
+                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+              />
+              <span className="text-[#4A2C2A] text-sm font-medium">Admin Utama</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAdminDonasi}
+                onChange={(e) => handleFilterChange(setIsAdminDonasi)(e.target.checked)}
+                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+              />
+              <span className="text-[#4A2C2A] text-sm font-medium">Admin Donasi</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAdminEvent}
+                onChange={(e) => handleFilterChange(setIsAdminEvent)(e.target.checked)}
+                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+              />
+              <span className="text-[#4A2C2A] text-sm font-medium">Admin Event</span>
+            </label>
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isAdminCabang}
+                onChange={(e) => handleFilterChange(setIsAdminCabang)(e.target.checked)}
+                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+              />
+              <span className="text-[#4A2C2A] text-sm font-medium">Admin Cabang</span>
+            </label>
             <button
-              onClick={openAddModal}
-              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm"
+              onClick={toggleTambahModal}
+              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm uppercase"
             >
               Tambah Administrator
             </button>
           </div>
         </div>
 
-        {/* Add/Edit Modal */}
-        {(isAddModalOpen || isEditModalOpen) && (
+        {/* Tambah Modal */}
+        {isTambahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">
-                {isAddModalOpen ? "Tambah Administrator" : "Ubah Data"}
-              </h2>
-              <form onSubmit={isAddModalOpen ? handleAddSubmit : handleEditSubmit}>
+              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">Tambah Administrator</h2>
+              <form onSubmit={handleTambahSubmit}>
                 <div className="mb-4">
                   <label className="block text-sm text-[#4A2C2A] mb-1">Nama</label>
                   <input
                     type="text"
                     name="nama"
-                    value={formData.nama}
-                    onChange={handleInputChange}
+                    value={tambahFormData.nama}
+                    onChange={handleTambahInputChange}
                     placeholder="Contoh: Matthew Emmanuel"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                     required
@@ -436,8 +354,8 @@ export default function AdminPage() {
                   <input
                     type="email"
                     name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
+                    value={tambahFormData.email}
+                    onChange={handleTambahInputChange}
                     placeholder="Contoh: matthew.emmanuel@email.com"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                     required
@@ -448,8 +366,8 @@ export default function AdminPage() {
                   <input
                     type="text"
                     name="noTelepon"
-                    value={formData.noTelepon}
-                    onChange={handleInputChange}
+                    value={tambahFormData.noTelepon}
+                    onChange={handleTambahInputChange}
                     placeholder="Contoh: +6281212312312"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                     required
@@ -460,23 +378,23 @@ export default function AdminPage() {
                   <input
                     type="text"
                     name="penempatan"
-                    value={formData.penempatan}
-                    onChange={handleInputChange}
+                    value={tambahFormData.penempatan}
+                    onChange={handleTambahInputChange}
                     placeholder="Contoh: Cabang Bekasi"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                     required
                   />
                 </div>
-                <div className="mb-6 relative">
+                <div className="mb-6">
                   <label className="block text-sm text-[#4A2C2A] mb-1">Role</label>
                   <div
-                    onClick={toggleRoleDropdown}
+                    onClick={() => setOpenDropdownIndex(openDropdownIndex === "role" ? null : "role")}
                     className="border border-gray-300 rounded-lg p-2 w-full text-[#4A2C2A] text-sm flex justify-between items-center cursor-pointer"
                   >
-                    <span>{formData.role || "Pilih role yang sesuai"}</span>
+                    <span>{tambahFormData.role || "Pilih role yang sesuai"}</span>
                     <Icon icon="mdi:chevron-down" className="w-5 h-5" />
                   </div>
-                  {isRoleDropdownOpen && (
+                  {openDropdownIndex === "role" && (
                     <div className="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10">
                       <button
                         onClick={() => handleRoleSelect("Admin Utama")}
@@ -522,17 +440,140 @@ export default function AdminPage() {
                 </div>
                 <div className="flex space-x-3">
                   <button
+                    type="submit"
+                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                  >
+                    Tambah Administrator
+                  </button>
+                  <button
                     type="button"
-                    onClick={closeModal}
+                    onClick={toggleTambahModal}
                     className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
                   >
                     Batal
                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Ubah Modal */}
+        {isUbahModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-96">
+              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">Ubah Data Administrator</h2>
+              <form onSubmit={handleUbahSubmit}>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">Nama</label>
+                  <input
+                    type="text"
+                    name="nama"
+                    value={ubahFormData.nama}
+                    onChange={handleUbahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={ubahFormData.email}
+                    onChange={handleUbahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">No. Telepon</label>
+                  <input
+                    type="text"
+                    name="noTelepon"
+                    value={ubahFormData.noTelepon}
+                    onChange={handleUbahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">Penempatan</label>
+                  <input
+                    type="text"
+                    name="penempatan"
+                    value={ubahFormData.penempatan}
+                    onChange={handleUbahInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    required
+                  />
+                </div>
+                <div className="mb-6">
+                  <label className="block text-sm text-[#4A2C2A] mb-1">Role</label>
+                  <div
+                    onClick={() => setOpenDropdownIndex(openDropdownIndex === "role-ubah" ? null : "role-ubah")}
+                    className="border border-gray-300 rounded-lg p-2 w-full text-[#4A2C2A] text-sm flex justify-between items-center cursor-pointer"
+                  >
+                    <span>{ubahFormData.role || "Pilih role yang sesuai"}</span>
+                    <Icon icon="mdi:chevron-down" className="w-5 h-5" />
+                  </div>
+                  {openDropdownIndex === "role-ubah" && (
+                    <div className="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                      <button
+                        onClick={() => handleRoleSelect("Admin Utama")}
+                        className="block w-full text-left px-4 py-2 text-[#4A2C2A] text-sm hover:bg-[#F5E9D4]"
+                      >
+                        Admin Utama
+                      </button>
+                      <button
+                        onClick={() => handleRoleSelect("Admin Donasi")}
+                        className="block w-full text-left px-4 py-2 text-[#4A2C2A] text-sm hover:bg-[#F5E9D4]"
+                      >
+                        Admin Donasi
+                      </button>
+                      <button
+                        onClick={() => handleRoleSelect("Admin Event")}
+                        className="block w-full text-left px-4 py-2 text-[#4A2C2A] text-sm hover:bg-[#F5E9D4]"
+                      >
+                        Admin Event
+                      </button>
+                      <button
+                        onClick={() => handleRoleSelect("Admin Cabang/Drop Point")}
+                        className="block w-full text-left px-4 py-2 text-[#4A2C2A] text-sm hover:bg-[#F5E9D4]"
+                      >
+                        Admin Cabang/Drop Point
+                      </button>
+                      {customRoles.map((role, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleRoleSelect(role)}
+                          className="block w-full text-left px-4 py-2 text-[#4A2C2A] text-sm hover:bg-[#F5E9D4]"
+                        >
+                          {role}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => handleRoleSelect("Buat Role Baru")}
+                        className="block w-full text-left px-4 py-2 text-[#4A2C2A] text-sm hover:bg-[#F5E9D4]"
+                      >
+                        Buat Role Baru
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex space-x-3">
                   <button
                     type="submit"
                     className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
                   >
-                    {isAddModalOpen ? "Tambah Administrator" : "Simpan"}
+                    Simpan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleUbahModal(null)}
+                    className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
+                  >
+                    Batal
                   </button>
                 </div>
               </form>
@@ -613,17 +654,17 @@ export default function AdminPage() {
                 </div>
                 <div className="flex space-x-3">
                   <button
-                    type="button"
-                    onClick={closeCreateRoleModal}
-                    className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
-                  >
-                    Batal
-                  </button>
-                  <button
                     type="submit"
                     className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
                   >
                     Simpan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={toggleCreateRoleModal}
+                    className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
+                  >
+                    Batal
                   </button>
                 </div>
               </form>
@@ -632,109 +673,111 @@ export default function AdminPage() {
         )}
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="bg-[#F5E9D4] text-[#4A2C2A] font-semibold">
-                <th className="p-3">NAMA</th>
-                <th className="p-3">EMAIL</th>
-                <th className="p-3">NO. TELEPON</th>
-                <th className="p-3">PENEMPATAN</th>
-                <th className="p-3">ROLE</th>
-                <th className="p-3">MENU</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentItems.length > 0 ? (
-                currentItems.map((admin, index) => (
-                  <tr key={index} className="border-t border-gray-200">
-                    <td className="p-3 text-black">{admin.nama}</td>
-                    <td className="p-3 text-black">{admin.email}</td>
-                    <td className="p-3 text-black">{admin.noTelepon}</td>
-                    <td className="p-3 text-black">{admin.penempatan}</td>
-                    <td className="p-3 text-black">{admin.role}</td>
-                    <td className="p-3 relative">
-                      <button
-                        onClick={() => toggleMenu(startIndex + index)}
-                        className="text-[#4A2C2A] hover:text-[#8B5A2B]"
-                        aria-label="Menu"
-                      >
-                        <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
-                      </button>
-                      {menuOpen === (startIndex + index) && (
-                        <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
-                          <ul className="text-sm text-[#4A2C2A]">
-                            <li
-                              onClick={() => openEditModal(startIndex + index)}
-                              className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
-                            >
-                              Ubah Data
-                            </li>
-                            <li
-                              onClick={() => {
-                                setAdmins(admins.filter((_, i) => i !== (startIndex + index)));
-                                setMenuOpen(null);
-                              }}
-                              className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
-                            >
-                              Hapus Data
-                            </li>
-                          </ul>
-                        </div>
-                      )}
+          {isLoading ? (
+            <Spinner />
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-white text-[#4A2C2A] font-semibold uppercase">
+                  <th className="p-3 w-1/5">Nama</th>
+                  <th className="p-3 w-1/5">Email</th>
+                  <th className="p-3 w-1/5">No. Telepon</th>
+                  <th className="p-3 w-1/5">Penempatan</th>
+                  <th className="p-3 w-1/5">Role</th>
+                  <th className="p-3 w-1/12">Menu</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentItems.length > 0 ? (
+                  currentItems.map((admin, index) => (
+                    <tr key={index} className="border-t border-gray-200">
+                      <td className="p-3 text-black">{admin.nama}</td>
+                      <td className="p-3 text-black">{admin.email}</td>
+                      <td className="p-3 text-black">{admin.noTelepon}</td>
+                      <td className="p-3 text-black">{admin.penempatan}</td>
+                      <td className="p-3 text-black">{admin.role}</td>
+                      <td className="p-3 relative">
+                        <button
+                          onClick={() => toggleDropdown(indexOfFirstItem + index)}
+                          className="text-[#4A2C2A] hover:text-[#8B5A2B]"
+                          aria-label="Menu"
+                        >
+                          <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
+                        </button>
+                        {openDropdownIndex === indexOfFirstItem + index && (
+                          <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
+                            <ul className="text-sm text-[#4A2C2A]">
+                              <li
+                                onClick={() => toggleUbahModal(indexOfFirstItem + index)}
+                                className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                              >
+                                Ubah Data
+                              </li>
+                              <li
+                                onClick={() => handleDelete(indexOfFirstItem + index)}
+                                className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                              >
+                                Hapus Data
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="p-3 text-center text-black">
+                      Tidak ada data yang sesuai dengan pencarian.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="p-3 text-center text-black">
-                    Tidak ada data yang sesuai dengan pencarian.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
 
-        <div className="flex justify-end mt-4 space-x-2">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={`px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm ${
-              currentPage === 1
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-[#8B5A2B] hover:text-white"
-            }`}
-          >
-            Previous
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+        {!isLoading && (
+          <div className="flex justify-end mt-4 space-x-2">
             <button
-              key={page}
-              onClick={() => handlePageChange(page)}
-              className={`px-3 py-1 rounded-lg text-sm ${
-                currentPage === page
-                  ? "bg-[#4A2C2A] text-white"
-                  : "border border-gray-300 text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
+                currentPage === 1
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-[#8B5A2B] hover:text-white"
               }`}
             >
-              {page}
+              Previous
             </button>
-          ))}
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className={`px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm ${
-              currentPage === totalPages
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-[#8B5A2B] hover:text-white"
-            }`}
-          >
-            Next
-          </button>
-        </div>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  currentPage === page
+                    ? "bg-[#4A2C2A] text-white"
+                    : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
+                currentPage === totalPages
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-[#8B5A2B] hover:text-white"
+              }`}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </main>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
