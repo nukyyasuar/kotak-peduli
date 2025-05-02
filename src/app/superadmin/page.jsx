@@ -18,6 +18,8 @@ export default function Superadmin() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
 
   const itemsPerPage = 10;
 
@@ -291,43 +293,43 @@ export default function Superadmin() {
             </div>
 
             {/* Pagination */}
-            <div className="flex justify-end mt-4 space-x-2">
+            {!isLoading && (
+          <div className="flex justify-end mt-4 space-x-2">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
+              } active:border-none active:bg-transparent`}
+            >
+              <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
-                  currentPage === 1
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-[#8B5A2B] hover:text-white"
+                key={page}
+                onClick={() => handlePageChange(page)}
+                className={`px-3 py-1 rounded-lg text-sm ${
+                  currentPage === page
+                    ? "bg-[#4A2C2A] text-white"
+                    : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
                 }`}
               >
-                Previous
+                {page}
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 rounded-lg text-sm ${
-                    currentPage === page
-                      ? "bg-[#4A2C2A] text-white"
-                      : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
-                  currentPage === totalPages
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-[#8B5A2B] hover:text-white"
-                }`}
-              >
-                Next
-              </button>
-            </div>
+            ))}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+              } active:border-none active:bg-transparent`}
+            >
+              Next
+              <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />
+            </button>
+          </div>
+        )}
           </div>
         </div>
       </section>

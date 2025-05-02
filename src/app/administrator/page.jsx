@@ -44,6 +44,7 @@ export default function AdminPage() {
   const [isAdminDonasi, setIsAdminDonasi] = useState(false);
   const [isAdminEvent, setIsAdminEvent] = useState(false);
   const [isAdminCabang, setIsAdminCabang] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -137,6 +138,10 @@ export default function AdminPage() {
 
   const toggleDropdown = (index) => {
     setOpenDropdownIndex(openDropdownIndex === index ? null : index);
+  };
+
+  const toggleFilterDropdown = () => {
+    setIsFilterOpen(!isFilterOpen);
   };
 
   const toggleTambahModal = () => {
@@ -252,6 +257,15 @@ export default function AdminPage() {
     setCurrentPage(pageNumber);
   };
 
+  const handleResetFilters = () => {
+    setIsAdminUtama(false);
+    setIsAdminDonasi(false);
+    setIsAdminEvent(false);
+    setIsAdminCabang(false);
+    setIsFilterOpen(false);
+    setCurrentPage(1);
+  };
+
   const Spinner = () => (
     <div className="flex justify-center items-center py-8">
       <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#4A2C2A] border-t-transparent"></div>
@@ -271,7 +285,7 @@ export default function AdminPage() {
       <main className="px-8 py-6">
         <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Administrator</h1>
 
-        <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
+        <div className="flex justify-between items-center mb-6">
           <div className="relative w-64">
             <input
               type="text"
@@ -285,43 +299,70 @@ export default function AdminPage() {
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#C2C2C2] w-5 h-5"
             />
           </div>
-          <div className="flex items-center space-x-6">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isAdminUtama}
-                onChange={(e) => handleFilterChange(setIsAdminUtama)(e.target.checked)}
-                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
-              />
-              <span className="text-[#4A2C2A] text-sm font-medium">Admin Utama</span>
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isAdminDonasi}
-                onChange={(e) => handleFilterChange(setIsAdminDonasi)(e.target.checked)}
-                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
-              />
-              <span className="text-[#4A2C2A] text-sm font-medium">Admin Donasi</span>
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isAdminEvent}
-                onChange={(e) => handleFilterChange(setIsAdminEvent)(e.target.checked)}
-                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
-              />
-              <span className="text-[#4A2C2A] text-sm font-medium">Admin Event</span>
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isAdminCabang}
-                onChange={(e) => handleFilterChange(setIsAdminCabang)(e.target.checked)}
-                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
-              />
-              <span className="text-[#4A2C2A] text-sm font-medium">Admin Cabang</span>
-            </label>
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <button
+                onClick={toggleFilterDropdown}
+                className="flex items-center px-4 py-1.5 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium bg-white"
+              >
+                Filter
+                <Icon icon="mdi:chevron-down" className="ml-2 w-5 h-5" />
+              </button>
+              {isFilterOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <label className="flex items-center space-x-2 px-4 py-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isAdminUtama}
+                      onChange={(e) => handleFilterChange(setIsAdminUtama)(e.target.checked)}
+                      className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                    />
+                    <span className="text-[#4A2C2A] text-sm">Admin Utama</span>
+                  </label>
+                  <label className="flex items-center space-x-2 px-4 py-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isAdminDonasi}
+                      onChange={(e) => handleFilterChange(setIsAdminDonasi)(e.target.checked)}
+                      className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                    />
+                    <span className="text-[#4A2C2A] text-sm">Admin Donasi</span>
+                  </label>
+                  <label className="flex items-center space-x-2 px-4 py-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isAdminEvent}
+                      onChange={(e) => handleFilterChange(setIsAdminEvent)(e.target.checked)}
+                      className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                    />
+                    <span className="text-[#4A2C2A] text-sm">Admin Event</span>
+                  </label>
+                  <label className="flex items-center space-x-2 px-4 py-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isAdminCabang}
+                      onChange={(e) => handleFilterChange(setIsAdminCabang)(e.target.checked)}
+                      className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                    />
+                    <span className="text-[#4A2C2A] text-sm">Admin Cabang / Drop Point</span>
+                  </label>
+                  <div className="flex justify-between px-4 py-2">
+                    <button
+                      onClick={handleResetFilters}
+                      className="px-3 py-1 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium"
+                    >
+                      Filter
+                    </button>
+                    <button
+                      onClick={handleResetFilters}
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <button
               onClick={toggleTambahModal}
               className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm uppercase"
@@ -412,7 +453,7 @@ export default function AdminPage() {
                         onClick={() => handleRoleSelect("Admin Event")}
                         className="block w-full text-left px-4 py-2 text-[#4A2C2A] text-sm hover:bg-[#F5E9D4]"
                       >
-                        Admin Event
+                        Admin Event(aux
                       </button>
                       <button
                         onClick={() => handleRoleSelect("Admin Cabang/Drop Point")}
@@ -742,12 +783,11 @@ export default function AdminPage() {
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
-                currentPage === 1
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-[#8B5A2B] hover:text-white"
-              }`}
+              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
+              } active:border-none active:bg-transparent`}
             >
+              <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
               Previous
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -766,13 +806,12 @@ export default function AdminPage() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
-                currentPage === totalPages
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-[#8B5A2B] hover:text-white"
-              }`}
+              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+              } active:border-none active:bg-transparent`}
             >
               Next
+              <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />
             </button>
           </div>
         )}

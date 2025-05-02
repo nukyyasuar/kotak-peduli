@@ -7,6 +7,8 @@ import Footer from "../footer/page";
 import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
 import NavbarAfterLogin from "../../components/navbarAfterLogin";
+import SortProvider from "react-easy-sort";
+import { SortableItem } from "react-easy-sort";
 
 export default function Home() {
   const [isAktif, setIsAktif] = useState(false);
@@ -20,6 +22,7 @@ export default function Home() {
   const [selectedEventIndex, setSelectedEventIndex] = useState(null);
   const [eventToFinishIndex, setEventToFinishIndex] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortOrder, setSortOrder] = useState("asc");
   const eventsPerPage = 10;
 
   const [tambahFormData, setTambahFormData] = useState({
@@ -42,7 +45,7 @@ export default function Home() {
       events.push({
         name: `Banjir di Bekasi ${i}`,
         address: i % 2 === 0 ? "JL. Lorem Ipsum No. X, Bekasi..." : "Bekasi, Jawa Barat",
-        endDate: "20/03/2025",
+        endDate: `20/${String((i % 12) + 1).padStart(2, "0")}/2025`,
         items: "Pakaian, Buku, Mainan, Elektronik",
         status: i % 3 === 0 ? "Selesai" : "Aktif",
       });
@@ -66,19 +69,25 @@ export default function Home() {
     return matchesStatus && matchesSearch;
   });
 
+  const sortedEvents = [...filteredEvents].sort((a, b) => {
+    const dateA = new Date(a.endDate.split("/").reverse().join("-"));
+    const dateB = new Date(b.endDate.split("/").reverse().join("-"));
+    return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+  });
+
   useEffect(() => {
     setIsLoading(true);
     const timer = setTimeout(() => {
-      console.log("Filtered Events:", filteredEvents);
+      console.log("Sorted Events:", sortedEvents);
       setIsLoading(false);
     }, 500);
     return () => clearTimeout(timer);
-  }, [searchQuery, isAktif, isSelesai, events]);
+  }, [searchQuery, isAktif, isSelesai, events, sortOrder]);
 
   const indexOfLastEvent = currentPage * eventsPerPage;
   const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
-  const currentEvents = filteredEvents.slice(indexOfFirstEvent, indexOfLastEvent);
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
+  const currentEvents = sortedEvents.slice(indexOfFirstEvent, indexOfLastEvent);
+  const totalPages = Math.ceil(sortedEvents.length / eventsPerPage);
 
   const handleFilterChange = (setter) => (value) => {
     setter(value);
@@ -218,18 +227,22 @@ export default function Home() {
     setCurrentPage(pageNumber);
   };
 
+  const handleSort = () => {
+    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    setCurrentPage(1);
+  };
+
   const Spinner = () => (
     <div className="flex justify-center items-center py-8">
-      <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#4A2C2A] border-t-transparent"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#543A14] border-t-transparent"></div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-[#F5E9D4] font-sans">
+      <NavbarAfterLogin />
 
-      <NavbarAfterLogin/>
-
-      <main className="px-8 py-6"> {/*container mx-auto px-6*/}
+      <main className="px-8 py-6">
         <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Event</h1>
 
         <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
@@ -252,7 +265,7 @@ export default function Home() {
                 type="checkbox"
                 checked={isAktif}
                 onChange={(e) => handleFilterChange(setIsAktif)(e.target.checked)}
-                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                className="h-4 w-4 accent-[#543A14]"
               />
               <span className="text-[#4A2C2A] text-sm font-medium">Aktif</span>
             </label>
@@ -261,13 +274,13 @@ export default function Home() {
                 type="checkbox"
                 checked={isSelesai}
                 onChange={(e) => handleFilterChange(setIsSelesai)(e.target.checked)}
-                className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                className="h-4 w-4 accent-[#543A14]"
               />
               <span className="text-[#4A2C2A] text-sm font-medium">Selesai</span>
             </label>
             <button
               onClick={toggleTambahModal}
-              className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-bold hover:bg-[#8B5A2B]"
+              className="px-4 py-1.5 bg-[#543A14] text-white rounded-lg text-sm font-bold hover:bg-[#8B5A2B]"
             >
               Tambah Event
             </button>
@@ -277,10 +290,10 @@ export default function Home() {
         {isTambahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">Tambah Event</h2>
+              <h2 className="text-lg font-semibold text-[#543A14] mb-4">Tambah Event</h2>
               <form onSubmit={handleTambahSubmit}>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Nama</label>
+                  <label className="block text-sm text-[#543A14] mb-1">Nama</label>
                   <input
                     type="text"
                     name="nama"
@@ -321,7 +334,7 @@ export default function Home() {
                         name="pakaian"
                         checked={tambahFormData.barang.pakaian}
                         onChange={handleTambahCheckboxChange}
-                        className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                        className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#4A2C2A]">Pakaian</span>
                     </label>
@@ -331,7 +344,7 @@ export default function Home() {
                         name="elektronik"
                         checked={tambahFormData.barang.elektronik}
                         onChange={handleTambahCheckboxChange}
-                        className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                        className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#4A2C2A]">Elektronik</span>
                     </label>
@@ -341,7 +354,7 @@ export default function Home() {
                         name="mainan"
                         checked={tambahFormData.barang.mainan}
                         onChange={handleTambahCheckboxChange}
-                        className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                        className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#4A2C2A]">Mainan</span>
                     </label>
@@ -351,7 +364,7 @@ export default function Home() {
                         name="buku"
                         checked={tambahFormData.barang.buku}
                         onChange={handleTambahCheckboxChange}
-                        className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                        className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#4A2C2A]">Buku</span>
                     </label>
@@ -360,7 +373,7 @@ export default function Home() {
                 <div className="flex space-x-3">
                   <button
                     type="submit"
-                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                    className="w-1/2 py-2 bg-[#543A14] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
                   >
                     Tambah Event
                   </button>
@@ -421,7 +434,7 @@ export default function Home() {
                         name="pakaian"
                         checked={ubahFormData.barang.pakaian}
                         onChange={handleUbahCheckboxChange}
-                        className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                        className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#4A2C2A]">Pakaian</span>
                     </label>
@@ -431,7 +444,7 @@ export default function Home() {
                         name="elektronik"
                         checked={ubahFormData.barang.elektronik}
                         onChange={handleUbahCheckboxChange}
-                        className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                        className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#4A2C2A]">Elektronik</span>
                     </label>
@@ -441,7 +454,7 @@ export default function Home() {
                         name="mainan"
                         checked={ubahFormData.barang.mainan}
                         onChange={handleUbahCheckboxChange}
-                        className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                        className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#4A2C2A]">Mainan</span>
                     </label>
@@ -451,7 +464,7 @@ export default function Home() {
                         name="buku"
                         checked={ubahFormData.barang.buku}
                         onChange={handleUbahCheckboxChange}
-                        className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
+                        className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#4A2C2A]">Buku</span>
                     </label>
@@ -505,92 +518,101 @@ export default function Home() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {isLoading ? (
-            <Spinner />
-          ) : (
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="bg-white text-[#4A2C2A] font-bold">
-                  <th className="p-3 w-1/6">Nama</th>
-                  <th className="p-3 w-1/4">Alamat</th>
-                  <th className="p-3 w-1/6">Akhir Penerimaan</th>
-                  <th className="p-3 w-1/4">Jenis Barang</th>
-                  <th className="p-3 w-1/6">Status</th>
-                  <th className="p-3 w-1/12">Menu</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentEvents.length > 0 ? (
-                  currentEvents.map((event, index) => (
-                    <tr key={index} className="border-t border-gray-200">
-                      <td className="p-3 text-black">{event.name}</td>
-                      <td className="p-3 text-black">{event.address}</td>
-                      <td className="p-3 text-black">{event.endDate}</td>
-                      <td className="p-3 text-black">{event.items}</td>
-                      <td className="p-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            event.status === "Aktif"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {event.status}
-                        </span>
-                      </td>
-                      <td className="p-3 relative">
-                        <button
-                          onClick={() => toggleDropdown(index)}
-                          className="text-[#4A2C2A] hover:text-[#8B5A2B]"
-                          aria-label="Menu"
-                        >
-                          <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
-                        </button>
-                        {openDropdownIndex === index && (
-                          <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
-                            <ul className="text-sm text-[#4A2C2A]">
-                              <li
-                                onClick={() => toggleUbahModal(indexOfFirstEvent + index)}
-                                className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
-                              >
-                                Ubah Data
-                              </li>
-                              <li
-                                onClick={() => toggleConfirmModal(indexOfFirstEvent + index)}
-                                className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
-                              >
-                                Selesai
-                              </li>
-                            </ul>
-                          </div>
-                        )}
+        <SortProvider>
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            {isLoading ? (
+              <Spinner />
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-white text-[#4A2C2A] font-bold">
+                    <th className="p-3 w-1/6">Nama</th>
+                    <th className="p-3 w-1/4">Alamat</th>
+                    <th className="p-3 w-1/6 cursor-pointer" onClick={handleSort}>
+                      <div className="flex items-center">
+                        Akhir Penerimaan
+                        <Icon
+                          icon={sortOrder === "asc" ? "mdi:sort-ascending" : "mdi:sort-descending"}
+                          className="ml-2 w-4 h-4"
+                        />
+                      </div>
+                    </th>
+                    <th className="p-3 w-1/4">Jenis Barang</th>
+                    <th className="p-3 w-1/6">Status</th>
+                    <th className="p-3 w-1/12">Menu</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentEvents.length > 0 ? (
+                    currentEvents.map((event, index) => (
+                      <tr key={index} className="border-t border-gray-200">
+                        <td className="p-3 text-black">{event.name}</td>
+                        <td className="p-3 text-black">{event.address}</td>
+                        <td className="p-3 text-black">{event.endDate}</td>
+                        <td className="p-3 text-black">{event.items}</td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              event.status === "Aktif"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {event.status}
+                          </span>
+                        </td>
+                        <td className="p-3 relative">
+                          <button
+                            onClick={() => toggleDropdown(index)}
+                            className="text-[#4A2C2A] hover:text-[#8B5A2B]"
+                            aria-label="Menu"
+                          >
+                            <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
+                          </button>
+                          {openDropdownIndex === index && (
+                            <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
+                              <ul className="text-sm text-[#4A2C2A]">
+                                <li
+                                  onClick={() => toggleUbahModal(indexOfFirstEvent + index)}
+                                  className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                                >
+                                  Ubah Data
+                                </li>
+                                <li
+                                  onClick={() => toggleConfirmModal(indexOfFirstEvent + index)}
+                                  className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                                >
+                                  Selesai
+                                </li>
+                              </ul>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="p-3 text-center text-black">
+                        Tidak ada event yang sesuai dengan pencarian.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="p-3 text-center text-black">
-                      Tidak ada event yang sesuai dengan pencarian.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
-        </div>
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </SortProvider>
 
         {!isLoading && (
           <div className="flex justify-end mt-4 space-x-2">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
-                currentPage === 1
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-[#8B5A2B] hover:text-white"
-              }`}
+              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
+              } active:border-none active:bg-transparent`}
             >
+              <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
               Previous
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -609,13 +631,12 @@ export default function Home() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
-                currentPage === totalPages
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-[#8B5A2B] hover:text-white"
-              }`}
+              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+              } active:border-none active:bg-transparent`}
             >
               Next
+              <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />
             </button>
           </div>
         )}
