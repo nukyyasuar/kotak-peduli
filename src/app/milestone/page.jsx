@@ -1,14 +1,15 @@
 "use client";
 
-import Head from "next/head";
-import Image from "next/image";
 import { useState, useEffect } from "react";
-import Footer from "../footer/page";
-import { useRouter } from "next/navigation";
 import { Icon } from "@iconify/react";
 import NavbarAfterLogin from "../../components/navbarAfterLogin";
-import SortProvider from "react-easy-sort";
-import { SortableItem } from "react-easy-sort";
+import Footer from "../footer/page";
+import eventService from "../../service/eventService";
+import {format} from 'date-fns';
+// import {utcToZonedTime} from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
+import {formatInTimeZone} from 'date-fns-tz'
+
 
 export default function Home() {
   const [isAktif, setIsAktif] = useState(false);
@@ -19,10 +20,11 @@ export default function Home() {
   const [isTambahModalOpen, setIsTambahModalOpen] = useState(false);
   const [isUbahModalOpen, setIsUbahModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [selectedEventIndex, setSelectedEventIndex] = useState(null);
-  const [eventToFinishIndex, setEventToFinishIndex] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [eventToFinishId, setEventToFinishId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("asc");
+  const [error, setError] = useState(null);
   const eventsPerPage = 10;
 
   const [tambahFormData, setTambahFormData] = useState({
@@ -39,21 +41,59 @@ export default function Home() {
     barang: { pakaian: false, elektronik: false, mainan: false, buku: false },
   });
 
-  const generateEvents = (count) => {
-    const events = [];
-    for (let i = 1; i <= count; i++) {
-      events.push({
-        name: `Banjir di Bekasi ${i}`,
-        address: i % 2 === 0 ? "JL. Lorem Ipsum No. X, Bekasi..." : "Bekasi, Jawa Barat",
-        endDate: `20/${String((i % 12) + 1).padStart(2, "0")}/2025`,
-        items: "Pakaian, Buku, Mainan, Elektronik",
-        status: i % 3 === 0 ? "Selesai" : "Aktif",
-      });
+  const [events, setEvents] = useState([]);
+  const timeZone = toZonedTime(new Date(), 'Asia/Jakarta')
+
+  // Fetch events from API
+  const fetchEvents = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const profileData = await eventService.getUserCollectionCenter();
+      const centerId = profileData?.id;
+      console.log("Collection Center ID:", centerId);
+      if (!centerId) throw new Error("No collection center ID found in profile");
+
+      const data = await eventService.getEvents(centerId);
+      console.log("Raw API Events:", data);
+
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid API response: Expected an array of events");
+      }
+
+      const mappedEvents = data.map(({id, name, address, endDate, types, isActive}) => {
+        // if (!event.id || !event.nama || !event.alamat || !event.akhirPenerimaan || !event.barang) {
+        //   console.warn("Invalid event data:", event);
+        //   return null;
+        // }
+        console.log("Event Data:", {id, name, address, endDate, types, isActive});
+        return {
+           id,
+           name,
+           address,
+           endDate: endDate !== null && formatInTimeZone(new Date(endDate || null ), 'Asia/Jakarta', 'dd/MM/yyyy'),
+          types,
+          status: !isActive ? "Selesai" : "Aktif",
+        };
+      }).filter((event) => event !== null);
+
+      console.log("Mapped Events:", mappedEvents);
+      setEvents(mappedEvents);
+      if (mappedEvents.length === 0) {
+        setError("No events found for this collection center.");
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.meta?.message?.join(", ") || err.message || "Failed to fetch events";
+      setError(errorMessage);
+      console.error("Fetch Events Error:", err);
+    } finally {
+      setIsLoading(false);
     }
-    return events;
   };
 
-  const [events, setEvents] = useState(generateEvents(20));
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   const filteredEvents = events.filter((event) => {
     let matchesStatus = false;
@@ -70,19 +110,10 @@ export default function Home() {
   });
 
   const sortedEvents = [...filteredEvents].sort((a, b) => {
-    const dateA = new Date(a.endDate.split("/").reverse().join("-"));
-    const dateB = new Date(b.endDate.split("/").reverse().join("-"));
+    const dateA = new Date(a.endDate);
+    const dateB = new Date(b.endDate);
     return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
   });
-
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      console.log("Sorted Events:", sortedEvents);
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, isAktif, isSelesai, events, sortOrder]);
 
   const indexOfLastEvent = currentPage * eventsPerPage;
   const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
@@ -116,45 +147,52 @@ export default function Home() {
   };
 
   const toggleUbahModal = (index) => {
-    if (index !== null) {
-      const event = events[index];
-      const itemsArray = event.items.split(", ");
+    if (index !== null && currentEvents[index]) {
+      const event = currentEvents[index];
       setUbahFormData({
         nama: event.name,
         alamat: event.address,
         akhirPenerimaan: event.endDate,
         barang: {
-          pakaian: itemsArray.includes("Pakaian"),
-          elektronik: itemsArray.includes("Elektronik"),
-          mainan: itemsArray.includes("Mainan"),
-          buku: itemsArray.includes("Buku"),
+          pakaian: event.items.includes("pakaian"),
+          elektronik: event.items.includes("elektronik"),
+          mainan: event.items.includes("mainan"),
+          buku: event.items.includes("buku"),
         },
       });
-      setSelectedEventIndex(index);
+      setSelectedEventId(event.id);
     }
     setIsUbahModalOpen(!isUbahModalOpen);
     setOpenDropdownIndex(null);
   };
 
   const toggleConfirmModal = (index) => {
-    setEventToFinishIndex(index);
+    if (index !== null && currentEvents[index]) {
+      setEventToFinishId(currentEvents[index].id);
+    }
     setIsConfirmModalOpen(!isConfirmModalOpen);
     setOpenDropdownIndex(null);
   };
 
-  const handleConfirmFinish = () => {
-    if (eventToFinishIndex !== null) {
-      setEvents((prev) => {
-        const updatedEvents = [...prev];
-        updatedEvents[eventToFinishIndex] = {
-          ...updatedEvents[eventToFinishIndex],
-          status: "Selesai",
-        };
-        return updatedEvents;
-      });
+  const handleConfirmFinish = async () => {
+    if (eventToFinishId !== null) {
+      setIsLoading(true);
+      try {
+        const profileData = await eventService.getUserCollectionCenter();
+        const centerId = profileData.id;
+        if (!centerId) throw new Error("No collection center ID found in profile");
+        await eventService.finishEvent(centerId, eventToFinishId);
+        await fetchEvents();
+        setError(null);
+      } catch (err) {
+        setError("Failed to finish event. Please try again.");
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+        setIsConfirmModalOpen(false);
+        setEventToFinishId(null);
+      }
     }
-    setIsConfirmModalOpen(false);
-    setEventToFinishIndex(null);
   };
 
   const handleTambahInputChange = (e) => {
@@ -170,22 +208,29 @@ export default function Home() {
     }));
   };
 
-  const handleTambahSubmit = (e) => {
+  const handleTambahSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    const selectedItems = Object.keys(tambahFormData.barang)
-      .filter((key) => tambahFormData.barang[key])
-      .join(", ");
-    const newEvent = {
-      name: tambahFormData.nama || "Contoh: Banjir Bekasi",
-      address: tambahFormData.alamat || "Contoh: Jl. Lorem ipsum...",
-      endDate: tambahFormData.akhirPenerimaan || "20/03/2025",
-      items: selectedItems || "Pakaian, Buku, Mainan, Elektronik",
-      status: "Aktif",
-    };
-    setEvents((prev) => [...prev, newEvent]);
-    toggleTambahModal();
-    setTimeout(() => setIsLoading(false), 500);
+    try {
+      const profileData = await eventService.getUserCollectionCenter();
+      const centerId = profileData.id;
+      if (!centerId) throw new Error("No collection center ID found in profile");
+      const eventData = {
+        nama: tambahFormData.nama || "Contoh: Banjir Bekasi",
+        alamat: tambahFormData.alamat || "Contoh: Jl. Lorem ipsum...",
+        akhirPenerimaan: tambahFormData.akhirPenerimaan || "2025-03-20",
+        barang: tambahFormData.barang,
+      };
+      await eventService.createEvent(centerId, eventData);
+      await fetchEvents();
+      toggleTambahModal();
+      setError(null);
+    } catch (err) {
+      setError("Failed to create event. Please try again.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleUbahInputChange = (e) => {
@@ -201,26 +246,29 @@ export default function Home() {
     }));
   };
 
-  const handleUbahSubmit = (e) => {
+  const handleUbahSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    const selectedItems = Object.keys(ubahFormData.barang)
-      .filter((key) => ubahFormData.barang[key])
-      .join(", ");
-    const updatedEvent = {
-      name: ubahFormData.nama,
-      address: ubahFormData.alamat,
-      endDate: ubahFormData.akhirPenerimaan,
-      items: selectedItems || "Pakaian, Buku, Mainan, Elektronik",
-      status: events[selectedEventIndex].status,
-    };
-    setEvents((prev) => {
-      const updatedEvents = [...prev];
-      updatedEvents[selectedEventIndex] = updatedEvent;
-      return updatedEvents;
-    });
-    toggleUbahModal(null);
-    setTimeout(() => setIsLoading(false), 500);
+    try {
+      const profileData = await eventService.getUserCollectionCenter();
+      const centerId = profileData.id;
+      if (!centerId) throw new Error("No collection center ID found in profile");
+      const eventData = {
+        nama: ubahFormData.nama,
+        alamat: ubahFormData.alamat,
+        akhirPenerimaan: ubahFormData.akhirPenerimaan,
+        barang: ubahFormData.barang,
+      };
+      await eventService.updateEvent(centerId, selectedEventId, eventData);
+      await fetchEvents();
+      toggleUbahModal(null);
+      setError(null);
+    } catch (err) {
+      setError("Failed to update event. Please try again.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePageChange = (pageNumber) => {
@@ -239,17 +287,24 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5E9D4] font-sans">
-      <NavbarAfterLogin />
-
-      <main className="px-8 py-6">
+    <div className="flex flex-col min-h-screen bg-[#F5E9D4]">
+      <div className="sticky top-0 z-50">
+        <NavbarAfterLogin />
+      </div>
+      <main className="flex-grow px-8 py-6">
         <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Event</h1>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-800 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
 
         <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="Search courses"
+              placeholder="Search events"
               value={searchQuery}
               onChange={handleSearchChange}
               className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm"
@@ -300,7 +355,7 @@ export default function Home() {
                     value={tambahFormData.nama}
                     onChange={handleTambahInputChange}
                     placeholder="Contoh: Banjir Bekasi"
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-4">
@@ -311,18 +366,18 @@ export default function Home() {
                     value={tambahFormData.alamat}
                     onChange={handleTambahInputChange}
                     placeholder="Contoh: Jl. Lorem ipsum..."
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Akhir Penerimaan</label>
+                  <label className="block text-sm text-[#4A2C2A] mb-1">Akhir Penerimaan (YYYY-MM-DD)</label>
                   <input
                     type="text"
                     name="akhirPenerimaan"
                     value={tambahFormData.akhirPenerimaan}
                     onChange={handleTambahInputChange}
-                    placeholder="Contoh: 20/03/2025"
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    placeholder="Contoh: 2025-03-20"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-6">
@@ -396,37 +451,37 @@ export default function Home() {
               <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">Ubah Informasi Event</h2>
               <form onSubmit={handleUbahSubmit}>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Nama</label>
+                  <label className="block text-sm text-[#131010] mb-1">Nama</label>
                   <input
                     type="text"
                     name="nama"
                     value={ubahFormData.nama}
                     onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Alamat Lengkap</label>
+                  <label className="block text-sm text-[#131010] mb-1">Alamat Lengkap</label>
                   <input
                     type="text"
                     name="alamat"
                     value={ubahFormData.alamat}
                     onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Akhir Penerimaan</label>
+                  <label className="block text-sm text-[#131010] mb-1">Akhir Penerimaan (YYYY-MM-DD)</label>
                   <input
                     type="text"
                     name="akhirPenerimaan"
                     value={ubahFormData.akhirPenerimaan}
                     onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-6">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Barang yang Dibutuhkan</label>
+                  <label className="block text-sm text-[#131010] mb-1">Barang yang Dibutuhkan</label>
                   <div className="flex space-x-4">
                     <label className="flex items-center space-x-2">
                       <input
@@ -436,7 +491,7 @@ export default function Home() {
                         onChange={handleUbahCheckboxChange}
                         className="h-4 w-4 accent-[#543A14]"
                       />
-                      <span className="text-sm text-[#4A2C2A]">Pakaian</span>
+                      <span className="text-sm text-[#131010]">Pakaian</span>
                     </label>
                     <label className="flex items-center space-x-2">
                       <input
@@ -446,7 +501,7 @@ export default function Home() {
                         onChange={handleUbahCheckboxChange}
                         className="h-4 w-4 accent-[#543A14]"
                       />
-                      <span className="text-sm text-[#4A2C2A]">Elektronik</span>
+                      <span className="text-sm text-[#131010]">Elektronik</span>
                     </label>
                     <label className="flex items-center space-x-2">
                       <input
@@ -456,7 +511,7 @@ export default function Home() {
                         onChange={handleUbahCheckboxChange}
                         className="h-4 w-4 accent-[#543A14]"
                       />
-                      <span className="text-sm text-[#4A2C2A]">Mainan</span>
+                      <span className="text-sm text-[#131010]">Mainan</span>
                     </label>
                     <label className="flex items-center space-x-2">
                       <input
@@ -466,7 +521,7 @@ export default function Home() {
                         onChange={handleUbahCheckboxChange}
                         className="h-4 w-4 accent-[#543A14]"
                       />
-                      <span className="text-sm text-[#4A2C2A]">Buku</span>
+                      <span className="text-sm text-[#131010]">Buku</span>
                     </label>
                   </div>
                 </div>
@@ -510,7 +565,7 @@ export default function Home() {
                 <button
                   onClick={() => toggleConfirmModal(null)}
                   className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
-                >
+                  >
                   Batal
                 </button>
               </div>
@@ -518,90 +573,88 @@ export default function Home() {
           </div>
         )}
 
-        <SortProvider>
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
-            {isLoading ? (
-              <Spinner />
-            ) : (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="bg-white text-[#4A2C2A] font-bold">
-                    <th className="p-3 w-1/6">Nama</th>
-                    <th className="p-3 w-1/4">Alamat</th>
-                    <th className="p-3 w-1/6 cursor-pointer" onClick={handleSort}>
-                      <div className="flex items-center">
-                        Akhir Penerimaan
-                        <Icon
-                          icon={sortOrder === "asc" ? "mdi:sort-ascending" : "mdi:sort-descending"}
-                          className="ml-2 w-4 h-4"
-                        />
-                      </div>
-                    </th>
-                    <th className="p-3 w-1/4">Jenis Barang</th>
-                    <th className="p-3 w-1/6">Status</th>
-                    <th className="p-3 w-1/12">Menu</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentEvents.length > 0 ? (
-                    currentEvents.map((event, index) => (
-                      <tr key={index} className="border-t border-gray-200">
-                        <td className="p-3 text-black">{event.name}</td>
-                        <td className="p-3 text-black">{event.address}</td>
-                        <td className="p-3 text-black">{event.endDate}</td>
-                        <td className="p-3 text-black">{event.items}</td>
-                        <td className="p-3">
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-medium ${
-                              event.status === "Aktif"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {event.status}
-                          </span>
-                        </td>
-                        <td className="p-3 relative">
-                          <button
-                            onClick={() => toggleDropdown(index)}
-                            className="text-[#4A2C2A] hover:text-[#8B5A2B]"
-                            aria-label="Menu"
-                          >
-                            <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
-                          </button>
-                          {openDropdownIndex === index && (
-                            <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
-                              <ul className="text-sm text-[#4A2C2A]">
-                                <li
-                                  onClick={() => toggleUbahModal(indexOfFirstEvent + index)}
-                                  className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
-                                >
-                                  Ubah Data
-                                </li>
-                                <li
-                                  onClick={() => toggleConfirmModal(indexOfFirstEvent + index)}
-                                  className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
-                                >
-                                  Selesai
-                                </li>
-                              </ul>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="6" className="p-3 text-center text-black">
-                        Tidak ada event yang sesuai dengan pencarian.
+        <div className="bg-white rounded-lg shadow-md">
+          {isLoading ? (
+            <Spinner />
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-white text-[#4A2C2A] font-bold">
+                  <th className="p-3 w-1/6">Nama</th>
+                  <th className="p-3 w-1/4">Alamat</th>
+                  <th className="p-3 w-1/6 cursor-pointer" onClick={handleSort}>
+                    <div className="flex items-center">
+                      Akhir Penerimaan
+                      <Icon
+                        icon={sortOrder === "asc" ? "mdi:sort-ascending" : "mdi:sort-descending"}
+                        className="ml-2 w-4 h-4"
+                      />
+                    </div>
+                  </th>
+                  <th className="p-3 w-1/4">Jenis Barang</th>
+                  <th className="p-3 w-1/6">Status</th>
+                  <th className="p-3 w-1/12">Menu</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentEvents.length > 0 ? (
+                  currentEvents.map((event, index) => (
+                    <tr key={event.id} className="border-t border-gray-200">
+                      <td className="p-3 text-black">{event.name}</td>
+                      <td className="p-3 text-black">{event.address}</td>
+                      <td className="p-3 text-black">{event.endDate}</td>
+                      <td className="p-3 text-black">{event.types}</td>
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            event.status === "Aktif"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {event.status}
+                        </span>
+                      </td>
+                      <td className="p-3 relative">
+                        <button
+                          onClick={() => toggleDropdown(index)}
+                          className="text-[#4A2C2A] hover:text-[#8B5A2B]"
+                          aria-label="Menu"
+                        >
+                          <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
+                        </button>
+                        {openDropdownIndex === index && (
+                          <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
+                            <ul className="text-sm text-[#4A2C2A]">
+                              <li
+                                onClick={() => toggleUbahModal(index)}
+                                className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                              >
+                                Ubah Data
+                              </li>
+                              <li
+                                onClick={() => toggleConfirmModal(index)}
+                                className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
+                              >
+                                Selesai
+                              </li>
+                            </ul>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </SortProvider>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="6" className="p-3 text-center text-black">
+                      Tidak ada event yang sesuai dengan pencarian.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
 
         {!isLoading && (
           <div className="flex justify-end mt-4 space-x-2">

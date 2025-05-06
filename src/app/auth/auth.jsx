@@ -194,11 +194,16 @@ export const loginWithEmail = async (email, password) => {
     const result = await response.json();
     
     if (!response.ok) {
-      throw new Error(result.message || 'Login failed');
+      throw new Error(result.meta?.message?.join(', ') || result.message || 'Login failed');
     }
 
-    localStorage.setItem('authToken', result.token || result.accessToken);
-    return result.user || result;
+    const accessToken = result.data?.tokens?.accessToken;
+    if (!accessToken) {
+      throw new Error('Access token not found in response');
+    }
+
+    localStorage.setItem('authToken', accessToken);
+    return result.data?.user || result.data || result;
   } catch (error) {
     throw new Error(error.message);
   }

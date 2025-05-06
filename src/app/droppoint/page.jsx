@@ -2,12 +2,11 @@
 
 import Head from "next/head";
 import { Icon } from "@iconify/react";
-import NavbarAfterLogin from "../../components/navbarAfterLogin"; // Use the same navbar as Event
+import NavbarAfterLogin from "../../components/navbarAfterLogin";
 import Footer from "../footer/page";
 import { useState, useEffect } from "react";
 
 export default function Home() {
-  // State declarations
   const [dropPoints, setDropPoints] = useState([
     {
       nama: "Tempat Penampung A",
@@ -93,11 +92,9 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // State for filters
   const [isCabang, setIsCabang] = useState(false);
   const [isDropPoint, setIsDropPoint] = useState(false);
 
-  // State for form data
   const [tambahFormData, setTambahFormData] = useState({
     nama: "",
     alamat: "",
@@ -112,7 +109,6 @@ export default function Home() {
     tipe: "",
   });
 
-  // Filter drop points
   const filteredDropPoints = dropPoints.filter((point) => {
     let matchesType = false;
     if (!isCabang && !isDropPoint) matchesType = true;
@@ -127,7 +123,6 @@ export default function Home() {
     return matchesType && matchesSearch;
   });
 
-  // Loading effect
   useEffect(() => {
     setIsLoading(true);
     const timer = setTimeout(() => {
@@ -137,7 +132,6 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [searchQuery, isCabang, isDropPoint, dropPoints]);
 
-  // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentDropPoints = filteredDropPoints.slice(
@@ -146,7 +140,6 @@ export default function Home() {
   );
   const totalPages = Math.ceil(filteredDropPoints.length / itemsPerPage);
 
-  // Handlers
   const handleFilterChange = (setter) => (value) => {
     setter(value);
     setCurrentPage(1);
@@ -259,7 +252,6 @@ export default function Home() {
     setOpenDropdownIndex(null);
   };
 
-  // Spinner component (same as Event)
   const Spinner = () => (
     <div className="flex justify-center items-center py-8">
       <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#4A2C2A] border-t-transparent"></div>
@@ -267,21 +259,22 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F5E9D4] font-sans">
+    <div className="flex flex-col min-h-screen bg-[#F5E9D4] font-sans">
       <Head>
         <title>Drop Point - Kotak Peduli</title>
         <meta name="description" content="Drop Point page for Kotak Peduli" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      <NavbarAfterLogin />
-
-      <main className="px-8 py-6">
+  
+      <div className="sticky top-0 z-50">
+        <NavbarAfterLogin />
+      </div>
+  
+      <main className="flex-grow px-8 py-6">
         <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">
           Cabang & Drop Point
         </h1>
-
-        {/* Search and Filter */}
+  
         <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
           <div className="relative w-64">
             <input
@@ -297,7 +290,7 @@ export default function Home() {
             />
           </div>
           <div className="flex items-center space-x-6">
-            <label className="flex items-center space-x-2 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer accent-[#543A14]">
               <input
                 type="checkbox"
                 checked={isCabang}
@@ -308,7 +301,7 @@ export default function Home() {
               />
               <span className="text-[#4A2C2A] text-sm font-medium">Cabang</span>
             </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
+            <label className="flex items-center space-x-2 cursor-pointer accent-[#543A14]">
               <input
                 type="checkbox"
                 checked={isDropPoint}
@@ -329,8 +322,7 @@ export default function Home() {
             </button>
           </div>
         </div>
-
-        {/* Tambah Modal */}
+  
         {isTambahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
@@ -348,7 +340,7 @@ export default function Home() {
                     value={tambahFormData.nama}
                     onChange={handleTambahInputChange}
                     placeholder="Contoh: Tempat Penampung"
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-4">
@@ -361,7 +353,7 @@ export default function Home() {
                     value={tambahFormData.alamat}
                     onChange={handleTambahInputChange}
                     placeholder="Contoh: Jl. Lorem ipsum..."
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-4">
@@ -374,7 +366,7 @@ export default function Home() {
                     value={tambahFormData.telepon}
                     onChange={handleTambahInputChange}
                     placeholder="Contoh: +6281212312312"
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-6">
@@ -385,7 +377,7 @@ export default function Home() {
                     name="tipe"
                     value={tambahFormData.tipe}
                     onChange={handleTambahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   >
                     <option value="" disabled>
                       Pilih tipe tempat
@@ -413,8 +405,7 @@ export default function Home() {
             </div>
           </div>
         )}
-
-        {/* Ubah Modal */}
+  
         {isUbahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
@@ -431,7 +422,7 @@ export default function Home() {
                     name="nama"
                     value={ubahFormData.nama}
                     onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-4">
@@ -443,7 +434,7 @@ export default function Home() {
                     name="alamat"
                     value={ubahFormData.alamat}
                     onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-4">
@@ -455,7 +446,7 @@ export default function Home() {
                     name="telepon"
                     value={ubahFormData.telepon}
                     onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                 </div>
                 <div className="mb-6">
@@ -466,7 +457,7 @@ export default function Home() {
                     name="tipe"
                     value={ubahFormData.tipe}
                     onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   >
                     <option value="" disabled>
                       Pilih tipe tempat
@@ -494,8 +485,7 @@ export default function Home() {
             </div>
           </div>
         )}
-
-        {/* Delete Confirmation Modal */}
+  
         {isDeleteModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
@@ -523,9 +513,8 @@ export default function Home() {
             </div>
           </div>
         )}
-
-        {/* Table */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+  
+        <div className="bg-white rounded-lg shadow-md">
           {isLoading ? (
             <Spinner />
           ) : (
@@ -604,19 +593,17 @@ export default function Home() {
             </table>
           )}
         </div>
-
-        {/* Pagination */}
+  
         {!isLoading && (
           <div className="flex justify-end mt-4 space-x-2">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
-                currentPage === 1
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-[#8B5A2B] hover:text-white"
-              }`}
+              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
+              } active:border-none active:bg-transparent`}
             >
+              <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
               Previous
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
@@ -635,19 +622,18 @@ export default function Home() {
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className={`px-3 py-1 border border-[#4A2C2A] rounded-lg text-[#4A2C2A] text-sm ${
-                currentPage === totalPages
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-[#8B5A2B] hover:text-white"
-              }`}
+              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+              } active:border-none active:bg-transparent`}
             >
               Next
+              <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />
             </button>
           </div>
         )}
       </main>
-
+  
       <Footer />
     </div>
-  );
+  )
 }

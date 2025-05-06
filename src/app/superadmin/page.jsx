@@ -145,7 +145,9 @@ export default function Superadmin() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FFFFFF]">
+    <div className="sticky top-0 z-50">
       <NavbarAfterLogin />
+    </div>
 
       {/* Summary Cards Section */}
       <section className="container mx-auto px-6 p-7">
@@ -195,7 +197,7 @@ export default function Superadmin() {
                     type="checkbox"
                     checked={filterStatus.includes("Disetujui")}
                     onChange={() => handleFilterChange("Disetujui")}
-                    className="form-checkbox h-5 w-5 text-[#5C4033] focus:ring-[#5C4033]"
+                    className="form-checkbox h-5 w-5 accent-[#543A14]"
                   />
                   <span className="text-sm font-medium text-[#232323]">Disetujui</span>
                 </label>
@@ -204,7 +206,7 @@ export default function Superadmin() {
                     type="checkbox"
                     checked={filterStatus.includes("Ditolak")}
                     onChange={() => handleFilterChange("Ditolak")}
-                    className="form-checkbox h-5 w-5 text-[#5C4033] focus:ring-[#5C4033]"
+                    className="form-checkbox h-5 w-5 accent-[#543A14]"
                   />
                   <span className="text-sm font-medium text-[#232323]">Ditolak</span>
                 </label>
@@ -212,7 +214,7 @@ export default function Superadmin() {
             </div>
 
             {/* Table */}
-            <div className="bg-white shadow rounded-lg overflow-x-auto">
+            <div className="bg-white shadow rounded-lg">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-white">
@@ -336,7 +338,7 @@ export default function Superadmin() {
 
       {/* Detail Modal */}
       {isDetailModalOpen && selectedShelter && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-brightness-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl p-8 relative">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold text-[#131010]">Detail Tempat Penampung</h2>
@@ -444,7 +446,7 @@ export default function Superadmin() {
 
       {/* Approve Confirmation Modal */}
       {isApproveConfirmModalOpen && shelterToApprove && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-brightness-50 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
             <h2 className="text-xl font-bold text-[#131010] mb-4">
               Pendaftaran Tempat Penampungan (Disetujui)
@@ -473,7 +475,7 @@ export default function Superadmin() {
 
       {/* Reject Confirmation Modal */}
       {isRejectConfirmModalOpen && shelterToReject && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 backdrop-brightness-50 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
             <h2 className="text-xl font-bold text-[#131010] mb-4">
               Pendaftaran Tempat Penampungan (Ditolak)
