@@ -27,21 +27,37 @@ const IconText = ({ text, src, alt, iconType, variant }) => {
   );
 };
 
-const TextBetween = ({ label, value }) => {
+const TextBetween = ({ label, value, className, type }) => {
   return (
-    <div className="flex justify-between">
+    <div className={`flex justify-between ${className}`}>
       <p>{label}:</p>
       {Array.isArray(value) ? (
         <div>
           {value.map((item, index) => (
-            <p key={index}>{item}</p>
+            <p
+              key={index}
+              className={`flex justify-end ${type === "list" && "flex-col"}`}
+            >
+              {item}
+            </p>
           ))}
         </div>
       ) : (
-        <p>{value}</p>
+        <p className="flex">{value}</p>
       )}
     </div>
   );
 };
 
-export { IconText, TextBetween };
+const ListTextWithTitle = ({ title, values }) => {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-bold">{title}</span>
+      {values.map((value, idx) => (
+        <span key={idx}>{value}</span>
+      ))}
+    </div>
+  );
+};
+
+export { IconText, TextBetween, ListTextWithTitle };
