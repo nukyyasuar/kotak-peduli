@@ -11,7 +11,7 @@ const SidebarCustom = ({ href, menu, icon, isActive }) => {
       className={`${isActive && "bg-[#FFF3E4]"} flex items-center text-[#543A14] space-x-2 cursor-pointer font-bold px-2 py-2 rounded-lg`}
     >
       <div
-        className={`${isActive ? "bg-[#F0BB78]" : "bg-[#543A14]"} h-8 w-8 rounded-full flex items-center justify-center`}
+        className={`${isActive ? "bg-[#F0BB78]" : "bg-[#543a14]"} h-8 w-8 rounded-full flex items-center justify-center`}
       >
         <Icon icon={icon} width={20} height={20} color="white" />
       </div>
@@ -36,6 +36,11 @@ const sidebarMenu = [
     menu: "Tempat Penampung",
     icon: "teenyicons:building-solid",
   },
+  {
+    href: "/akun/admin-platform",
+    menu: "Admin Platform",
+    icon: "ri:admin-fill",
+  },
 ];
 
 export default function AkunLayout({
@@ -46,10 +51,10 @@ export default function AkunLayout({
   const pathname = usePathname();
 
   return (
-    <section className="w-[1200px] py-12 mx-auto">
+    <section className="max-w-[1200px] py-12 mx-auto">
       <div className="flex gap-8">
         {/* Sidebar */}
-        <div className="space-y-8">
+        <div className="space-y-8 min-w-60">
           <div className="text-[#543A14]">
             <h2>Halo,</h2>
             <h1 className="font-bold">Nuky Yasuar Zamzamy</h1>
@@ -73,7 +78,7 @@ export default function AkunLayout({
         </div>
 
         {/* Page content */}
-        <main className="w-full">{children}</main>
+        <main className="w-full max-w-[calc(1200px-240px)]">{children}</main>
       </div>
     </section>
   );
