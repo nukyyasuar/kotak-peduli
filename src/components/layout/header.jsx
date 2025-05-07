@@ -78,7 +78,7 @@ export default function Header() {
             {role === "admin" ? null : (
               <Link
                 href="/donasi"
-                className="text-[#FFF0DC] font-bold h-10 px-7 bg-[#543A14] flex items-center rounded-lg hover:bg-[#6B4D20]"
+                className="text-[#FFF0DC] font-bold h-10 px-7 bg-[#543a14] flex items-center rounded-lg hover:bg-[#6B4D20]"
               >
                 Donasi Sekarang
               </Link>
@@ -86,7 +86,7 @@ export default function Header() {
             {isLoggedIn ? (
               <Link href="/profile">
                 <Link href="/profile">
-                  <div className="w-10 h-10 bg-[#543A14] hover:bg-[#6B4D20] flex items-center justify-center rounded-full">
+                  <div className="w-10 h-10 bg-[#543a14] hover:bg-[#6B4D20] flex items-center justify-center rounded-full">
                     <Icon icon="mdi:user" width={30} height={30} />
                   </div>
                 </Link>
