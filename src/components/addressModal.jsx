@@ -345,8 +345,14 @@ export default function AddressModal({
             label="Simpan"
             onClick={handleSaveLocation}
             variant="brown"
+            className="w-full"
           />
-          <ButtonCustom label="Batal" onClick={handleClose} variant="white" />
+          <ButtonCustom
+            label="Batal"
+            onClick={handleClose}
+            variant="white"
+            className="w-full"
+          />
         </div>
       </div>
     </div>
