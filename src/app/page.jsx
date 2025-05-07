@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 
 function BannerText({ title, subtitle }) {
   return (
-    <div className="bg-[#543A14] text-white pl-12 pr-20 h-[130px] flex flex-col justify-center w-fit shadow-lg shadow-neutral-500">
+    <div className="bg-[#543a14] text-white pl-12 pr-20 h-[130px] flex flex-col justify-center w-fit shadow-lg shadow-neutral-500">
       <h2 className="text-[32px] font-bold mb-2">{title}</h2>
       <p className="text-xl">{subtitle}</p>
     </div>
@@ -189,7 +189,7 @@ export default function Home() {
       </section>
 
       {/* Testimonial Section */}
-      <section className="py-12 flex justify-center bg-[#543A14]">
+      <section className="py-12 flex justify-center bg-[#543a14]">
         <div className="w-fit max-w-[1005px]">
           <SectionTitle color="#FFF0DC" title="terimakasih para donatur" />
           {/* Donatur Statistics */}
@@ -253,7 +253,7 @@ export default function Home() {
                   <button
                     key={index}
                     className={`w-2 h-2 rounded-full ${
-                      index === activeIndex ? "bg-[#543A14]" : "bg-white"
+                      index === activeIndex ? "bg-[#543a14]" : "bg-white"
                     }`}
                     onClick={() => setActiveIndex(index)}
                   ></button>
