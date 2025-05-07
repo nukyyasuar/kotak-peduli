@@ -1,3 +1,5 @@
+"use client";
+
 import Select from "react-select";
 import { Icon } from "@iconify/react";
 import { useState } from "react";
@@ -117,9 +119,15 @@ const FormInput = ({
           render={({ field }) => (
             <Select
               {...field}
-              isSearchable={false}
+              isMulti={type === "checkbox"}
+              isSearchable={true}
               value={formattedOptions.find((opt) => opt.value === field.value)}
-              onChange={(selected) => field.onChange(selected?.value)}
+              onChange={
+                type === "checkbox"
+                  ? (selected) =>
+                      field.onChange(selected.map((option) => option.value))
+                  : (selected) => field.onChange(selected?.value)
+              }
               options={formattedOptions}
               placeholder={placeholder}
               styles={customStyles}
@@ -136,6 +144,7 @@ const FormInput = ({
                 ),
                 IndicatorSeparator: () => null,
               }}
+              className={inputStyles}
             />
           )}
         />
@@ -175,7 +184,7 @@ const FormInput = ({
         />
       )}
 
-      {inputType === "dropdownChecklist" && (
+      {inputType === "dropdownChecklistOther" && (
         <Controller
           name={name}
           control={control}
@@ -231,6 +240,7 @@ const FormInput = ({
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
           className={`${baseClass} ${inputStyles}`}
+          onClick={onClick}
           {...register}
         />
       ) : null}
