@@ -9,7 +9,7 @@ import { TextBetween } from "src/components/text";
 
 const GoodsTypeBadge = ({ icon }) => {
   return (
-    <div className="bg-[#543A14] h-7 aspect-square rounded-full flex items-center justify-center">
+    <div className="bg-[#543a14] h-7 aspect-square rounded-full flex items-center justify-center">
       <Icon icon={icon} width={20} height={20} color="white" />
     </div>
   );
