@@ -2,17 +2,22 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { Form, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { FormInput } from "src/components/formInput";
 import AddressModal from "src/components/addressModal";
 import { ButtonCustom } from "src/components/button";
 import Image from "next/image";
+import handleOutsideModal from "src/components/handleOutsideModal";
 
 export default function Akun() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const fileInputRef = useRef();
+  const verifEmailModalRef = useRef();
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [isEmailVerifModalOpen, setIsEmailVerifModalOpen] = useState(false);
+  const [isEmailVerifSent, setIsEmailVerifSent] = useState(false);
+
   const { register, handleSubmit, control, watch, setValue } = useForm({
     defaultValues: {
       namaDepan: "",
@@ -34,6 +39,12 @@ export default function Akun() {
       setPreviewUrl(objectUrl);
     }
   };
+
+  handleOutsideModal({
+    ref: verifEmailModalRef,
+    isOpen: isEmailVerifModalOpen,
+    onClose: () => setIsEmailVerifModalOpen(false),
+  });
 
   const onSubmit = (data) => {
     console.log(data);
@@ -79,14 +90,23 @@ export default function Akun() {
               inputStyles="w-full"
               register={register("nomorTelepon")}
             />
-            <FormInput
-              label="Email"
-              inputType="text"
-              type="email"
-              placeholder="Contoh: user@example.com"
-              inputStyles="w-full"
-              register={register("email")}
-            />
+            <div className="flex gap-3 items-end">
+              <FormInput
+                label="Email"
+                inputType="text"
+                type="email"
+                placeholder="Contoh: user@example.com"
+                inputStyles="w-full"
+                register={register("email")}
+              />
+              <ButtonCustom
+                type="button"
+                variant="orange"
+                label="Verifikasi Email"
+                onClick={() => setIsEmailVerifModalOpen(true)}
+                className="h-[51px] text-nowrap"
+              />
+            </div>
             <FormInput
               label="Alamat Lengkap"
               inputType="textArea"
@@ -119,6 +139,53 @@ export default function Akun() {
             />
           </div>
         </div>
+
+        {isEmailVerifModalOpen && (
+          <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
+            <div
+              ref={verifEmailModalRef}
+              className="bg-white rounded-lg p-8 space-y-6 text-black"
+            >
+              <h1 className="font-bold text-xl">Verfikasi Email</h1>
+              {isEmailVerifSent ? (
+                <div className="flex flex-col items-center gap-3">
+                  <Icon
+                    icon="icon-park-solid:check-one"
+                    width={120}
+                    height={120}
+                    color="#1F7D53"
+                  />
+                  <div className="w-md">
+                    <p className="text-center">
+                      Email Anda berhasil diverifikasi. Notifikasi terkait
+                      status barang donasi dan jadwal pengiriman/penjemputan
+                      akan dikirimkan ke email Anda.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1">
+                    <span>
+                      Kami telah mengirimkan tautan verifikasi ke email Anda,
+                      berikut:
+                    </span>
+                    <span className="font-bold">example@gmail.com</span>
+                  </div>
+                  <ButtonCustom
+                    type="button"
+                    label="Kirim Ulang Tautan Verifikasi (00:00)"
+                    variant="brown"
+                    className="w-full"
+                    onClick={() => {
+                      setIsEmailVerifSent(true);
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Gambar Profil */}
         <div className="flex flex-col items-center">
