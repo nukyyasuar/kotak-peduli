@@ -2,12 +2,39 @@
 
 import Head from "next/head";
 import { useState, useEffect } from "react";
-import Footer from "../footer/page"; // Verify this path is correct
-import NavbarAfterLoginAdmin from "../../components/navbarAfterLoginAdmin"; // Verify this path is correct
-import { Icon } from "@iconify/react"; // Ensure @iconify/react is installed
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as Yup from "yup";
+import Footer from "../footer/page";
+import NavbarAfterLoginAdmin from "../../components/navbarAfterLoginAdmin";
+import { Icon } from "@iconify/react";
+
+// Yup validation schema for admin forms
+const adminValidationSchema = Yup.object().shape({
+  nama: Yup.string().required("Nama tidak boleh kosong"),
+  email: Yup.string()
+    .required("Email tidak boleh kosong")
+    .email("Format email salah. Masukkan format email yang valid (contoh: user@example.com)"),
+  noTelepon: Yup.string()
+    .required("Nomor telepon tidak boleh kosong")
+    .matches(/^8/, "Nomor telepon harus diawali dengan angka '8'")
+    .min(13, "Nomor telepon harus berisi minimal 13 digit")
+    .max(15, "Nomor telepon tidak boleh lebih dari 15 digit"),
+  penempatan: Yup.string().required("Penempatan tidak boleh kosong"),
+  role: Yup.string().required("Role tidak boleh kosong"),
+});
+
+// Yup validation schema for create role form
+const roleValidationSchema = Yup.object().shape({
+  name: Yup.string().required("Nama Role tidak boleh kosong"),
+  barangDonasi: Yup.boolean(),
+  melihatDataDonasi: Yup.boolean(),
+  mengaturTanggalPenjemputan: Yup.boolean(),
+  mengubahStatusDonasi: Yup.boolean(),
+  mengaturTanggalPengiriman: Yup.boolean(),
+});
 
 export default function AdminPage() {
-  // Static admin data
   const [admins, setAdmins] = useState([
     {
       nama: "Matthew Emmanuel",
@@ -39,7 +66,6 @@ export default function AdminPage() {
     },
   ]);
 
-  // State for filters
   const [isAdminUtama, setIsAdminUtama] = useState(false);
   const [isAdminDonasi, setIsAdminDonasi] = useState(false);
   const [isAdminEvent, setIsAdminEvent] = useState(false);
@@ -47,40 +73,42 @@ export default function AdminPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
-  // State for pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-
-  // State for modals and dropdowns
   const [isTambahModalOpen, setIsTambahModalOpen] = useState(false);
   const [isUbahModalOpen, setIsUbahModalOpen] = useState(false);
   const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
   const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
   const [selectedAdminIndex, setSelectedAdminIndex] = useState(null);
-
-  // State for form data
-  const [tambahFormData, setTambahFormData] = useState({
-    nama: "",
-    email: "",
-    noTelepon: "",
-    penempatan: "",
-    role: "",
-  });
-
-  const [ubahFormData, setUbahFormData] = useState({
-    nama: "",
-    email: "",
-    noTelepon: "",
-    penempatan: "",
-    role: "",
-  });
-
-  // State for custom roles
   const [customRoles, setCustomRoles] = useState([]);
-  const [newRoleData, setNewRoleData] = useState({
-    name: "",
-    permissions: {
+
+  // Initialize react-hook-form for each form with Yup resolver
+  const tambahForm = useForm({
+    resolver: yupResolver(adminValidationSchema),
+    defaultValues: {
+      nama: "",
+      email: "",
+      noTelepon: "",
+      penempatan: "",
+      role: "",
+    },
+  });
+
+  const ubahForm = useForm({
+    resolver: yupResolver(adminValidationSchema),
+    defaultValues: {
+      nama: "",
+      email: "",
+      noTelepon: "",
+      penempatan: "",
+      role: "",
+    },
+  });
+
+  const createRoleForm = useForm({
+    resolver: yupResolver(roleValidationSchema),
+    defaultValues: {
+      name: "",
       barangDonasi: false,
       melihatDataDonasi: false,
       mengaturTanggalPenjemputan: false,
@@ -89,7 +117,6 @@ export default function AdminPage() {
     },
   });
 
-  // Filter admins based on role and search query
   const filteredAdmins = admins.filter((admin) => {
     let matchesRole = false;
     if (!isAdminUtama && !isAdminDonasi && !isAdminEvent && !isAdminCabang) {
@@ -110,7 +137,6 @@ export default function AdminPage() {
     return matchesRole && matchesSearch;
   });
 
-  // Loading effect for filtering
   useEffect(() => {
     setIsLoading(true);
     const timer = setTimeout(() => {
@@ -119,13 +145,11 @@ export default function AdminPage() {
     return () => clearTimeout(timer);
   }, [searchQuery, isAdminUtama, isAdminDonasi, isAdminEvent, isAdminCabang, admins]);
 
-  // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredAdmins.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredAdmins.length / itemsPerPage);
 
-  // Handlers
   const handleFilterChange = (setter) => (value) => {
     setter(value);
     setCurrentPage(1);
@@ -147,20 +171,14 @@ export default function AdminPage() {
   const toggleTambahModal = () => {
     setIsTambahModalOpen(!isTambahModalOpen);
     if (isTambahModalOpen) {
-      setTambahFormData({
-        nama: "",
-        email: "",
-        noTelepon: "",
-        penempatan: "",
-        role: "",
-      });
+      tambahForm.reset();
     }
   };
 
   const toggleUbahModal = (index) => {
     if (index !== null && admins[index]) {
       const admin = admins[index];
-      setUbahFormData({
+      ubahForm.reset({
         nama: admin.nama,
         email: admin.email,
         noTelepon: admin.noTelepon,
@@ -176,87 +194,40 @@ export default function AdminPage() {
   const toggleCreateRoleModal = () => {
     setIsCreateRoleModalOpen(!isCreateRoleModalOpen);
     if (isCreateRoleModalOpen) {
-      setNewRoleData({
-        name: "",
-        permissions: {
-          barangDonasi: false,
-          melihatDataDonasi: false,
-          mengaturTanggalPenjemputan: false,
-          mengubahStatusDonasi: false,
-          mengaturTanggalPengiriman: false,
-        },
-      });
+      createRoleForm.reset();
     }
   };
 
-  const handleTambahInputChange = (e) => {
-    const { name, value } = e.target;
-    setTambahFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleUbahInputChange = (e) => {
-    const { name, value } = e.target;
-    setUbahFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleRoleSelect = (role) => {
+  const handleRoleSelect = (role, form) => {
     if (role === "Buat Role Baru") {
       toggleCreateRoleModal();
     } else {
-      setTambahFormData((prev) => ({ ...prev, role }));
-      setUbahFormData((prev) => ({ ...prev, role }));
+      form.setValue("role", role);
     }
   };
 
-  const handleNewRoleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (type === "checkbox") {
-      setNewRoleData((prev) => ({
-        ...prev,
-        permissions: { ...prev.permissions, [name]: checked },
-      }));
-    } else {
-      setNewRoleData((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleTambahSubmit = (e) => {
-    e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(tambahFormData.email)) {
-      alert("Invalid email format");
-      return;
-    }
+  const handleTambahSubmit = (data) => {
     setIsLoading(true);
-    setAdmins((prev) => [...prev, tambahFormData]);
+    setAdmins((prev) => [...prev, data]);
     toggleTambahModal();
     setTimeout(() => setIsLoading(false), 500);
   };
 
-  const handleUbahSubmit = (e) => {
-    e.preventDefault();
-    if (!/^\S+@\S+\.\S+$/.test(ubahFormData.email)) {
-      alert("Invalid email format");
-      return;
-    }
+  const handleUbahSubmit = (data) => {
     setIsLoading(true);
     setAdmins((prev) => {
       const updatedAdmins = [...prev];
-      updatedAdmins[selectedAdminIndex] = ubahFormData;
+      updatedAdmins[selectedAdminIndex] = data;
       return updatedAdmins;
     });
     toggleUbahModal(null);
     setTimeout(() => setIsLoading(false), 500);
   };
 
-  const handleCreateRoleSubmit = (e) => {
-    e.preventDefault();
-    if (!newRoleData.name.trim()) {
-      alert("Role name cannot be empty");
-      return;
-    }
-    setCustomRoles((prev) => [...prev, newRoleData.name]);
-    setTambahFormData((prev) => ({ ...prev, role: newRoleData.name }));
-    setUbahFormData((prev) => ({ ...prev, role: newRoleData.name }));
+  const handleCreateRoleSubmit = (data) => {
+    setCustomRoles((prev) => [...prev, data.name]);
+    tambahForm.setValue("role", data.name);
+    ubahForm.setValue("role", data.name);
     toggleCreateRoleModal();
   };
 
@@ -349,7 +320,7 @@ export default function AdminPage() {
                     />
                     <span className="text-[#4A2C2A] text-sm">Admin Event</span>
                   </label>
-                  <label className="flex items-center space-x-2 px-4 py-2 cursor-pointer">
+                  <label className="ownershipflex items-center space-x-2 px-4 py-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isAdminCabang}
@@ -390,7 +361,7 @@ export default function AdminPage() {
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-white text-[#4A2C2A] font-semibold uppercase">
+                <tr className="bg-white text-[#131010] font-semibold uppercase">
                   <th className="p-3 w-1/5">Nama</th>
                   <th className="p-3 w-1/5">Email</th>
                   <th className="p-3 w-1/5">No. Telepon</th>
@@ -489,67 +460,65 @@ export default function AdminPage() {
 
         {/* Tambah Administrator Modal */}
         {isTambahModalOpen && (
-          <div className="fixed inset-0 backkdrop-brightness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
+          <div className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
             <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
               <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">Tambah Administrator</h2>
-              <form onSubmit={handleTambahSubmit}>
+              <form onSubmit={tambahForm.handleSubmit(handleTambahSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="tambah-nama">Nama</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">Nama</label>
                   <input
                     id="tambah-nama"
                     type="text"
-                    name="nama"
-                    value={tambahFormData.nama}
-                    onChange={handleTambahInputChange}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...tambahForm.register("nama")}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   />
+                  {tambahForm.formState.errors.nama && (
+                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.nama.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="tambah-email">Email</label>
+                  <label className="block text-[#4A2C2A] text-sm mb-1 font-bold">Email</label>
                   <input
                     id="tambah-email"
                     type="email"
-                    name="email"
-                    value={tambahFormData.email}
-                    onChange={handleTambahInputChange}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...tambahForm.register("email")}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   />
+                  {tambahForm.formState.errors.email && (
+                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.email.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="tambah-noTelepon">No. Telepon</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">No. Telepon</label>
                   <input
                     id="tambah-noTelepon"
                     type="text"
-                    name="noTelepon"
-                    value={tambahFormData.noTelepon}
-                    onChange={handleTambahInputChange}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...tambahForm.register("noTelepon")}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   />
+                  {tambahForm.formState.errors.noTelepon && (
+                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.noTelepon.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="tambah-penempatan">Penempatan</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">Penempatan</label>
                   <input
                     id="tambah-penempatan"
                     type="text"
-                    name="penempatan"
-                    value={tambahFormData.penempatan}
-                    onChange={handleTambahInputChange}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...tambahForm.register("penempatan")}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   />
+                  {tambahForm.formState.errors.penempatan && (
+                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.penempatan.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="tambah-role">Role</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">Role</label>
                   <select
                     id="tambah-role"
-                    name="role"
-                    value={tambahFormData.role}
-                    onChange={(e) => handleRoleSelect(e.target.value)}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...tambahForm.register("role")}
+                    onChange={(e) => handleRoleSelect(e.target.value, tambahForm)}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   >
                     <option value="">Pilih Role</option>
                     <option value="Admin Utama">Admin Utama</option>
@@ -563,20 +532,24 @@ export default function AdminPage() {
                     ))}
                     <option value="Buat Role Baru">Buat Role Baru</option>
                   </select>
+                  {tambahForm.formState.errors.role && (
+                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.role.message}</p>
+                  )}
                 </div>
-                <div className="flex justify-end space-x-2">
+                <div className="flex space-x-3">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] disabled:opacity-50"
+                  >
+                    {isLoading ? "Memproses..." : "Simpan"}
+                  </button>
                   <button
                     type="button"
                     onClick={toggleTambahModal}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-[#4A2C2A]"
+                    className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
                   >
                     Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#4A2C2A] text-white rounded-lg"
-                  >
-                    Tambah
                   </button>
                 </div>
               </form>
@@ -586,67 +559,65 @@ export default function AdminPage() {
 
         {/* Ubah Data Modal */}
         {isUbahModalOpen && (
-          <div className="fixed inset-0 backdrop:brightness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
+          <div className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
             <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
               <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">Ubah Data Administrator</h2>
-              <form onSubmit={handleUbahSubmit}>
+              <form onSubmit={ubahForm.handleSubmit(handleUbahSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="ubah-nama">Nama</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">Nama</label>
                   <input
                     id="ubah-nama"
                     type="text"
-                    name="nama"
-                    value={ubahFormData.nama}
-                    onChange={handleUbahInputChange}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...ubahForm.register("nama")}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   />
+                  {ubahForm.formState.errors.nama && (
+                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.nama.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="ubah-email">Email</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">Email</label>
                   <input
                     id="ubah-email"
                     type="email"
-                    name="email"
-                    value={ubahFormData.email}
-                    onChange={handleUbahInputChange}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...ubahForm.register("email")}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   />
+                  {ubahForm.formState.errors.email && (
+                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.email.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="ubah-noTelepon">No. Telepon</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">No. Telepon</label>
                   <input
                     id="ubah-noTelepon"
                     type="text"
-                    name="noTelepon"
-                    value={ubahFormData.noTelepon}
-                    onChange={handleUbahInputChange}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...ubahForm.register("noTelepon")}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   />
+                  {ubahForm.formState.errors.noTelepon && (
+                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.noTelepon.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="ubah-penempatan">Penempatan</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">Penempatan</label>
                   <input
                     id="ubah-penempatan"
                     type="text"
-                    name="penempatan"
-                    value={ubahFormData.penempatan}
-                    onChange={handleUbahInputChange}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...ubahForm.register("penempatan")}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   />
+                  {ubahForm.formState.errors.penempatan && (
+                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.penempatan.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="ubah-role">Role</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">Role</label>
                   <select
                     id="ubah-role"
-                    name="role"
-                    value={ubahFormData.role}
-                    onChange={(e) => handleRoleSelect(e.target.value)}
-                    className="w-full p-2 border rounded-lg"
-                    required
+                    {...ubahForm.register("role")}
+                    onChange={(e) => handleRoleSelect(e.target.value, ubahForm)}
+                    className="w-full p-2 border rounded-lg text-[#131010]"
                   >
                     <option value="">Pilih Role</option>
                     <option value="Admin Utama">Admin Utama</option>
@@ -660,20 +631,24 @@ export default function AdminPage() {
                     ))}
                     <option value="Buat Role Baru">Buat Role Baru</option>
                   </select>
+                  {ubahForm.formState.errors.role && (
+                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.role.message}</p>
+                  )}
                 </div>
-                <div className="flex justify-end space-x-2">
+                <div className="flex space-x-3">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] disabled:opacity-50"
+                  >
+                    {isLoading ? "Memproses..." : "Simpan"}
+                  </button>
                   <button
                     type="button"
                     onClick={() => toggleUbahModal(null)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-[#4A2C2A]"
+                    className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
                   >
                     Batal
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#4A2C2A] text-white rounded-lg"
-                  >
-                    Simpan
                   </button>
                 </div>
               </form>
@@ -683,30 +658,28 @@ export default function AdminPage() {
 
         {/* Buat Role Baru Modal */}
         {isCreateRoleModalOpen && (
-          <div className="fixed inset-0 backdrop-brigtness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
+          <div className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
             <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
               <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">Buat Role Baru</h2>
-              <form onSubmit={handleCreateRoleSubmit}>
+              <form onSubmit={createRoleForm.handleSubmit(handleCreateRoleSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1" htmlFor="role-name">Nama Role</label>
+                  <label className="block text-[#4A2C2A] text-sm mb-1">Nama Role</label>
                   <input
                     id="role-name"
                     type="text"
-                    name="name"
-                    value={newRoleData.name}
-                    onChange={handleNewRoleInputChange}
+                    {...createRoleForm.register("name")}
                     className="w-full p-2 border rounded-lg"
-                    required
                   />
+                  {createRoleForm.formState.errors.name && (
+                    <p className="text-red-500 text-xs mt-1">{createRoleForm.formState.errors.name.message}</p>
+                  )}
                 </div>
                 <div className="mb-4">
                   <label className="block text-[#4A2C2A] text-sm mb-2">Izin Akses</label>
                   <label className="flex items-center space-x-2 mb-2">
                     <input
                       type="checkbox"
-                      name="barangDonasi"
-                      checked={newRoleData.permissions.barangDonasi}
-                      onChange={handleNewRoleInputChange}
+                      {...createRoleForm.register("barangDonasi")}
                       className="h-4 w-4 accent-[#543A14]"
                     />
                     <span className="text-[#4A2C2A] text-sm">Barang Donasi</span>
@@ -714,9 +687,7 @@ export default function AdminPage() {
                   <label className="flex items-center space-x-2 mb-2">
                     <input
                       type="checkbox"
-                      name="melihatDataDonasi"
-                      checked={newRoleData.permissions.melihatDataDonasi}
-                      onChange={handleNewRoleInputChange}
+                      {...createRoleForm.register("melihatDataDonasi")}
                       className="h-4 w-4 accent-[#543A14]"
                     />
                     <span className="text-[#4A2C2A] text-sm">Melihat Data Donasi</span>
@@ -724,9 +695,7 @@ export default function AdminPage() {
                   <label className="flex items-center space-x-2 mb-2">
                     <input
                       type="checkbox"
-                      name="mengaturTanggalPenjemputan"
-                      checked={newRoleData.permissions.mengaturTanggalPenjemputan}
-                      onChange={handleNewRoleInputChange}
+                      {...createRoleForm.register("mengaturTanggalPenjemputan")}
                       className="h-4 w-4 accent-[#543A14]"
                     />
                     <span className="text-[#4A2C2A] text-sm">Mengatur Tanggal Penjemputan</span>
@@ -734,9 +703,7 @@ export default function AdminPage() {
                   <label className="flex items-center space-x-2 mb-2">
                     <input
                       type="checkbox"
-                      name="mengubahStatusDonasi"
-                      checked={newRoleData.permissions.mengubahStatusDonasi}
-                      onChange={handleNewRoleInputChange}
+                      {...createRoleForm.register("mengubahStatusDonasi")}
                       className="h-4 w-4 accent-[#543A14]"
                     />
                     <span className="text-[#4A2C2A] text-sm">Mengubah Status Donasi</span>
@@ -744,9 +711,7 @@ export default function AdminPage() {
                   <label className="flex items-center space-x-2 mb-2">
                     <input
                       type="checkbox"
-                      name="mengaturTanggalPengiriman"
-                      checked={newRoleData.permissions.mengaturTanggalPengiriman}
-                      onChange={handleNewRoleInputChange}
+                      {...createRoleForm.register("mengaturTanggalPengiriman")}
                       className="h-4 w-4 accent-[#543A14]"
                     />
                     <span className="text-[#4A2C2A] text-sm">Mengatur Tanggal Pengiriman</span>

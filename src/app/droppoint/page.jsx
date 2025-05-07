@@ -5,78 +5,96 @@ import { Icon } from "@iconify/react";
 import NavbarAfterLogin from "../../components/navbarAfterLogin";
 import Footer from "../footer/page";
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import * as Yup from "yup";
+
+// Validation schema using Yup
+const validationSchema = Yup.object({
+  nama: Yup.string()
+    .required("Nama tempat penampung tidak boleh kosong.")
+    .max(100, "Nama tempat penampung tidak boleh melebihi 100 karakter.")
+    .min(10, "Nama tempat penampung harus berisi minimal 10 karakter."),
+  alamat: Yup.string().required("Alamat tidak boleh kosong."),
+  telepon: Yup.string()
+    .required("Nomor telepon tidak boleh kosong.")
+    .matches(/^8/, "Nomor telepon harus diawali dengan angka ‘8’.")
+    .max(15, "Nomor telepon tidak boleh lebih dari 15 digit.")
+    .min(13, "Nomor telepon harus berisi minimal 13 digit."),
+  tipe: Yup.string().required("Tipe tempat harus dipilih."),
+});
 
 export default function Home() {
   const [dropPoints, setDropPoints] = useState([
     {
       nama: "Tempat Penampung A",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Cabang",
     },
     {
       nama: "Tempat Penampung B",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Cabang",
     },
     {
       nama: "Tempat Penampung C",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Cabang",
     },
     {
       nama: "Drop Point A",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
     {
       nama: "Drop Point B",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
     {
       nama: "Drop Point C",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
     {
       nama: "Tempat Penampung D",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
     {
       nama: "Tempat Penampung E",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
     {
       nama: "Drop Point D",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
     {
       nama: "Drop Point E",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
     {
       nama: "Tempat Penampung F",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
     {
       nama: "Tempat Penampung G",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur...",
+      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
       telepon: "+6281212312312",
       tipe: "Drop Point",
     },
@@ -95,18 +113,26 @@ export default function Home() {
   const [isCabang, setIsCabang] = useState(false);
   const [isDropPoint, setIsDropPoint] = useState(false);
 
-  const [tambahFormData, setTambahFormData] = useState({
-    nama: "",
-    alamat: "",
-    telepon: "",
-    tipe: "",
+  // Initialize React Hook Form for Tambah modal
+  const tambahForm = useForm({
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      nama: "",
+      alamat: "",
+      telepon: "",
+      tipe: "",
+    },
   });
 
-  const [ubahFormData, setUbahFormData] = useState({
-    nama: "",
-    alamat: "",
-    telepon: "",
-    tipe: "",
+  // Initialize React Hook Form for Ubah modal
+  const ubahForm = useForm({
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      nama: "",
+      alamat: "",
+      telepon: "",
+      tipe: "",
+    },
   });
 
   const filteredDropPoints = dropPoints.filter((point) => {
@@ -157,19 +183,14 @@ export default function Home() {
   const toggleTambahModal = () => {
     setIsTambahModalOpen(!isTambahModalOpen);
     if (isTambahModalOpen) {
-      setTambahFormData({
-        nama: "",
-        alamat: "",
-        telepon: "",
-        tipe: "",
-      });
+      tambahForm.reset();
     }
   };
 
   const toggleUbahModal = (index) => {
     if (index !== null) {
       const point = dropPoints[index];
-      setUbahFormData({
+      ubahForm.reset({
         nama: point.nama,
         alamat: point.alamat,
         telepon: point.telepon,
@@ -187,38 +208,26 @@ export default function Home() {
     setOpenDropdownIndex(null);
   };
 
-  const handleTambahInputChange = (e) => {
-    const { name, value } = e.target;
-    setTambahFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleTambahSubmit = (e) => {
-    e.preventDefault();
+  const handleTambahSubmit = (data) => {
     setIsLoading(true);
     const newDropPoint = {
-      nama: tambahFormData.nama || "Contoh: Tempat Penampung",
-      alamat: tambahFormData.alamat || "Contoh: Jl. Lorem ipsum...",
-      telepon: tambahFormData.telepon || "+6281212312312",
-      tipe: tambahFormData.tipe || "Drop Point",
+      nama: data.nama,
+      alamat: data.alamat,
+      telepon: data.telepon,
+      tipe: data.tipe,
     };
     setDropPoints((prev) => [...prev, newDropPoint]);
     toggleTambahModal();
     setTimeout(() => setIsLoading(false), 500);
   };
 
-  const handleUbahInputChange = (e) => {
-    const { name, value } = e.target;
-    setUbahFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleUbahSubmit = (e) => {
-    e.preventDefault();
+  const handleUbahSubmit = (data) => {
     setIsLoading(true);
     const updatedDropPoint = {
-      nama: ubahFormData.nama,
-      alamat: ubahFormData.alamat,
-      telepon: ubahFormData.telepon,
-      tipe: ubahFormData.tipe,
+      nama: data.nama,
+      alamat: data.alamat,
+      telepon: data.telepon,
+      tipe: data.tipe,
     };
     setDropPoints((prev) => {
       const updatedDropPoints = [...prev];
@@ -265,16 +274,16 @@ export default function Home() {
         <meta name="description" content="Drop Point page for Kotak Peduli" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-  
+
       <div className="sticky top-0 z-50">
         <NavbarAfterLogin />
       </div>
-  
+
       <main className="flex-grow px-8 py-6">
         <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">
           Cabang & Drop Point
         </h1>
-  
+
         <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
           <div className="relative w-64">
             <input
@@ -282,7 +291,7 @@ export default function Home() {
               placeholder="Search courses"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm"
+              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm text-[#131010] placeholder-[#C2C2C2]"
             />
             <Icon
               icon="mdi:magnify"
@@ -318,65 +327,79 @@ export default function Home() {
               onClick={toggleTambahModal}
               className="px-4 py-1.5 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] shadow-sm uppercase"
             >
-              Tambah Pos
+              Tambah Cabang
             </button>
           </div>
         </div>
-  
+
         {isTambahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">
-                Tambah Pos
+              <h2 className="text-lg font-bold text-[#131010] mb-4">
+                Tambah Cabang
               </h2>
-              <form onSubmit={handleTambahSubmit}>
+              <form onSubmit={tambahForm.handleSubmit(handleTambahSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">
-                    Nama
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Nama Tempat Penampung
                   </label>
-                  <input
-                    type="text"
-                    name="nama"
-                    value={tambahFormData.nama}
-                    onChange={handleTambahInputChange}
-                    placeholder="Contoh: Tempat Penampung"
+                  <select
+                    {...tambahForm.register("nama")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                  />
+                  >
+                    <option value="" disabled>
+                      Pilih tempat penampung yang tersedia
+                    </option>
+                    {dropPoints.map((point, index) => (
+                      <option key={index} value={point.nama}>
+                        {point.nama}
+                      </option>
+                    ))}
+                  </select>
+                  {tambahForm.formState.errors.nama && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {tambahForm.formState.errors.nama.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
                     Alamat Lengkap
                   </label>
                   <input
                     type="text"
-                    name="alamat"
-                    value={tambahFormData.alamat}
-                    onChange={handleTambahInputChange}
+                    {...tambahForm.register("alamat")}
                     placeholder="Contoh: Jl. Lorem ipsum..."
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
+                  {tambahForm.formState.errors.alamat && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {tambahForm.formState.errors.alamat.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
                     No. Telepon
                   </label>
                   <input
                     type="text"
-                    name="telepon"
-                    value={tambahFormData.telepon}
-                    onChange={handleTambahInputChange}
+                    {...tambahForm.register("telepon")}
                     placeholder="Contoh: +6281212312312"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
+                  {tambahForm.formState.errors.telepon && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {tambahForm.formState.errors.telepon.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-6">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
                     Tipe
                   </label>
                   <select
-                    name="tipe"
-                    value={tambahFormData.tipe}
-                    onChange={handleTambahInputChange}
+                    {...tambahForm.register("tipe")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   >
                     <option value="" disabled>
@@ -385,13 +408,18 @@ export default function Home() {
                     <option value="Cabang">Cabang</option>
                     <option value="Drop Point">Drop Point</option>
                   </select>
+                  {tambahForm.formState.errors.tipe && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {tambahForm.formState.errors.tipe.message}
+                    </p>
+                  )}
                 </div>
                 <div className="flex space-x-3">
                   <button
                     type="submit"
                     className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
                   >
-                    Tambah Pos
+                    Konfirmasi
                   </button>
                   <button
                     type="button"
@@ -405,58 +433,73 @@ export default function Home() {
             </div>
           </div>
         )}
-  
+
         {isUbahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
               <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">
-                Ubah Informasi Pos
+                Ubah Informasi Cabang
               </h2>
-              <form onSubmit={handleUbahSubmit}>
+              <form onSubmit={ubahForm.handleSubmit(handleUbahSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">
-                    Nama
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Nama Tempat Penampung
                   </label>
-                  <input
-                    type="text"
-                    name="nama"
-                    value={ubahFormData.nama}
-                    onChange={handleUbahInputChange}
+                  <select
+                    {...ubahForm.register("nama")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                  />
+                  >
+                    <option value="" disabled>
+                      Pilih tempat penampung yang tersedia
+                    </option>
+                    {dropPoints.map((point, index) => (
+                      <option key={index} value={point.nama}>
+                        {point.nama}
+                      </option>
+                    ))}
+                  </select>
+                  {ubahForm.formState.errors.nama && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {ubahForm.formState.errors.nama.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
                     Alamat Lengkap
                   </label>
                   <input
                     type="text"
-                    name="alamat"
-                    value={ubahFormData.alamat}
-                    onChange={handleUbahInputChange}
+                    {...ubahForm.register("alamat")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
+                  {ubahForm.formState.errors.alamat && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {ubahForm.formState.errors.alamat.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
                     No. Telepon
                   </label>
                   <input
                     type="text"
-                    name="telepon"
-                    value={ubahFormData.telepon}
-                    onChange={handleUbahInputChange}
+                    {...ubahForm.register("telepon")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
+                  {ubahForm.formState.errors.telepon && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {ubahForm.formState.errors.telepon.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-6">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
                     Tipe
                   </label>
                   <select
-                    name="tipe"
-                    value={ubahFormData.tipe}
-                    onChange={handleUbahInputChange}
+                    {...ubahForm.register("tipe")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   >
                     <option value="" disabled>
@@ -465,6 +508,11 @@ export default function Home() {
                     <option value="Cabang">Cabang</option>
                     <option value="Drop Point">Drop Point</option>
                   </select>
+                  {ubahForm.formState.errors.tipe && (
+                    <p className="text-red-600 text-xs mt-1">
+                      {ubahForm.formState.errors.tipe.message}
+                    </p>
+                  )}
                 </div>
                 <div className="flex space-x-3">
                   <button
@@ -485,12 +533,12 @@ export default function Home() {
             </div>
           </div>
         )}
-  
+
         {isDeleteModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
               <h2 className="text-lg font-semibold text-red-600 mb-4">
-                Hapus Pos
+                Hapus Cabang
               </h2>
               <p className="text-sm text-[#4A2C2A] mb-6">
                 Apakah Anda yakin ingin menghapus data ini? Data yang telah
@@ -513,14 +561,14 @@ export default function Home() {
             </div>
           </div>
         )}
-  
+
         <div className="bg-white rounded-lg shadow-md">
           {isLoading ? (
             <Spinner />
           ) : (
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-white text-[#4A2C2A] font-semibold uppercase">
+                <tr className="bg-white text-[#131010] font-semibold uppercase">
                   <th className="p-3 w-1/5">Nama</th>
                   <th className="p-3 w-2/5">Alamat</th>
                   <th className="p-3 w-1/5">No. Telepon</th>
@@ -552,10 +600,7 @@ export default function Home() {
                           className="text-[#4A2C2A] hover:text-[#8B5A2B]"
                           aria-label="Menu"
                         >
-                          <Icon
-                            icon="mdi:dots-vertical"
-                            className="w-5 h-5"
-                          />
+                          <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
                         </button>
                         {openDropdownIndex === index && (
                           <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
@@ -585,7 +630,7 @@ export default function Home() {
                 ) : (
                   <tr>
                     <td colSpan="5" className="p-3 text-center text-black">
-                      Tidak ada pos yang sesuai dengan pencarian.
+                      Tidak ada Cabang yang sesuai dengan pencarian.
                     </td>
                   </tr>
                 )}
@@ -593,7 +638,7 @@ export default function Home() {
             </table>
           )}
         </div>
-  
+
         {!isLoading && (
           <div className="flex justify-end mt-4 space-x-2">
             <button
@@ -623,7 +668,9 @@ export default function Home() {
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
               className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+                currentPage === totalPages
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               } active:border-none active:bg-transparent`}
             >
               Next
@@ -632,8 +679,8 @@ export default function Home() {
           </div>
         )}
       </main>
-  
+
       <Footer />
     </div>
-  )
+  );
 }

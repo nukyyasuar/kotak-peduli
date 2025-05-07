@@ -172,7 +172,7 @@ export default function Superadmin() {
 
       {/* Table Section */}
       <section className="bg-[#FFF0DC] w-full">
-        <div className="container mx-auto px-6 py-7">
+        <div className="flex-grow px-8 py-6">
           <h2 className="text-[22px] font-bold mb-4 text-center uppercase tracking-wide text-[#131010]">
             Tempat Penampung
           </h2>

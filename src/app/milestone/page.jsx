@@ -5,11 +5,49 @@ import { Icon } from "@iconify/react";
 import NavbarAfterLogin from "../../components/navbarAfterLogin";
 import Footer from "../footer/page";
 import eventService from "../../service/eventService";
-import {format} from 'date-fns';
-// import {utcToZonedTime} from 'date-fns-tz';
-import { toZonedTime } from 'date-fns-tz';
-import {formatInTimeZone} from 'date-fns-tz'
+import { formatInTimeZone } from "date-fns-tz";
+import { useForm } from "react-hook-form";
+import * as yup from "yup";
+import { yupResolver } from "@hookform/resolvers/yup";
 
+// Yup validation schema
+const validationSchema = yup.object({
+  nama: yup
+    .string()
+    .required("Nama tempat penampung tidak boleh kosong.")
+    .min(10, "Nama tempat penampung harus berisi minimal 10 karakter.")
+    .max(100, "Nama tempat penampung tidak boleh melebihi 100 karakter."),
+  alamat: yup.string().required("Alamat tidak boleh kosong."),
+  akhirPenerimaan: yup
+    .string()
+    .required("Tanggal akhir penerimaan wajib diisi.")
+    .matches(
+      /^\d{4}-\d{2}-\d{2}$/,
+      "Format tanggal harus YYYY-MM-DD (contoh: 2025-03-20)"
+    )
+    .test(
+      "is-future-or-today",
+      "Tanggal harus setelah atau sama dengan hari ini.",
+      (value) => {
+        if (!value) return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const inputDate = new Date(value);
+        return inputDate >= today && !isNaN(inputDate);
+      }
+    )
+    .transform((value) => (value ? value : undefined)),
+  barang: yup
+    .object({
+      pakaian: yup.boolean(),
+      elektronik: yup.boolean(),
+      mainan: yup.boolean(),
+      buku: yup.boolean(),
+    })
+    .test("at-least-one-selected", "Pilih minimal satu opsi.", (value) => {
+      return value.pakaian || value.elektronik || value.mainan || value.buku;
+    }),
+});
 
 export default function Home() {
   const [isAktif, setIsAktif] = useState(false);
@@ -25,24 +63,40 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("asc");
   const [error, setError] = useState(null);
+  const [events, setEvents] = useState([]);
   const eventsPerPage = 10;
 
-  const [tambahFormData, setTambahFormData] = useState({
-    nama: "",
-    alamat: "",
-    akhirPenerimaan: "",
-    barang: { pakaian: false, elektronik: false, mainan: false, buku: false },
+  // Initialize React Hook Form for Tambah form with Yup validation
+  const tambahForm = useForm({
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      nama: "",
+      alamat: "",
+      akhirPenerimaan: "",
+      barang: {
+        pakaian: false,
+        elektronik: false,
+        mainan: false,
+        buku: false,
+      },
+    },
   });
 
-  const [ubahFormData, setUbahFormData] = useState({
-    nama: "",
-    alamat: "",
-    akhirPenerimaan: "",
-    barang: { pakaian: false, elektronik: false, mainan: false, buku: false },
+  // Initialize React Hook Form for Ubah form with Yup validation
+  const ubahForm = useForm({
+    resolver: yupResolver(validationSchema),
+    defaultValues: {
+      nama: "",
+      alamat: "",
+      akhirPenerimaan: "",
+      barang: {
+        pakaian: false,
+        elektronik: false,
+        mainan: false,
+        buku: false,
+      },
+    },
   });
-
-  const [events, setEvents] = useState([]);
-  const timeZone = toZonedTime(new Date(), 'Asia/Jakarta')
 
   // Fetch events from API
   const fetchEvents = async () => {
@@ -51,39 +105,66 @@ export default function Home() {
     try {
       const profileData = await eventService.getUserCollectionCenter();
       const centerId = profileData?.id;
-      console.log("Collection Center ID:", centerId);
-      if (!centerId) throw new Error("No collection center ID found in profile");
+      if (!centerId)
+        throw new Error("No collection center ID found in profile");
 
       const data = await eventService.getEvents(centerId);
-      console.log("Raw API Events:", data);
-
       if (!Array.isArray(data)) {
         throw new Error("Invalid API response: Expected an array of events");
       }
 
-      const mappedEvents = data.map(({id, name, address, endDate, types, isActive}) => {
-        // if (!event.id || !event.nama || !event.alamat || !event.akhirPenerimaan || !event.barang) {
-        //   console.warn("Invalid event data:", event);
-        //   return null;
-        // }
-        console.log("Event Data:", {id, name, address, endDate, types, isActive});
-        return {
-           id,
-           name,
-           address,
-           endDate: endDate !== null && formatInTimeZone(new Date(endDate || null ), 'Asia/Jakarta', 'dd/MM/yyyy'),
-          types,
-          status: !isActive ? "Selesai" : "Aktif",
-        };
-      }).filter((event) => event !== null);
+      const typeTranslations = {
+        clothes: "Pakaian",
+        electronics: "Elektronik",
+        toys: "Mainan",
+        books: "Buku",
+      };
 
-      console.log("Mapped Events:", mappedEvents);
+      const mappedEvents = data
+        .map(({ id, name, address, endDate, types, isActive }) => {
+          // Map the types to Indonesian
+          const translatedTypes = Array.isArray(types)
+            ? types
+                .map((type) => typeTranslations[type.toLowerCase()] || type)
+                .filter(Boolean)
+                .join(", ")
+            : "";
+
+          // Format endDate safely
+          let formattedEndDate = "";
+          if (endDate) {
+            try {
+              formattedEndDate = formatInTimeZone(
+                new Date(endDate),
+                "Asia/Jakarta",
+                "dd/MM/yyyy"
+              );
+            } catch (err) {
+              console.error(`Invalid date for event ${id}:`, endDate, err);
+              formattedEndDate = "";
+            }
+          }
+
+          return {
+            id,
+            name,
+            address,
+            endDate: formattedEndDate,
+            types: translatedTypes || "Tidak ada barang",
+            status: !isActive ? "Selesai" : "Aktif",
+          };
+        })
+        .filter((event) => event !== null);
+
       setEvents(mappedEvents);
       if (mappedEvents.length === 0) {
         setError("No events found for this collection center.");
       }
     } catch (err) {
-      const errorMessage = err.response?.data?.meta?.message?.join(", ") || err.message || "Failed to fetch events";
+      const errorMessage =
+        err.response?.data?.meta?.message?.join(", ") ||
+        err.message ||
+        "Failed to fetch events";
       setError(errorMessage);
       console.error("Fetch Events Error:", err);
     } finally {
@@ -110,8 +191,8 @@ export default function Home() {
   });
 
   const sortedEvents = [...filteredEvents].sort((a, b) => {
-    const dateA = new Date(a.endDate);
-    const dateB = new Date(b.endDate);
+    const dateA = new Date(a.endDate.split("/").reverse().join("-"));
+    const dateB = new Date(b.endDate.split("/").reverse().join("-"));
     return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
   });
 
@@ -137,27 +218,38 @@ export default function Home() {
   const toggleTambahModal = () => {
     setIsTambahModalOpen(!isTambahModalOpen);
     if (isTambahModalOpen) {
-      setTambahFormData({
-        nama: "",
-        alamat: "",
-        akhirPenerimaan: "",
-        barang: { pakaian: false, elektronik: false, mainan: false, buku: false },
-      });
+      tambahForm.reset();
     }
   };
 
   const toggleUbahModal = (index) => {
     if (index !== null && currentEvents[index]) {
       const event = currentEvents[index];
-      setUbahFormData({
+      let formattedEndDate = "";
+      if (event.endDate) {
+        try {
+          const [day, month, year] = event.endDate.split("/");
+          formattedEndDate = `${year}-${month}-${day}`;
+        } catch (err) {
+          console.error(
+            `Invalid endDate format for event ${event.id}:`,
+            event.endDate,
+            err
+          );
+          formattedEndDate = "";
+        }
+      }
+
+      ubahForm.reset({
         nama: event.name,
         alamat: event.address,
-        akhirPenerimaan: event.endDate,
+        akhirPenerimaan: formattedEndDate,
         barang: {
-          pakaian: event.items.includes("pakaian"),
-          elektronik: event.items.includes("elektronik"),
-          mainan: event.items.includes("mainan"),
-          buku: event.items.includes("buku"),
+          pakaian: event.types && event.types.toLowerCase().includes("pakaian"),
+          elektronik:
+            event.types && event.types.toLowerCase().includes("elektronik"),
+          mainan: event.types && event.types.toLowerCase().includes("mainan"),
+          buku: event.types && event.types.toLowerCase().includes("buku"),
         },
       });
       setSelectedEventId(event.id);
@@ -180,7 +272,8 @@ export default function Home() {
       try {
         const profileData = await eventService.getUserCollectionCenter();
         const centerId = profileData.id;
-        if (!centerId) throw new Error("No collection center ID found in profile");
+        if (!centerId)
+          throw new Error("No collection center ID found in profile");
         await eventService.finishEvent(centerId, eventToFinishId);
         await fetchEvents();
         setError(null);
@@ -195,31 +288,18 @@ export default function Home() {
     }
   };
 
-  const handleTambahInputChange = (e) => {
-    const { name, value } = e.target;
-    setTambahFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleTambahCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-    setTambahFormData((prev) => ({
-      ...prev,
-      barang: { ...prev.barang, [name]: checked },
-    }));
-  };
-
-  const handleTambahSubmit = async (e) => {
-    e.preventDefault();
+  const handleTambahSubmit = async (data) => {
     setIsLoading(true);
     try {
       const profileData = await eventService.getUserCollectionCenter();
       const centerId = profileData.id;
-      if (!centerId) throw new Error("No collection center ID found in profile");
+      if (!centerId)
+        throw new Error("No collection center ID found in profile");
       const eventData = {
-        nama: tambahFormData.nama || "Contoh: Banjir Bekasi",
-        alamat: tambahFormData.alamat || "Contoh: Jl. Lorem ipsum...",
-        akhirPenerimaan: tambahFormData.akhirPenerimaan || "2025-03-20",
-        barang: tambahFormData.barang,
+        nama: data.nama,
+        alamat: data.alamat,
+        akhirPenerimaan: data.akhirPenerimaan,
+        barang: Object.keys(data.barang).filter((key) => data.barang[key]),
       };
       await eventService.createEvent(centerId, eventData);
       await fetchEvents();
@@ -233,31 +313,18 @@ export default function Home() {
     }
   };
 
-  const handleUbahInputChange = (e) => {
-    const { name, value } = e.target;
-    setUbahFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleUbahCheckboxChange = (e) => {
-    const { name, checked } = e.target;
-    setUbahFormData((prev) => ({
-      ...prev,
-      barang: { ...prev.barang, [name]: checked },
-    }));
-  };
-
-  const handleUbahSubmit = async (e) => {
-    e.preventDefault();
+  const handleUbahSubmit = async (data) => {
     setIsLoading(true);
     try {
       const profileData = await eventService.getUserCollectionCenter();
       const centerId = profileData.id;
-      if (!centerId) throw new Error("No collection center ID found in profile");
+      if (!centerId)
+        throw new Error("No collection center ID found in profile");
       const eventData = {
-        nama: ubahFormData.nama,
-        alamat: ubahFormData.alamat,
-        akhirPenerimaan: ubahFormData.akhirPenerimaan,
-        barang: ubahFormData.barang,
+        nama: data.nama,
+        alamat: data.alamat,
+        akhirPenerimaan: data.akhirPenerimaan,
+        barang: Object.keys(data.barang).filter((key) => data.barang[key]),
       };
       await eventService.updateEvent(centerId, selectedEventId, eventData);
       await fetchEvents();
@@ -292,7 +359,9 @@ export default function Home() {
         <NavbarAfterLogin />
       </div>
       <main className="flex-grow px-8 py-6">
-        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Event</h1>
+        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">
+          Event
+        </h1>
 
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-800 rounded-lg text-sm">
@@ -307,7 +376,7 @@ export default function Home() {
               placeholder="Search events"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm"
+              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm text-[#131010]"
             />
             <Icon
               icon="mdi:magnify"
@@ -319,7 +388,9 @@ export default function Home() {
               <input
                 type="checkbox"
                 checked={isAktif}
-                onChange={(e) => handleFilterChange(setIsAktif)(e.target.checked)}
+                onChange={(e) =>
+                  handleFilterChange(setIsAktif)(e.target.checked)
+                }
                 className="h-4 w-4 accent-[#543A14]"
               />
               <span className="text-[#4A2C2A] text-sm font-medium">Aktif</span>
@@ -328,10 +399,14 @@ export default function Home() {
               <input
                 type="checkbox"
                 checked={isSelesai}
-                onChange={(e) => handleFilterChange(setIsSelesai)(e.target.checked)}
+                onChange={(e) =>
+                  handleFilterChange(setIsSelesai)(e.target.checked)
+                }
                 className="h-4 w-4 accent-[#543A14]"
               />
-              <span className="text-[#4A2C2A] text-sm font-medium">Selesai</span>
+              <span className="text-[#4A2C2A] text-sm font-medium">
+                Selesai
+              </span>
             </label>
             <button
               onClick={toggleTambahModal}
@@ -345,92 +420,127 @@ export default function Home() {
         {isTambahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-              <h2 className="text-lg font-semibold text-[#543A14] mb-4">Tambah Event</h2>
-              <form onSubmit={handleTambahSubmit}>
+              <h2 className="text-lg font-semibold text-[#543A14] mb-4">
+                Tambah Event
+              </h2>
+              <form onSubmit={tambahForm.handleSubmit(handleTambahSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#543A14] mb-1">Nama</label>
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Nama
+                  </label>
                   <input
                     type="text"
-                    name="nama"
-                    value={tambahFormData.nama}
-                    onChange={handleTambahInputChange}
+                    {...tambahForm.register("nama")}
                     placeholder="Contoh: Banjir Bekasi"
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className={`w-full p-2 border rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
+                      tambahForm.formState.errors.nama
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                   />
+                  {tambahForm.formState.errors.nama && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.nama.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Alamat Lengkap</label>
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Alamat Lengkap
+                  </label>
                   <input
                     type="text"
-                    name="alamat"
-                    value={tambahFormData.alamat}
-                    onChange={handleTambahInputChange}
+                    {...tambahForm.register("alamat")}
                     placeholder="Contoh: Jl. Lorem ipsum..."
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    className={`w-full p-2 border rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
+                      tambahForm.formState.errors.alamat
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                   />
+                  {tambahForm.formState.errors.alamat && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.alamat.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Akhir Penerimaan (YYYY-MM-DD)</label>
-                  <input
-                    type="text"
-                    name="akhirPenerimaan"
-                    value={tambahFormData.akhirPenerimaan}
-                    onChange={handleTambahInputChange}
-                    placeholder="Contoh: 2025-03-20"
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                  />
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Akhir Penerimaan
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      {...tambahForm.register("akhirPenerimaan")}
+                      className={`w-full p-2 border rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
+                        tambahForm.formState.errors.akhirPenerimaan
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                    <Icon
+                      icon="mdi:calendar"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#C2C2C2] w-5 h-5"
+                    />
+                  </div>
+                  {tambahForm.formState.errors.akhirPenerimaan && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.akhirPenerimaan.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-6">
-                  <label className="block text-sm text-[#4A2C2A] mb-1">Barang yang Dibutuhkan</label>
-                  <div className="flex space-x-4">
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Barang yang Dibutuhkan
+                  </label>
+                  <div className="flex flex-row gap-4">
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        name="pakaian"
-                        checked={tambahFormData.barang.pakaian}
-                        onChange={handleTambahCheckboxChange}
+                        {...tambahForm.register("barang.pakaian")}
                         className="h-4 w-4 accent-[#543A14]"
                       />
-                      <span className="text-sm text-[#4A2C2A]">Pakaian</span>
+                      <span className="text-sm text-[#131010]">Pakaian</span>
                     </label>
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        name="elektronik"
-                        checked={tambahFormData.barang.elektronik}
-                        onChange={handleTambahCheckboxChange}
+                        {...tambahForm.register("barang.elektronik")}
                         className="h-4 w-4 accent-[#543A14]"
                       />
-                      <span className="text-sm text-[#4A2C2A]">Elektronik</span>
+                      <span className="text-sm text-[#131010]">Elektronik</span>
                     </label>
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        name="mainan"
-                        checked={tambahFormData.barang.mainan}
-                        onChange={handleTambahCheckboxChange}
+                        {...tambahForm.register("barang.mainan")}
                         className="h-4 w-4 accent-[#543A14]"
                       />
-                      <span className="text-sm text-[#4A2C2A]">Mainan</span>
+                      <span className="text-sm text-[#131010]">Mainan</span>
                     </label>
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        name="buku"
-                        checked={tambahFormData.barang.buku}
-                        onChange={handleTambahCheckboxChange}
+                        {...tambahForm.register("barang.buku")}
                         className="h-4 w-4 accent-[#543A14]"
                       />
-                      <span className="text-sm text-[#4A2C2A]">Buku</span>
+                      <span className="text-sm text-[#131010]">Buku</span>
                     </label>
                   </div>
+                  {tambahForm.formState.errors.barang && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.barang.message}
+                    </p>
+                  )}
                 </div>
                 <div className="flex space-x-3">
                   <button
                     type="submit"
-                    className="w-1/2 py-2 bg-[#543A14] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                    disabled={isLoading}
+                    className="w-1/2 py-2 bg-[#543A14] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] disabled:opacity-50"
                   >
-                    Tambah Event
+                    {isLoading ? "Memproses..." : "Tambah Event"}
                   </button>
                   <button
                     type="button"
@@ -448,47 +558,83 @@ export default function Home() {
         {isUbahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 bg-opacity-50 z-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">Ubah Informasi Event</h2>
-              <form onSubmit={handleUbahSubmit}>
+              <h2 className="text-lg font-semibold text-[#4A2C2A] mb-4">
+                Ubah Informasi Event
+              </h2>
+              <form onSubmit={ubahForm.handleSubmit(handleUbahSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#131010] mb-1">Nama</label>
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Nama
+                  </label>
                   <input
                     type="text"
-                    name="nama"
-                    value={ubahFormData.nama}
-                    onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    {...ubahForm.register("nama")}
+                    className={`w-full p-2 border rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
+                      ubahForm.formState.errors.nama
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                   />
+                  {ubahForm.formState.errors.nama && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.nama.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#131010] mb-1">Alamat Lengkap</label>
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Alamat Lengkap
+                  </label>
                   <input
                     type="text"
-                    name="alamat"
-                    value={ubahFormData.alamat}
-                    onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
+                    {...ubahForm.register("alamat")}
+                    className={`w-full p-2 border rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
+                      ubahForm.formState.errors.alamat
+                        ? "border-red-500"
+                        : "border-gray-300"
+                    }`}
                   />
+                  {ubahForm.formState.errors.alamat && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.alamat.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-sm text-[#131010] mb-1">Akhir Penerimaan (YYYY-MM-DD)</label>
-                  <input
-                    type="text"
-                    name="akhirPenerimaan"
-                    value={ubahFormData.akhirPenerimaan}
-                    onChange={handleUbahInputChange}
-                    className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                  />
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Akhir Penerimaan
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      {...ubahForm.register("akhirPenerimaan")}
+                      className={`w-full p-2 border rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
+                        ubahForm.formState.errors.akhirPenerimaan
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      }`}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                    <Icon
+                      icon="mdi:calendar"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#C2C2C2] w-5 h-5"
+                    />
+                  </div>
+                  {ubahForm.formState.errors.akhirPenerimaan && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.akhirPenerimaan.message}
+                    </p>
+                  )}
                 </div>
                 <div className="mb-6">
-                  <label className="block text-sm text-[#131010] mb-1">Barang yang Dibutuhkan</label>
-                  <div className="flex space-x-4">
+                  <label className="block text-sm text-[#131010] mb-1 font-bold">
+                    Barang yang Dibutuhkan
+                  </label>
+                  <div className="flex flex-row gap-4">
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        name="pakaian"
-                        checked={ubahFormData.barang.pakaian}
-                        onChange={handleUbahCheckboxChange}
+                        {...ubahForm.register("barang.pakaian")}
                         className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#131010]">Pakaian</span>
@@ -496,9 +642,7 @@ export default function Home() {
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        name="elektronik"
-                        checked={ubahFormData.barang.elektronik}
-                        onChange={handleUbahCheckboxChange}
+                        {...ubahForm.register("barang.elektronik")}
                         className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#131010]">Elektronik</span>
@@ -506,9 +650,7 @@ export default function Home() {
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        name="mainan"
-                        checked={ubahFormData.barang.mainan}
-                        onChange={handleUbahCheckboxChange}
+                        {...ubahForm.register("barang.mainan")}
                         className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#131010]">Mainan</span>
@@ -516,21 +658,25 @@ export default function Home() {
                     <label className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        name="buku"
-                        checked={ubahFormData.barang.buku}
-                        onChange={handleUbahCheckboxChange}
+                        {...ubahForm.register("barang.buku")}
                         className="h-4 w-4 accent-[#543A14]"
                       />
                       <span className="text-sm text-[#131010]">Buku</span>
                     </label>
                   </div>
+                  {ubahForm.formState.errors.barang && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.barang.message}
+                    </p>
+                  )}
                 </div>
                 <div className="flex space-x-3">
                   <button
                     type="submit"
-                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                    disabled={isLoading}
+                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] disabled:opacity-50"
                   >
-                    Simpan
+                    {isLoading ? "Memproses..." : "Simpan"}
                   </button>
                   <button
                     type="button"
@@ -548,24 +694,28 @@ export default function Home() {
         {isConfirmModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
-              <h2 className="text-lg font-semibold text-red-600 mb-4">Status Event (SELESAI)</h2>
-              <p className="text-sm text-[#4A2C2A] mb-6">
-                Status event yang telah diubah menjadi <span className="font-semibold">SELESAI</span>,
-                akan ditampilkan dengan warna yang berbeda dari halaman yang ditampilkan kepada donatur
-                dan tidak dapat dipilih akhir penerimaan. Pastikan event yang selesai sesuai dengan
-                tanggal akhir penerimaan.
+              <h2 className="text-lg font-semibold text-red-600 mb-4">
+                Status Event (SELESAI)
+              </h2>
+              <p className="text-sm text-[#131010] mb-6 text-[14px]">
+                Status event yang telah diubah menjadi{" "}
+                <span className="font-bold text-[#131010]">SELESAI</span>, akan
+                dihilangkan dari halaman yang ditampilkan kepada donatur dan
+                tidak dapat dipilih kembali. Pastikan event yang selesai sesuai
+                dengan tanggal akhir penerimaan.
               </p>
               <div className="flex space-x-3">
                 <button
                   onClick={handleConfirmFinish}
-                  className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                  disabled={isLoading}
+                  className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] disabled:opacity-50"
                 >
-                  Konfirmasi
+                  {isLoading ? "Memproses..." : "Konfirmasi"}
                 </button>
                 <button
                   onClick={() => toggleConfirmModal(null)}
                   className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
-                  >
+                >
                   Batal
                 </button>
               </div>
@@ -586,7 +736,11 @@ export default function Home() {
                     <div className="flex items-center">
                       Akhir Penerimaan
                       <Icon
-                        icon={sortOrder === "asc" ? "mdi:sort-ascending" : "mdi:sort-descending"}
+                        icon={
+                          sortOrder === "asc"
+                            ? "mdi:sort-ascending"
+                            : "mdi:sort-descending"
+                        }
                         className="ml-2 w-4 h-4"
                       />
                     </div>
@@ -685,7 +839,9 @@ export default function Home() {
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
               className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+                currentPage === totalPages
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               } active:border-none active:bg-transparent`}
             >
               Next

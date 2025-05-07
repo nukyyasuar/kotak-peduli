@@ -25,6 +25,7 @@
     "next": "^15.2.4",
     "next-auth": "^5.0.0-beta.25",
     "postcss": "^8.5.3",
+    "primereact": "^10.9.5",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-easy-sort": "^1.6.0",
