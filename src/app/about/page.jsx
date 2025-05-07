@@ -117,7 +117,7 @@ export default function About() {
         </h1>
         <div className="flex flex-col gap-5">
           <div className="flex justify-between gap-6">
-            <div className="bg-[#543A14] text-white p-8 rounded-lg flex flex-col justify-center w-2/3">
+            <div className="bg-[#543a14] text-white p-8 rounded-lg flex flex-col justify-center w-2/3">
               <h2 className="text-xl font-bold mb-3">
                 "Membantu Sesama dengan Barang yang Lebih Bermakna"
               </h2>
@@ -129,7 +129,7 @@ export default function About() {
                 benar-benar membutuhkan.
               </p>
             </div>
-            <div className="bg-[#543A14] text-white p-8 rounded-lg flex">
+            <div className="bg-[#543a14] text-white p-8 rounded-lg flex">
               <div className="flex gap-5">
                 <div className="w-1/2">
                   <h2 className="text-xl font-bold h-14 mb-3">Visi</h2>
@@ -155,7 +155,7 @@ export default function About() {
           </div>
 
           {/* Donation Flow */}
-          <div className="bg-[#543A14] text-white p-8 rounded-lg">
+          <div className="bg-[#543a14] text-white p-8 rounded-lg">
             <h2 className="text-[32px] font-bold text-center mb-6">
               Alur Donasi
             </h2>
@@ -174,7 +174,7 @@ export default function About() {
           </div>
 
           {/* Team Section */}
-          <div className="bg-[#543A14] text-white p-8 rounded-lg">
+          <div className="bg-[#543a14] text-white p-8 rounded-lg">
             <h2 className="text-[32px] font-bold text-center mb-6">Tim Kami</h2>
             <div className="flex justify-between">
               {teamMembers.map(({ src, alt, nim, name }) => (
