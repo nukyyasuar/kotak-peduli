@@ -2,15 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { ButtonCustom } from "./button";
 import { FormInput } from "./formInput";
+import { useForm } from "react-hook-form";
 
 const DEFAULT_LOCATION = { lat: -6.2088, lng: 106.8456 };
 
 export default function AddressModal({
   isOpen,
   handleClose,
-  control,
-  register,
-  watch,
+  // control,
+  // register,
+  // watch,
   setValue,
 }) {
   const [mapError, setMapError] = useState(null);
@@ -22,6 +23,24 @@ export default function AddressModal({
   const autocompleteRef = useRef(null);
   const streetInputRef = useRef(null);
   const scriptLoadedRef = useRef(false);
+
+  const {
+    control,
+    getValues: getValueDetail,
+    register,
+    watch,
+    setValue: setValueDetail,
+  } = useForm({
+    defaultValues: {
+      alamat: {
+        latitude: "",
+        longitude: "",
+        jalan: "",
+        patokan: "",
+        summary: "",
+      },
+    },
+  });
 
   // Funtion mengambil current location user
   const getUserLocation = (callback) => {
@@ -39,6 +58,8 @@ export default function AddressModal({
           lng: position.coords.longitude,
           accuracy: position.coords.accuracy,
         };
+        setValueDetail("alamat.latitude", location.lat);
+        setValueDetail("alamat.longitude", location.lng);
         setIsLocating(false);
         setGeolocationError(null);
         callback(location);
@@ -115,7 +136,7 @@ export default function AddressModal({
       });
 
       reverseGeocode(clicked, (address) => {
-        setValue("jalan", address);
+        setValueDetail("alamat.jalan", address);
       });
 
       map.panTo(clicked);
@@ -138,7 +159,7 @@ export default function AddressModal({
     });
 
     reverseGeocode(location, (address) => {
-      setValue("jalan", address);
+      setValueDetail("alamat.jalan", address);
     });
   };
   // Function untuk mengupdate peta berdasarkan alamat
@@ -158,6 +179,8 @@ export default function AddressModal({
             lat: results[0].geometry.location.lat(),
             lng: results[0].geometry.location.lng(),
           };
+          setValueDetail("alamat.latitude", location.lat);
+          setValueDetail("alamat.longitude", location.lng);
           updateMapWithLocation(location);
         } else {
           console.error("Alamat tidak ditemukan");
@@ -172,7 +195,7 @@ export default function AddressModal({
       console.log(`Lokasi ditemukan dengan akurasi ${loc.accuracy} meter`);
     });
   };
-  // Function inisialisasi fitur autocomplete alamat (input manual)
+  // Function inisialisasi fitur autocomplete alamat (input manual), ketik sendiri dan pilih dari recommended list
   const initAutocomplete = () => {
     if (!streetInputRef.current || !window.google?.maps?.places) return;
 
@@ -192,7 +215,9 @@ export default function AddressModal({
           lat: place.geometry.location.lat(),
           lng: place.geometry.location.lng(),
         };
-        setValue("jalan", place.formatted_address);
+        setValueDetail("alamat.latitude", location.lat);
+        setValueDetail("alamat.longitude", location.lng);
+        setValueDetail("jalan", place.formatted_address);
         updateMapWithLocation(location);
       }
     });
@@ -216,11 +241,12 @@ export default function AddressModal({
   };
   // Function handle menyimpan lokasi yang dipilih ke 'alamat'. Pada button 'simpan' di modal
   const handleSaveLocation = () => {
-    if (watch("jalan")) {
-      setValue(
-        "alamat",
-        `${watch("patokan") ? `(${watch("patokan")}) ` : ""}${watch("jalan")}`
+    if (watch("alamat.jalan")) {
+      setValueDetail(
+        "alamat.summary",
+        `${watch("alamat.patokan") ? `(${watch("alamat.patokan")}) ` : ""}${watch("alamat.jalan")}`
       );
+      setValue("alamat", getValueDetail("alamat"));
     } else {
       console.log("No location selected");
     }
@@ -231,31 +257,31 @@ export default function AddressModal({
   useEffect(() => {
     if (!isOpen || !window.google?.maps?.places) return;
 
-    const alamat = watch("alamat");
+    const summary = watch("alamat.summary");
     setGeolocationError(null);
     setMapError(null);
-
-    if (alamat) {
-      const match = alamat.match(/\((.*?)\)\s*(.*)/);
+    if (summary) {
+      const match = summary?.match(/\((.*?)\)\s*(.*)/);
       if (match) {
         const [, patokan, jalan] = match;
-        setValue("patokan", patokan);
-        setValue("jalan", jalan);
+        setValueDetail("alamat.patokan", patokan);
+        setValueDetail("alamat.jalan", jalan);
       } else {
-        setValue("patokan", "");
-        setValue("jalan", alamat);
+        setValueDetail("alamat.patokan", "");
+        setValueDetail("alamat.jalan", summary);
       }
     }
 
-    if (watch("jalan")) {
-      initMap(watch("jalan"));
-      updateMapWithAddress(watch("jalan"));
+    if (watch("alamat.jalan")) {
+      initMap(watch("alamat.jalan"));
+      updateMapWithAddress(watch("alamat.jalan"));
     } else {
       getUserLocation((location) => {
         initMap(location);
-        console.log(location);
+        setValueDetail("alamat.latitude", location.lat);
+        setValueDetail("alamat.longitude", location.lng);
         reverseGeocode(location, (address) => {
-          if (!watch("jalan")) setValue("jalan", address);
+          if (!watch("alamat.jalan")) setValueDetail("alamat.jalan", address);
         });
       });
     }
@@ -292,7 +318,7 @@ export default function AddressModal({
         <div className="space-y-4 max-h-[50dvh] overflow-scroll no-scrollbar">
           <FormInput
             ref={streetInputRef}
-            name="jalan"
+            name="alamat.jalan"
             control={control}
             inputType="controlledText"
             label="Nama Jalan, Perumahan, Komplek"
@@ -301,14 +327,14 @@ export default function AddressModal({
                 ? "Sedang mencari lokasi Anda..."
                 : "Masukkan nama jalan atau klik peta"
             }
-            onChange={(val) => setValue("jalan", val)}
+            onChange={(val) => setValueDetail("alamat.jalan", val)}
             disabled={isLocating}
           />
           <FormInput
             inputType="text"
             label="Patokan, Blok, No. Rumah"
             placeholder="Contoh: Blok Z, No. 99"
-            register={register("patokan")}
+            register={register("alamat.patokan")}
           />
           <div>
             <FormInput label="Peta (Jika Tersedia)" />
@@ -346,12 +372,14 @@ export default function AddressModal({
             onClick={handleSaveLocation}
             variant="brown"
             className="w-full"
+            type="button"
           />
           <ButtonCustom
             label="Batal"
             onClick={handleClose}
             variant="white"
             className="w-full"
+            type="button"
           />
         </div>
       </div>
