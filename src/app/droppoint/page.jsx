@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
+import collectionCenterService from "../../service/dropPointService"; // Adjust path as needed
 
 // Validation schema using Yup
 const validationSchema = Yup.object({
@@ -25,88 +26,15 @@ const validationSchema = Yup.object({
 });
 
 export default function Home() {
-  const [dropPoints, setDropPoints] = useState([
-    {
-      nama: "Tempat Penampung A",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Cabang",
-    },
-    {
-      nama: "Tempat Penampung B",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Cabang",
-    },
-    {
-      nama: "Tempat Penampung C",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Cabang",
-    },
-    {
-      nama: "Drop Point A",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-    {
-      nama: "Drop Point B",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-    {
-      nama: "Drop Point C",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-    {
-      nama: "Tempat Penampung D",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-    {
-      nama: "Tempat Penampung E",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-    {
-      nama: "Drop Point D",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-    {
-      nama: "Drop Point E",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-    {
-      nama: "Tempat Penampung F",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-    {
-      nama: "Tempat Penampung G",
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit...",
-      telepon: "+6281212312312",
-      tipe: "Drop Point",
-    },
-  ]);
-
+  const [dropPoints, setDropPoints] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
   const [isTambahModalOpen, setIsTambahModalOpen] = useState(false);
   const [isUbahModalOpen, setIsUbahModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedDropPointIndex, setSelectedDropPointIndex] = useState(null);
+  const [selectedDropPoint, setSelectedDropPoint] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -135,6 +63,25 @@ export default function Home() {
     },
   });
 
+  // Fetch drop points on component mount
+  useEffect(() => {
+    const fetchDropPoints = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Assuming a fixed collection center ID for simplicity; adjust as needed
+        const centerId = "1"; // Replace with actual center ID or retrieve dynamically
+        const posts = await collectionCenterService.getPosts(centerId);
+        setDropPoints(posts);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDropPoints();
+  }, []);
+
   const filteredDropPoints = dropPoints.filter((point) => {
     let matchesType = false;
     if (!isCabang && !isDropPoint) matchesType = true;
@@ -148,15 +95,6 @@ export default function Home() {
 
     return matchesType && matchesSearch;
   });
-
-  useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      console.log("Filtered Drop Points:", filteredDropPoints);
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, isCabang, isDropPoint, dropPoints]);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -187,73 +125,94 @@ export default function Home() {
     }
   };
 
-  const toggleUbahModal = (index) => {
-    if (index !== null) {
-      const point = dropPoints[index];
+  const toggleUbahModal = (point) => {
+    if (point) {
       ubahForm.reset({
         nama: point.nama,
         alamat: point.alamat,
         telepon: point.telepon,
         tipe: point.tipe,
       });
-      setSelectedDropPointIndex(index);
+      setSelectedDropPoint(point);
     }
     setIsUbahModalOpen(!isUbahModalOpen);
     setOpenDropdownIndex(null);
   };
 
-  const toggleDeleteModal = (index) => {
-    setSelectedDropPointIndex(index);
+  const toggleDeleteModal = (point) => {
+    setSelectedDropPoint(point);
     setIsDeleteModalOpen(!isDeleteModalOpen);
     setOpenDropdownIndex(null);
   };
 
-  const handleTambahSubmit = (data) => {
+  const handleTambahSubmit = async (data) => {
     setIsLoading(true);
-    const newDropPoint = {
-      nama: data.nama,
-      alamat: data.alamat,
-      telepon: data.telepon,
-      tipe: data.tipe,
-    };
-    setDropPoints((prev) => [...prev, newDropPoint]);
-    toggleTambahModal();
-    setTimeout(() => setIsLoading(false), 500);
-  };
-
-  const handleUbahSubmit = (data) => {
-    setIsLoading(true);
-    const updatedDropPoint = {
-      nama: data.nama,
-      alamat: data.alamat,
-      telepon: data.telepon,
-      tipe: data.tipe,
-    };
-    setDropPoints((prev) => {
-      const updatedDropPoints = [...prev];
-      updatedDropPoints[selectedDropPointIndex] = updatedDropPoint;
-      return updatedDropPoints;
-    });
-    toggleUbahModal(null);
-    setTimeout(() => setIsLoading(false), 500);
-  };
-
-  const handleDelete = () => {
-    setIsLoading(true);
-    setDropPoints((prev) =>
-      prev.filter((_, i) => i !== selectedDropPointIndex)
-    );
-    setIsDeleteModalOpen(false);
-    setSelectedDropPointIndex(null);
-    setTimeout(() => {
+    setError(null);
+    try {
+      const centerId = "1"; // Replace with actual center ID
+      const newDropPoint = {
+        nama: data.nama,
+        alamat: data.alamat,
+        telepon: data.telepon,
+        tipe: data.tipe,
+      };
+      const createdPost = await collectionCenterService.createPost(centerId, newDropPoint);
+      setDropPoints((prev) => [...prev, createdPost]);
+      toggleTambahModal();
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setIsLoading(false);
-      const newTotalPages = Math.ceil(filteredDropPoints.length / itemsPerPage);
+    }
+  };
+
+  const handleUbahSubmit = async (data) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const centerId = "1"; // Replace with actual center ID
+      const updatedDropPoint = {
+        nama: data.nama,
+        alamat: data.alamat,
+        telepon: data.telepon,
+        tipe: data.tipe,
+      };
+      const postId = selectedDropPoint.id; // Assuming the API returns an 'id' field
+      const updatedPost = await collectionCenterService.updatePost(centerId, postId, updatedDropPoint);
+      setDropPoints((prev) =>
+        prev.map((point) =>
+          point.id === postId ? updatedPost : point
+        )
+      );
+      toggleUbahModal(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const centerId = "1"; // Replace with actual center ID
+      const postId = selectedDropPoint.id; // Assuming the API returns an 'id' field
+      await collectionCenterService.deletePost(centerId, postId);
+      setDropPoints((prev) => prev.filter((point) => point.id !== postId));
+      setIsDeleteModalOpen(false);
+      setSelectedDropPoint(null);
+      const newTotalPages = Math.ceil((filteredDropPoints.length - 1) / itemsPerPage);
       if (currentPage > newTotalPages && newTotalPages > 0) {
         setCurrentPage(newTotalPages);
       } else if (newTotalPages === 0) {
         setCurrentPage(1);
       }
-    }, 500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePageChange = (pageNumber) => {
@@ -283,6 +242,12 @@ export default function Home() {
         <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">
           Cabang & Drop Point
         </h1>
+
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-600 text-sm rounded-lg">
+            {error}
+          </div>
+        )}
 
         <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
           <div className="relative w-64">
@@ -343,19 +308,12 @@ export default function Home() {
                   <label className="block text-sm text-[#131010] mb-1 font-bold">
                     Nama Tempat Penampung
                   </label>
-                  <select
+                  <input
+                    type="text"
                     {...tambahForm.register("nama")}
+                    placeholder="Masukkan nama tempat"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                  >
-                    <option value="" disabled>
-                      Pilih tempat penampung yang tersedia
-                    </option>
-                    {dropPoints.map((point, index) => (
-                      <option key={index} value={point.nama}>
-                        {point.nama}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {tambahForm.formState.errors.nama && (
                     <p className="text-red-600 text-xs mt-1">
                       {tambahForm.formState.errors.nama.message}
@@ -417,7 +375,8 @@ export default function Home() {
                 <div className="flex space-x-3">
                   <button
                     type="submit"
-                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                    disabled={isLoading}
+                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] disabled:opacity-50"
                   >
                     Konfirmasi
                   </button>
@@ -445,19 +404,11 @@ export default function Home() {
                   <label className="block text-sm text-[#131010] mb-1 font-bold">
                     Nama Tempat Penampung
                   </label>
-                  <select
+                  <input
+                    type="text"
                     {...ubahForm.register("nama")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
-                  >
-                    <option value="" disabled>
-                      Pilih tempat penampung yang tersedia
-                    </option>
-                    {dropPoints.map((point, index) => (
-                      <option key={index} value={point.nama}>
-                        {point.nama}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {ubahForm.formState.errors.nama && (
                     <p className="text-red-600 text-xs mt-1">
                       {ubahForm.formState.errors.nama.message}
@@ -517,7 +468,8 @@ export default function Home() {
                 <div className="flex space-x-3">
                   <button
                     type="submit"
-                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                    disabled={isLoading}
+                    className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] disabled:opacity-50"
                   >
                     Simpan
                   </button>
@@ -547,13 +499,15 @@ export default function Home() {
               <div className="flex space-x-3">
                 <button
                   onClick={handleDelete}
-                  className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B]"
+                  disabled={isLoading}
+                  className="w-1/2 py-2 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium hover:bg-[#8B5A2B] disabled:opacity-50"
                 >
                   Konfirmasi
                 </button>
                 <button
                   onClick={() => toggleDeleteModal(null)}
                   className="w-1/2 py-2 border border-gray-300 rounded-lg text-[#4A2C2A] text-sm font-medium hover:bg-[#F5E9D4]"
+                  disabled={isLoading}
                 >
                   Batal
                 </button>
@@ -579,7 +533,7 @@ export default function Home() {
               <tbody>
                 {currentDropPoints.length > 0 ? (
                   currentDropPoints.map((point, index) => (
-                    <tr key={index} className="border-t border-gray-200">
+                    <tr key={point.id || index} className="border-t border-gray-200">
                       <td className="p-3 text-black">{point.nama}</td>
                       <td className="p-3 text-black">{point.alamat}</td>
                       <td className="p-3 text-black">{point.telepon}</td>
@@ -606,17 +560,13 @@ export default function Home() {
                           <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
                             <ul className="text-sm text-[#4A2C2A]">
                               <li
-                                onClick={() =>
-                                  toggleUbahModal(indexOfFirstItem + index)
-                                }
+                                onClick={() => toggleUbahModal(point)}
                                 className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
                               >
                                 Ubah Data
                               </li>
                               <li
-                                onClick={() =>
-                                  toggleDeleteModal(indexOfFirstItem + index)
-                                }
+                                onClick={() => toggleDeleteModal(point)}
                                 className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
                               >
                                 Hapus Data

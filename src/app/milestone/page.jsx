@@ -113,11 +113,11 @@ export default function Home() {
         throw new Error("Invalid API response: Expected an array of events");
       }
 
-      const typeTranslations = {
-        clothes: "Pakaian",
-        electronics: "Elektronik",
-        toys: "Mainan",
-        books: "Buku",
+      const typeToFrontend = {
+        CLOTHES: "Pakaian",
+        ELECTRONICS: "Elektronik",
+        TOYS: "Mainan",
+        BOOKS: "Buku",
       };
 
       const mappedEvents = data
@@ -125,7 +125,7 @@ export default function Home() {
           // Map the types to Indonesian
           const translatedTypes = Array.isArray(types)
             ? types
-                .map((type) => typeTranslations[type.toLowerCase()] || type)
+                .map((type) => typeToFrontend[type.toUpperCase()] || type)
                 .filter(Boolean)
                 .join(", ")
             : "";
@@ -229,7 +229,10 @@ export default function Home() {
       if (event.endDate) {
         try {
           const [day, month, year] = event.endDate.split("/");
-          formattedEndDate = `${year}-${month}-${day}`;
+          formattedEndDate = `${year}-${month.padStart(2, "0")}-${day.padStart(
+            2,
+            "0"
+          )}`;
         } catch (err) {
           console.error(
             `Invalid endDate format for event ${event.id}:`,
@@ -240,16 +243,19 @@ export default function Home() {
         }
       }
 
+      // Map types to form values
+      const typesArray = event.types
+        ? event.types.split(", ").map((t) => t.toLowerCase())
+        : [];
       ubahForm.reset({
         nama: event.name,
         alamat: event.address,
         akhirPenerimaan: formattedEndDate,
         barang: {
-          pakaian: event.types && event.types.toLowerCase().includes("pakaian"),
-          elektronik:
-            event.types && event.types.toLowerCase().includes("elektronik"),
-          mainan: event.types && event.types.toLowerCase().includes("mainan"),
-          buku: event.types && event.types.toLowerCase().includes("buku"),
+          pakaian: typesArray.includes("pakaian"),
+          elektronik: typesArray.includes("elektronik"),
+          mainan: typesArray.includes("mainan"),
+          buku: typesArray.includes("buku"),
         },
       });
       setSelectedEventId(event.id);
@@ -295,11 +301,19 @@ export default function Home() {
       const centerId = profileData.id;
       if (!centerId)
         throw new Error("No collection center ID found in profile");
+      const typeMapping = {
+        pakaian: "CLOTHES",
+        elektronik: "ELECTRONICS",
+        mainan: "TOYS",
+        buku: "BOOKS",
+      };
       const eventData = {
-        nama: data.nama,
-        alamat: data.alamat,
-        akhirPenerimaan: data.akhirPenerimaan,
-        barang: Object.keys(data.barang).filter((key) => data.barang[key]),
+        name: data.nama,
+        address: data.alamat,
+        endDate: data.akhirPenerimaan,
+        types: Object.keys(data.barang)
+          .filter((key) => data.barang[key])
+          .map((key) => typeMapping[key]),
       };
       await eventService.createEvent(centerId, eventData);
       await fetchEvents();
@@ -317,22 +331,43 @@ export default function Home() {
     setIsLoading(true);
     try {
       const profileData = await eventService.getUserCollectionCenter();
-      const centerId = profileData.id;
+      const centerId = profileData?.id;
       if (!centerId)
         throw new Error("No collection center ID found in profile");
-      const eventData = {
-        nama: data.nama,
-        alamat: data.alamat,
-        akhirPenerimaan: data.akhirPenerimaan,
-        barang: Object.keys(data.barang).filter((key) => data.barang[key]),
+      if (!selectedEventId) throw new Error("No event selected for update");
+
+      const typeMapping = {
+        pakaian: "CLOTHES",
+        elektronik: "ELECTRONICS",
+        mainan: "TOYS",
+        buku: "BOOKS",
       };
+
+      const eventData = {
+        name: data.nama,
+        address: data.alamat,
+        endDate: data.akhirPenerimaan,
+        types: Object.keys(data.barang)
+          .filter((key) => data.barang[key])
+          .map((key) => typeMapping[key]),
+      };
+
+      console.log("Updating event with:", {
+        centerId,
+        selectedEventId,
+        eventData,
+      });
       await eventService.updateEvent(centerId, selectedEventId, eventData);
       await fetchEvents();
       toggleUbahModal(null);
       setError(null);
     } catch (err) {
-      setError("Failed to update event. Please try again.");
-      console.error(err);
+      const errorMessage =
+        err.response?.data?.meta?.message?.join(", ") ||
+        err.message ||
+        "Failed to update event";
+      console.error("Update error:", err);
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

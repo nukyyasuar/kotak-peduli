@@ -1,5 +1,8 @@
 "use client";
 
+//get nya yang Get All Collection Center
+// Get All User
+
 import Head from "next/head";
 import Image from "next/image";
 import { useState } from "react";

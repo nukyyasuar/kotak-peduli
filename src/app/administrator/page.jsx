@@ -178,10 +178,11 @@ export default function AdminPage() {
   const toggleUbahModal = (index) => {
     if (index !== null && admins[index]) {
       const admin = admins[index];
+      const newNumber = admin.noTelepon
       ubahForm.reset({
         nama: admin.nama,
         email: admin.email,
-        noTelepon: admin.noTelepon,
+        noTelepon: newNumber.slice(3),
         penempatan: admin.penempatan,
         role: admin.role,
       });
