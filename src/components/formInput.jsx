@@ -73,6 +73,7 @@ const FormInput = ({
   disabled,
   customMenu,
   setValue,
+  errors,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -239,7 +240,7 @@ const FormInput = ({
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
-          className={`${baseClass} ${inputStyles}`}
+          className={`${baseClass} ${inputStyles} ${value && `border-black`}`}
           onClick={onClick}
           {...register}
         />
@@ -270,6 +271,10 @@ const FormInput = ({
             />
           )}
         />
+      )}
+
+      {errors && errors[name] && (
+        <p className="text-red-500 text-sm mt-1">{errors[name]?.message}</p>
       )}
     </div>
   );
