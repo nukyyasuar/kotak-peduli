@@ -265,10 +265,18 @@ export default function Home() {
   };
 
   const toggleConfirmModal = (index) => {
-    if (index !== null && currentEvents[index]) {
-      setEventToFinishId(currentEvents[index].id);
+    // Only set the event ID if we're opening the modal
+    if (!isConfirmModalOpen && index !== null && currentEvents[index]) {
+      const eventId = currentEvents[index].id;
+      console.log(`Setting event to finish: ${eventId}`);
+      setEventToFinishId(eventId);
+    } else {
+      // Reset if we're closing the modal
+      setEventToFinishId(null);
     }
+    
     setIsConfirmModalOpen(!isConfirmModalOpen);
+    // Always close the dropdown when toggling the modal
     setOpenDropdownIndex(null);
   };
 
@@ -276,17 +284,51 @@ export default function Home() {
     if (eventToFinishId !== null) {
       setIsLoading(true);
       try {
+        // Get the collection center ID
         const profileData = await eventService.getUserCollectionCenter();
-        const centerId = profileData.id;
-        if (!centerId)
+        const centerId = profileData?.id;
+        
+        // Validation checks
+        if (!centerId) {
           throw new Error("No collection center ID found in profile");
+        }
+        
+        if (!eventToFinishId) {
+          throw new Error("No event selected to finish");
+        }
+        
+        console.log(`Attempting to finish event ${eventToFinishId} for center ${centerId}`);
+        
+        // Call the API to finish the event
         await eventService.finishEvent(centerId, eventToFinishId);
+        
+        // Refresh events list after successful operation
         await fetchEvents();
+        
+        // Clear error if there was one previously
         setError(null);
+        
+        // Show success message (you could add a success state if needed)
+        console.log("Event successfully marked as finished");
+        
       } catch (err) {
-        setError("Failed to finish event. Please try again.");
-        console.error(err);
+        console.error("Error details:", err);
+        
+        // Set a more descriptive error message
+        let errorMessage;
+        if (err.response?.data?.meta?.message) {
+          errorMessage = Array.isArray(err.response.data.meta.message) 
+            ? err.response.data.meta.message.join(", ") 
+            : err.response.data.meta.message;
+        } else if (err.response?.status) {
+          errorMessage = `API Error (${err.response.status}): Failed to finish event`;
+        } else {
+          errorMessage = err.message || "Failed to finish event. Please try again.";
+        }
+        
+        setError(errorMessage);
       } finally {
+        // Always reset UI state
         setIsLoading(false);
         setIsConfirmModalOpen(false);
         setEventToFinishId(null);

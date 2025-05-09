@@ -8,21 +8,21 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as Yup from "yup";
-import collectionCenterService from "../../service/dropPointService"; // Adjust path as needed
+import collectionCenterService from "../../service/dropPointService";
 
 // Validation schema using Yup
 const validationSchema = Yup.object({
-  nama: Yup.string()
+  name: Yup.string()
     .required("Nama tempat penampung tidak boleh kosong.")
     .max(100, "Nama tempat penampung tidak boleh melebihi 100 karakter.")
     .min(10, "Nama tempat penampung harus berisi minimal 10 karakter."),
-  alamat: Yup.string().required("Alamat tidak boleh kosong."),
-  telepon: Yup.string()
+  address: Yup.string().required("Alamat tidak boleh kosong."),
+  phoneNumber: Yup.string()
     .required("Nomor telepon tidak boleh kosong.")
     .matches(/^8/, "Nomor telepon harus diawali dengan angka ‘8’.")
     .max(15, "Nomor telepon tidak boleh lebih dari 15 digit.")
-    .min(13, "Nomor telepon harus berisi minimal 13 digit."),
-  tipe: Yup.string().required("Tipe tempat harus dipilih."),
+    .min(10, "Nomor telepon harus berisi minimal 10 digit."),
+  type: Yup.string().required("Tipe tempat harus dipilih."),
 });
 
 export default function Home() {
@@ -36,6 +36,7 @@ export default function Home() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedDropPoint, setSelectedDropPoint] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [centerId, setCenterId] = useState(null);
   const itemsPerPage = 10;
 
   const [isCabang, setIsCabang] = useState(false);
@@ -45,10 +46,10 @@ export default function Home() {
   const tambahForm = useForm({
     resolver: yupResolver(validationSchema),
     defaultValues: {
-      nama: "",
-      alamat: "",
-      telepon: "",
-      tipe: "",
+      name: "",
+      address: "",
+      phoneNumber: "",
+      type: "",
     },
   });
 
@@ -56,41 +57,65 @@ export default function Home() {
   const ubahForm = useForm({
     resolver: yupResolver(validationSchema),
     defaultValues: {
-      nama: "",
-      alamat: "",
-      telepon: "",
-      tipe: "",
+      name: "",
+      address: "",
+      phoneNumber: "",
+      type: "",
     },
   });
 
-  // Fetch drop points on component mount
   useEffect(() => {
-    const fetchDropPoints = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        // Assuming a fixed collection center ID for simplicity; adjust as needed
-        const centerId = "1"; // Replace with actual center ID or retrieve dynamically
-        const posts = await collectionCenterService.getPosts(centerId);
-        setDropPoints(posts);
+        // Fetch user's collection center
+        const centerData = await collectionCenterService.getUserCollectionCenter();
+        const fetchedCenterId = centerData.id; 
+        setCenterId(fetchedCenterId);
+
+        // Fetch drop points
+        const posts = await collectionCenterService.getPosts(fetchedCenterId);
+        const mappedDropPoints = Array.isArray(posts)
+          ? posts.map((post) => ({
+              id: post.id,
+              name: post.name,
+              address: post.address.detail, 
+              phoneNumber: post.phoneNumber,
+              type: post.type === "Cabang" ? "BRANCH" : post.type,
+              collectionCenterId: post.collectionCenterId,
+              parentId: post.parentId,
+            }))
+          : [];
+        setDropPoints(mappedDropPoints);
+        console.log("Fetched drop points:", posts);
+
+        if (mappedDropPoints.length === 0) {
+          setError("No drop points found for this collection center.");
+        }
       } catch (err) {
-        setError(err.message);
+        const errorMessage =
+          err.response?.data?.meta?.message?.join(", ") ||
+          err.message ||
+          "Gagal memuat data. Silakan coba lagi.";
+        setError(errorMessage);
+        console.error("Fetch Drop Points Error:", err);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchDropPoints();
+    fetchData();
   }, []);
 
   const filteredDropPoints = dropPoints.filter((point) => {
     let matchesType = false;
     if (!isCabang && !isDropPoint) matchesType = true;
     else if (isCabang && isDropPoint) matchesType = true;
-    else if (isCabang) matchesType = point.tipe === "Cabang";
-    else if (isDropPoint) matchesType = point.tipe === "Drop Point";
+    else if (isCabang) matchesType = point.type === "BRANCH";
+    else if (isDropPoint) matchesType = point.type === "DROP_POINT";
 
     const matchesSearch = searchQuery
-      ? point.nama.toLowerCase().includes(searchQuery.toLowerCase())
+      ? point.name.toLowerCase().includes(searchQuery.toLowerCase())
       : true;
 
     return matchesType && matchesSearch;
@@ -128,10 +153,10 @@ export default function Home() {
   const toggleUbahModal = (point) => {
     if (point) {
       ubahForm.reset({
-        nama: point.nama,
-        alamat: point.alamat,
-        telepon: point.telepon,
-        tipe: point.tipe,
+        name: point.name,
+        address: point.address.detail || "", 
+        phoneNumber: point.phoneNumber,
+        type: point.type,
       });
       setSelectedDropPoint(point);
     }
@@ -149,18 +174,17 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      const centerId = "1"; // Replace with actual center ID
       const newDropPoint = {
-        nama: data.nama,
-        alamat: data.alamat,
-        telepon: data.telepon,
-        tipe: data.tipe,
+        name: data.name,
+        address: { detail: data.address }, 
+        phoneNumber: data.phoneNumber,
+        type: data.type,
       };
       const createdPost = await collectionCenterService.createPost(centerId, newDropPoint);
       setDropPoints((prev) => [...prev, createdPost]);
       toggleTambahModal();
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Gagal menambahkan cabang. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -170,23 +194,22 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      const centerId = "1"; // Replace with actual center ID
       const updatedDropPoint = {
-        nama: data.nama,
-        alamat: data.alamat,
-        telepon: data.telepon,
-        tipe: data.tipe,
+        name: data.name,
+        address: { detail: data.address }, 
+        phoneNumber: data.phoneNumber,
+        type: data.type,
       };
-      const postId = selectedDropPoint.id; // Assuming the API returns an 'id' field
+      const postId = selectedDropPoint.id;
       const updatedPost = await collectionCenterService.updatePost(centerId, postId, updatedDropPoint);
       setDropPoints((prev) =>
         prev.map((point) =>
-          point.id === postId ? updatedPost : point
+          point.id === updatedPost.id ? updatedPost : point
         )
       );
       toggleUbahModal(null);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Gagal memperbarui cabang. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -196,8 +219,7 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      const centerId = "1"; // Replace with actual center ID
-      const postId = selectedDropPoint.id; // Assuming the API returns an 'id' field
+      const postId = selectedDropPoint.id;
       await collectionCenterService.deletePost(centerId, postId);
       setDropPoints((prev) => prev.filter((point) => point.id !== postId));
       setIsDeleteModalOpen(false);
@@ -209,7 +231,7 @@ export default function Home() {
         setCurrentPage(1);
       }
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Gagal menghapus cabang. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -253,10 +275,11 @@ export default function Home() {
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="Search courses"
+              placeholder="Cari cabang atau drop point"
               value={searchQuery}
               onChange={handleSearchChange}
               className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm text-[#131010] placeholder-[#C2C2C2]"
+              aria-label="Cari cabang atau drop point"
             />
             <Icon
               icon="mdi:magnify"
@@ -310,13 +333,13 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
-                    {...tambahForm.register("nama")}
+                    {...tambahForm.register("name")}
                     placeholder="Masukkan nama tempat"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
-                  {tambahForm.formState.errors.nama && (
+                  {tambahForm.formState.errors.name && (
                     <p className="text-red-600 text-xs mt-1">
-                      {tambahForm.formState.errors.nama.message}
+                      {tambahForm.formState.errors.name.message}
                     </p>
                   )}
                 </div>
@@ -326,13 +349,13 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
-                    {...tambahForm.register("alamat")}
+                    {...tambahForm.register("address")}
                     placeholder="Contoh: Jl. Lorem ipsum..."
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
-                  {tambahForm.formState.errors.alamat && (
+                  {tambahForm.formState.errors.address && (
                     <p className="text-red-600 text-xs mt-1">
-                      {tambahForm.formState.errors.alamat.message}
+                      {tambahForm.formState.errors.address.message}
                     </p>
                   )}
                 </div>
@@ -342,13 +365,13 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
-                    {...tambahForm.register("telepon")}
+                    {...tambahForm.register("phoneNumber")}
                     placeholder="Contoh: +6281212312312"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
-                  {tambahForm.formState.errors.telepon && (
+                  {tambahForm.formState.errors.phoneNumber && (
                     <p className="text-red-600 text-xs mt-1">
-                      {tambahForm.formState.errors.telepon.message}
+                      {tambahForm.formState.errors.phoneNumber.message}
                     </p>
                   )}
                 </div>
@@ -357,7 +380,7 @@ export default function Home() {
                     Tipe
                   </label>
                   <select
-                    {...tambahForm.register("tipe")}
+                    {...tambahForm.register("type")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   >
                     <option value="" disabled>
@@ -366,9 +389,9 @@ export default function Home() {
                     <option value="Cabang">Cabang</option>
                     <option value="Drop Point">Drop Point</option>
                   </select>
-                  {tambahForm.formState.errors.tipe && (
+                  {tambahForm.formState.errors.type && (
                     <p className="text-red-600 text-xs mt-1">
-                      {tambahForm.formState.errors.tipe.message}
+                      {tambahForm.formState.errors.type.message}
                     </p>
                   )}
                 </div>
@@ -406,12 +429,12 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
-                    {...ubahForm.register("nama")}
+                    {...ubahForm.register("name")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
-                  {ubahForm.formState.errors.nama && (
+                  {ubahForm.formState.errors.name && (
                     <p className="text-red-600 text-xs mt-1">
-                      {ubahForm.formState.errors.nama.message}
+                      {ubahForm.formState.errors.name.message}
                     </p>
                   )}
                 </div>
@@ -421,12 +444,12 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
-                    {...ubahForm.register("alamat")}
+                    {...ubahForm.register("address")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
-                  {ubahForm.formState.errors.alamat && (
+                  {ubahForm.formState.errors.address && (
                     <p className="text-red-600 text-xs mt-1">
-                      {ubahForm.formState.errors.alamat.message}
+                      {ubahForm.formState.errors.address.message}
                     </p>
                   )}
                 </div>
@@ -436,12 +459,12 @@ export default function Home() {
                   </label>
                   <input
                     type="text"
-                    {...ubahForm.register("telepon")}
+                    {...ubahForm.register("phoneNumber")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
-                  {ubahForm.formState.errors.telepon && (
+                  {ubahForm.formState.errors.phoneNumber && (
                     <p className="text-red-600 text-xs mt-1">
-                      {ubahForm.formState.errors.telepon.message}
+                      {ubahForm.formState.errors.phoneNumber.message}
                     </p>
                   )}
                 </div>
@@ -450,18 +473,18 @@ export default function Home() {
                     Tipe
                   </label>
                   <select
-                    {...ubahForm.register("tipe")}
+                    {...ubahForm.register("type")}
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   >
                     <option value="" disabled>
                       Pilih tipe tempat
                     </option>
-                    <option value="Cabang">Cabang</option>
-                    <option value="Drop Point">Drop Point</option>
+                    <option value="BRANCH">Cabang</option>
+                    <option value="DROP_POINT">Drop Point</option>
                   </select>
-                  {ubahForm.formState.errors.tipe && (
+                  {ubahForm.formState.errors.type && (
                     <p className="text-red-600 text-xs mt-1">
-                      {ubahForm.formState.errors.tipe.message}
+                      {ubahForm.formState.errors.type.message}
                     </p>
                   )}
                 </div>
@@ -534,18 +557,18 @@ export default function Home() {
                 {currentDropPoints.length > 0 ? (
                   currentDropPoints.map((point, index) => (
                     <tr key={point.id || index} className="border-t border-gray-200">
-                      <td className="p-3 text-black">{point.nama}</td>
-                      <td className="p-3 text-black">{point.alamat}</td>
-                      <td className="p-3 text-black">{point.telepon}</td>
+                      <td className="p-3 text-black">{point.name}</td>
+                      <td className="p-3 text-black">{point.address || "No address available"}</td>
+                      <td className="p-3 text-black">{point.phoneNumber}</td>
                       <td className="p-3">
                         <span
                           className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            point.tipe === "Cabang"
+                            point.type === "Cabang"
                               ? "bg-green-100 text-green-800"
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
-                          {point.tipe}
+                          {point.type}
                         </span>
                       </td>
                       <td className="p-3 relative">
@@ -618,9 +641,7 @@ export default function Home() {
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
               className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === totalPages
-                  ? "opacity-50 cursor-not-allowed"
-                  : ""
+                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
               } active:border-none active:bg-transparent`}
             >
               Next

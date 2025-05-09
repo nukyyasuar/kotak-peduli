@@ -9,7 +9,7 @@ const getEvents = async (centerId) => {
 
     console.log("Fetching events for centerId:", centerId);
     const response = await axios.get(
-      `${API_URL}/collection-centers/${centerId}/events?showAll=true`,
+      `${API_URL}/collection-centers/${centerId}/events`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -91,15 +91,18 @@ const updateEvent = async (centerId, eventId, eventData) => {
   }
 };
 
-const finishEvent = async (centerId, eventId, eventData) => {
+// Modified finishEvent function to use the standard update endpoint
+const finishEvent = async (centerId, eventId) => {
   try {
     const token = localStorage.getItem("authToken");
     if (!token) throw new Error("No authentication token found");
 
     console.log("Finishing event:", { centerId, eventId });
+    
+    // Use the standard update endpoint with isActive: false
     const response = await axios.patch(
-      `${API_URL}/collection-centers/${centerId}/events/${eventId}/finish`,
-      {},
+      `${API_URL}/collection-centers/${centerId}/events/${eventId}`,
+      { isActive: false }, // Set event as inactive to mark as finished
       {
         headers: {
           "Content-Type": "application/json",
@@ -117,10 +120,11 @@ const finishEvent = async (centerId, eventId, eventData) => {
       "Error finishing event:",
       error.response?.data || error.message
     );
-    throw new Error(
-      error.response?.data?.meta?.message?.join(", ") ||
-        "Failed to finish event"
-    );
+    if (error.response) {
+      console.error("Error response status:", error.response.status);
+      console.error("Error response data:", error.response.data);
+    }
+    throw error;
   }
 };
 
