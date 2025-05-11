@@ -1,25 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import NavbarAfterLogin from "../../components/navbarAfterLogin";
 import Footer from "../footer/page";
 import eventService from "../../service/eventService";
 import { formatInTimeZone } from "date-fns-tz";
 import { useForm } from "react-hook-form";
-import * as yup from "yup";
+import * as YUP from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
+import DatePicker from "react-datepicker";
 
 // Yup validation schema
-const validationSchema = yup.object({
-  nama: yup
-    .string()
+const validationSchema = YUP.object({
+  nama: YUP.string()
     .required("Nama tempat penampung tidak boleh kosong.")
     .min(10, "Nama tempat penampung harus berisi minimal 10 karakter.")
     .max(100, "Nama tempat penampung tidak boleh melebihi 100 karakter."),
-  alamat: yup.string().required("Alamat tidak boleh kosong."),
-  akhirPenerimaan: yup
-    .string()
+  alamat: YUP.string().required("Alamat tidak boleh kosong."),
+  akhirPenerimaan: YUP.string()
     .required("Tanggal akhir penerimaan wajib diisi.")
     .matches(
       /^\d{4}-\d{2}-\d{2}$/,
@@ -37,16 +36,14 @@ const validationSchema = yup.object({
       }
     )
     .transform((value) => (value ? value : undefined)),
-  barang: yup
-    .object({
-      pakaian: yup.boolean(),
-      elektronik: yup.boolean(),
-      mainan: yup.boolean(),
-      buku: yup.boolean(),
-    })
-    .test("at-least-one-selected", "Pilih minimal satu opsi.", (value) => {
-      return value.pakaian || value.elektronik || value.mainan || value.buku;
-    }),
+  barang: YUP.object({
+    pakaian: YUP.boolean(),
+    elektronik: YUP.boolean(),
+    mainan: YUP.boolean(),
+    buku: YUP.boolean(),
+  }).test("at-least-one-selected", "Pilih minimal satu opsi.", (value) => {
+    return value.pakaian || value.elektronik || value.mainan || value.buku;
+  }),
 });
 
 export default function Home() {
@@ -64,7 +61,13 @@ export default function Home() {
   const [sortOrder, setSortOrder] = useState("asc");
   const [error, setError] = useState(null);
   const [events, setEvents] = useState([]);
-  const eventsPerPage = 10;
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+  });
+  const [collectionCenterId, setCollectionCenterId] = useState(null);
+  //bikin untuk pagination dynamic 
 
   // Initialize React Hook Form for Tambah form with Yup validation
   const tambahForm = useForm({
@@ -98,108 +101,144 @@ export default function Home() {
     },
   });
 
-  // Fetch events from API
-  const fetchEvents = async () => {
-    setIsLoading(true);
-    setError(null);
+  // Prevent typing in DatePicker input
+  const preventTyping = (e) => {
+    e.preventDefault();
+  };
+
+  // Get status filter value for API
+  const getStatusFilter = () => {
+    if (isAktif && !isSelesai) return "active";
+    if (!isAktif && isSelesai) return "finished";
+    return ""; // Both or none selected means no filter
+  };
+
+  // Fetch collection center ID once on component mount
+  const fetchCollectionCenterId = async () => {
     try {
       const profileData = await eventService.getUserCollectionCenter();
       const centerId = profileData?.id;
-      if (!centerId)
+      if (!centerId) {
         throw new Error("No collection center ID found in profile");
-
-      const data = await eventService.getEvents(centerId);
-      if (!Array.isArray(data)) {
-        throw new Error("Invalid API response: Expected an array of events");
       }
-
-      const typeToFrontend = {
-        CLOTHES: "Pakaian",
-        ELECTRONICS: "Elektronik",
-        TOYS: "Mainan",
-        BOOKS: "Buku",
-      };
-
-      const mappedEvents = data
-        .map(({ id, name, address, endDate, types, isActive }) => {
-          // Map the types to Indonesian
-          const translatedTypes = Array.isArray(types)
-            ? types
-                .map((type) => typeToFrontend[type.toUpperCase()] || type)
-                .filter(Boolean)
-                .join(", ")
-            : "";
-
-          // Format endDate safely
-          let formattedEndDate = "";
-          if (endDate) {
-            try {
-              formattedEndDate = formatInTimeZone(
-                new Date(endDate),
-                "Asia/Jakarta",
-                "dd/MM/yyyy"
-              );
-            } catch (err) {
-              console.error(`Invalid date for event ${id}:`, endDate, err);
-              formattedEndDate = "";
-            }
-          }
-
-          return {
-            id,
-            name,
-            address,
-            endDate: formattedEndDate,
-            types: translatedTypes || "Tidak ada barang",
-            status: !isActive ? "Selesai" : "Aktif",
-          };
-        })
-        .filter((event) => event !== null);
-
-      setEvents(mappedEvents);
-      if (mappedEvents.length === 0) {
-        setError("No events found for this collection center.");
-      }
+      setCollectionCenterId(centerId);
+      return centerId;
     } catch (err) {
-      const errorMessage =
-        err.response?.data?.meta?.message?.join(", ") ||
-        err.message ||
-        "Failed to fetch events";
-      setError(errorMessage);
-      console.error("Fetch Events Error:", err);
-    } finally {
-      setIsLoading(false);
+      setError("Failed to fetch collection center information.");
+      console.error("Fetch Collection Center Error:", err);
+      return null;
     }
   };
 
+  // Fetch events from API with server-side pagination, filtering, and sorting
+  const fetchEvents = useCallback(
+    async (centerId = collectionCenterId) => {
+      if (!centerId) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const params = {
+          search: searchQuery,
+          isActive: getStatusFilter() === "active" ? "true" : "false",
+          page: currentPage,
+          limit: 10, // Match the API's limit
+          sortBy: "endDate",
+          sortOrder: sortOrder,
+        };
+
+        const { events: fetchedEvents, pagination: paginationData } =
+          await eventService.getEvents(centerId, params);
+
+        const typeToFrontend = {
+          CLOTHES: "Pakaian",
+          ELECTRONICS: "Elektronik",
+          TOYS: "Mainan",
+          BOOKS: "Buku",
+        };
+
+        const mappedEvents = fetchedEvents
+          .map(({ id, name, address, endDate, types, isActive }) => {
+            // Map the types to Indonesian
+            const translatedTypes = Array.isArray(types)
+              ? types
+                  .map((type) => typeToFrontend[type.toUpperCase()] || type)
+                  .filter(Boolean)
+                  .join(", ")
+              : "";
+
+            // Format endDate safely
+            let formattedEndDate = "";
+            if (endDate) {
+              try {
+                formattedEndDate = formatInTimeZone(
+                  new Date(endDate),
+                  "Asia/Jakarta",
+                  "dd/MM/yyyy"
+                );
+              } catch (err) {
+                formattedEndDate = "";
+              }
+            }
+
+            return {
+              id,
+              name,
+              address,
+              endDate: formattedEndDate,
+              types: translatedTypes || "Tidak ada barang",
+              status: !isActive ? "Selesai" : "Aktif",
+            };
+          })
+          .filter((event) => event !== null);
+
+        setEvents(mappedEvents);
+        setPagination(paginationData);
+
+        if (mappedEvents.length === 0 && currentPage === 1) {
+          setError("No events found for this collection center.");
+        }
+      } catch (err) {
+        const errorMessage =
+          err.response?.data?.meta?.message?.join(", ") ||
+          err.message ||
+          "Failed to fetch events";
+        setError(errorMessage);
+        console.error("Fetch Events Error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [searchQuery, collectionCenterId, currentPage, sortOrder, isAktif, isSelesai]
+  );
+
+  // Initialize data and set up collection center ID
   useEffect(() => {
-    fetchEvents();
+    const initData = async () => {
+      const centerId = await fetchCollectionCenterId();
+      if (centerId) {
+        await fetchEvents(centerId);
+      }
+    };
+
+    initData();
   }, []);
 
-  const filteredEvents = events.filter((event) => {
-    let matchesStatus = false;
-    if (!isAktif && !isSelesai) matchesStatus = true;
-    else if (isAktif && isSelesai) matchesStatus = true;
-    else if (isAktif) matchesStatus = event.status === "Aktif";
-    else if (isSelesai) matchesStatus = event.status === "Selesai";
+  // Call fetchEvents when search parameters change
+  useEffect(() => {
+    if (collectionCenterId) {
+      setCurrentPage(1); // Reset to first page on new search
+      fetchEvents();
+    }
+  }, [searchQuery, isAktif, isSelesai, fetchEvents]);
 
-    const matchesSearch = searchQuery
-      ? event.name.toLowerCase().includes(searchQuery.toLowerCase())
-      : true;
-
-    return matchesStatus && matchesSearch;
-  });
-
-  const sortedEvents = [...filteredEvents].sort((a, b) => {
-    const dateA = new Date(a.endDate.split("/").reverse().join("-"));
-    const dateB = new Date(b.endDate.split("/").reverse().join("-"));
-    return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-  });
-
-  const indexOfLastEvent = currentPage * eventsPerPage;
-  const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
-  const currentEvents = sortedEvents.slice(indexOfFirstEvent, indexOfLastEvent);
-  const totalPages = Math.ceil(sortedEvents.length / eventsPerPage);
+  // Fetch events when page or sort order changes
+  useEffect(() => {
+    if (collectionCenterId) {
+      fetchEvents();
+    }
+  }, [currentPage, sortOrder, fetchEvents]);
 
   const handleFilterChange = (setter) => (value) => {
     setter(value);
@@ -208,7 +247,6 @@ export default function Home() {
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1);
   };
 
   const toggleDropdown = (index) => {
@@ -223,8 +261,8 @@ export default function Home() {
   };
 
   const toggleUbahModal = (index) => {
-    if (index !== null && currentEvents[index]) {
-      const event = currentEvents[index];
+    if (index !== null && events[index]) {
+      const event = events[index];
       let formattedEndDate = "";
       if (event.endDate) {
         try {
@@ -265,70 +303,30 @@ export default function Home() {
   };
 
   const toggleConfirmModal = (index) => {
-    // Only set the event ID if we're opening the modal
-    if (!isConfirmModalOpen && index !== null && currentEvents[index]) {
-      const eventId = currentEvents[index].id;
-      console.log(`Setting event to finish: ${eventId}`);
-      setEventToFinishId(eventId);
+    if (!isConfirmModalOpen && index !== null && events[index]) {
+      setEventToFinishId(events[index].id);
     } else {
-      // Reset if we're closing the modal
       setEventToFinishId(null);
     }
-    
+
     setIsConfirmModalOpen(!isConfirmModalOpen);
-    // Always close the dropdown when toggling the modal
     setOpenDropdownIndex(null);
   };
 
   const handleConfirmFinish = async () => {
-    if (eventToFinishId !== null) {
+    if (eventToFinishId !== null && collectionCenterId) {
       setIsLoading(true);
       try {
-        // Get the collection center ID
-        const profileData = await eventService.getUserCollectionCenter();
-        const centerId = profileData?.id;
-        
-        // Validation checks
-        if (!centerId) {
-          throw new Error("No collection center ID found in profile");
-        }
-        
-        if (!eventToFinishId) {
-          throw new Error("No event selected to finish");
-        }
-        
-        console.log(`Attempting to finish event ${eventToFinishId} for center ${centerId}`);
-        
-        // Call the API to finish the event
-        await eventService.finishEvent(centerId, eventToFinishId);
-        
-        // Refresh events list after successful operation
+        await eventService.finishEvent(collectionCenterId, eventToFinishId);
         await fetchEvents();
-        
-        // Clear error if there was one previously
         setError(null);
-        
-        // Show success message (you could add a success state if needed)
-        console.log("Event successfully marked as finished");
-        
       } catch (err) {
-        console.error("Error details:", err);
-        
-        // Set a more descriptive error message
-        let errorMessage;
-        if (err.response?.data?.meta?.message) {
-          errorMessage = Array.isArray(err.response.data.meta.message) 
-            ? err.response.data.meta.message.join(", ") 
-            : err.response.data.meta.message;
-        } else if (err.response?.status) {
-          errorMessage = `API Error (${err.response.status}): Failed to finish event`;
-        } else {
-          errorMessage = err.message || "Failed to finish event. Please try again.";
-        }
-        
+        const errorMessage =
+          err.response?.data?.meta?.message?.join(", ") ||
+          err.message ||
+          "Failed to finish event";
         setError(errorMessage);
       } finally {
-        // Always reset UI state
         setIsLoading(false);
         setIsConfirmModalOpen(false);
         setEventToFinishId(null);
@@ -337,18 +335,20 @@ export default function Home() {
   };
 
   const handleTambahSubmit = async (data) => {
+    if (!collectionCenterId) {
+      setError("No collection center ID found");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const profileData = await eventService.getUserCollectionCenter();
-      const centerId = profileData.id;
-      if (!centerId)
-        throw new Error("No collection center ID found in profile");
       const typeMapping = {
         pakaian: "CLOTHES",
         elektronik: "ELECTRONICS",
         mainan: "TOYS",
         buku: "BOOKS",
       };
+
       const eventData = {
         name: data.nama,
         address: data.alamat,
@@ -357,7 +357,8 @@ export default function Home() {
           .filter((key) => data.barang[key])
           .map((key) => typeMapping[key]),
       };
-      await eventService.createEvent(centerId, eventData);
+
+      await eventService.createEvent(collectionCenterId, eventData);
       await fetchEvents();
       toggleTambahModal();
       setError(null);
@@ -370,14 +371,13 @@ export default function Home() {
   };
 
   const handleUbahSubmit = async (data) => {
+    if (!collectionCenterId || !selectedEventId) {
+      setError("Missing collection center ID or event ID");
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const profileData = await eventService.getUserCollectionCenter();
-      const centerId = profileData?.id;
-      if (!centerId)
-        throw new Error("No collection center ID found in profile");
-      if (!selectedEventId) throw new Error("No event selected for update");
-
       const typeMapping = {
         pakaian: "CLOTHES",
         elektronik: "ELECTRONICS",
@@ -394,12 +394,7 @@ export default function Home() {
           .map((key) => typeMapping[key]),
       };
 
-      console.log("Updating event with:", {
-        centerId,
-        selectedEventId,
-        eventData,
-      });
-      await eventService.updateEvent(centerId, selectedEventId, eventData);
+      await eventService.updateEvent(collectionCenterId, selectedEventId, eventData);
       await fetchEvents();
       toggleUbahModal(null);
       setError(null);
@@ -408,7 +403,6 @@ export default function Home() {
         err.response?.data?.meta?.message?.join(", ") ||
         err.message ||
         "Failed to update event";
-      console.error("Update error:", err);
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -421,7 +415,6 @@ export default function Home() {
 
   const handleSort = () => {
     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-    setCurrentPage(1);
   };
 
   const Spinner = () => (
@@ -465,9 +458,7 @@ export default function Home() {
               <input
                 type="checkbox"
                 checked={isAktif}
-                onChange={(e) =>
-                  handleFilterChange(setIsAktif)(e.target.checked)
-                }
+                onChange={(e) => handleFilterChange(setIsAktif)(e.target.checked)}
                 className="h-4 w-4 accent-[#543A14]"
               />
               <span className="text-[#4A2C2A] text-sm font-medium">Aktif</span>
@@ -481,9 +472,7 @@ export default function Home() {
                 }
                 className="h-4 w-4 accent-[#543A14]"
               />
-              <span className="text-[#4A2C2A] text-sm font-medium">
-                Selesai
-              </span>
+              <span className="text-[#4A2C2A] text-sm font-medium">Selesai</span>
             </label>
             <button
               onClick={toggleTambahModal}
@@ -546,15 +535,30 @@ export default function Home() {
                     Akhir Penerimaan
                   </label>
                   <div className="relative">
-                    <input
-                      type="date"
-                      {...tambahForm.register("akhirPenerimaan")}
-                      className={`w-full p-2 border rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
+                    <DatePicker
+                      selected={
+                        tambahForm.getValues("akhirPenerimaan")
+                          ? new Date(tambahForm.getValues("akhirPenerimaan"))
+                          : null
+                      }
+                      onChange={(date) => {
+                        const formattedDate = date
+                          ? formatInTimeZone(date, "Asia/Jakarta", "yyyy-MM-dd")
+                          : "";
+                        tambahForm.setValue("akhirPenerimaan", formattedDate, {
+                          shouldValidate: true,
+                        });
+                      }}
+                      dateFormat="dd/MM/yyyy"
+                      minDate={new Date()}
+                      placeholderText="Pilih tanggal"
+                      className={`w-full p-2 border rounded-lg text-sm text-[#131010] bg-gray-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
                         tambahForm.formState.errors.akhirPenerimaan
                           ? "border-red-500"
                           : "border-gray-300"
                       }`}
-                      min={new Date().toISOString().split("T")[0]}
+                      wrapperClassName="w-full"
+                      onKeyDown={preventTyping} // Prevent typing
                     />
                     <Icon
                       icon="mdi:calendar"
@@ -682,15 +686,30 @@ export default function Home() {
                     Akhir Penerimaan
                   </label>
                   <div className="relative">
-                    <input
-                      type="date"
-                      {...ubahForm.register("akhirPenerimaan")}
-                      className={`w-full p-2 border rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
+                    <DatePicker
+                      selected={
+                        ubahForm.getValues("akhirPenerimaan")
+                          ? new Date(ubahForm.getValues("akhirPenerimaan"))
+                          : null
+                      }
+                      onChange={(date) => {
+                        const formattedDate = date
+                          ? formatInTimeZone(date, "Asia/Jakarta", "yyyy-MM-dd")
+                          : "";
+                        ubahForm.setValue("akhirPenerimaan", formattedDate, {
+                          shouldValidate: true,
+                        });
+                      }}
+                      dateFormat="dd/MM/yyyy"
+                      minDate={new Date()}
+                      placeholderText="Pilih tanggal"
+                      className={`w-full p-2 border rounded-lg text-sm text-[#131010] bg-gray-100 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#8B5A2B] ${
                         ubahForm.formState.errors.akhirPenerimaan
                           ? "border-red-500"
                           : "border-gray-300"
                       }`}
-                      min={new Date().toISOString().split("T")[0]}
+                      wrapperClassName="w-full"
+                      onKeyDown={preventTyping} // Prevent typing
                     />
                     <Icon
                       icon="mdi:calendar"
@@ -777,9 +796,9 @@ export default function Home() {
               <p className="text-sm text-[#131010] mb-6 text-[14px]">
                 Status event yang telah diubah menjadi{" "}
                 <span className="font-bold text-[#131010]">SELESAI</span>, akan
-                dihilangkan dari halaman yang ditampilkan kepada donatur dan
-                tidak dapat dipilih kembali. Pastikan event yang selesai sesuai
-                dengan tanggal akhir penerimaan.
+                dihilangkan dari halaman yang ditampilkan kepada donatur dan tidak
+                dapat dipilih kembali. Pastikan event yang selesai sesuai dengan
+                tanggal akhir penerimaan.
               </p>
               <div className="flex space-x-3">
                 <button
@@ -828,8 +847,8 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {currentEvents.length > 0 ? (
-                  currentEvents.map((event, index) => (
+                {events.length > 0 ? (
+                  events.map((event, index) => (
                     <tr key={event.id} className="border-t border-gray-200">
                       <td className="p-3 text-black">{event.name}</td>
                       <td className="p-3 text-black">{event.address}</td>
@@ -894,32 +913,34 @@ export default function Home() {
               disabled={currentPage === 1}
               className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
                 currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
-              } active:border-none active:bg-transparent`}
+              }`}
             >
               <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
               Previous
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  currentPage === page
-                    ? "bg-[#4A2C2A] text-white"
-                    : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map(
+              (page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    currentPage === page
+                      ? "bg-[#4A2C2A] text-white"
+                      : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                  }`}
+                >
+                  {page}
+                </button>
+              )
+            )}
             <button
               onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === pagination.totalPages}
               className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === totalPages
+                currentPage === pagination.totalPages
                   ? "opacity-50 cursor-not-allowed"
                   : ""
-              } active:border-none active:bg-transparent`}
+              }`}
             >
               Next
               <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />

@@ -8,6 +8,7 @@ import * as Yup from "yup";
 import Footer from "../footer/page";
 import NavbarAfterLoginAdmin from "../../components/navbarAfterLoginAdmin";
 import { Icon } from "@iconify/react";
+import administratorService from "../../service/administratorService"; 
 
 // Yup validation schema for admin forms
 const adminValidationSchema = Yup.object().shape({
@@ -17,9 +18,8 @@ const adminValidationSchema = Yup.object().shape({
     .email("Format email salah. Masukkan format email yang valid (contoh: user@example.com)"),
   noTelepon: Yup.string()
     .required("Nomor telepon tidak boleh kosong")
-    .matches(/^8/, "Nomor telepon harus diawali dengan angka '8'")
-    .min(13, "Nomor telepon harus berisi minimal 13 digit")
-    .max(15, "Nomor telepon tidak boleh lebih dari 15 digit"),
+    .min(10, "Nomor telepon harus berisi minimal 10 karakter")
+    .max(15, "Nomor telepon tidak boleh lebih dari 15 karakter"),
   penempatan: Yup.string().required("Penempatan tidak boleh kosong"),
   role: Yup.string().required("Role tidak boleh kosong"),
 });
@@ -35,37 +35,8 @@ const roleValidationSchema = Yup.object().shape({
 });
 
 export default function AdminPage() {
-  const [admins, setAdmins] = useState([
-    {
-      nama: "Matthew Emmanuel",
-      email: "matthew.emmanuel@email.com",
-      noTelepon: "+6281212312312",
-      penempatan: "Cabang Bekasi",
-      role: "Admin Utama",
-    },
-    {
-      nama: "John Doe",
-      email: "john.doe@email.com",
-      noTelepon: "+6281212312312",
-      penempatan: "Cabang Bekasi",
-      role: "Admin Donasi",
-    },
-    {
-      nama: "Jane Smith",
-      email: "jane.smith@email.com",
-      noTelepon: "+6281212312312",
-      penempatan: "Cabang Bekasi",
-      role: "Admin Event",
-    },
-    {
-      nama: "Alice Brown",
-      email: "alice.brown@email.com",
-      noTelepon: "+6281212312312",
-      penempatan: "Cabang Bekasi",
-      role: "Admin Cabang/Drop Point",
-    },
-  ]);
-
+  const [admins, setAdmins] = useState([]);
+  const [customRoles, setCustomRoles] = useState([]);
   const [isAdminUtama, setIsAdminUtama] = useState(false);
   const [isAdminDonasi, setIsAdminDonasi] = useState(false);
   const [isAdminEvent, setIsAdminEvent] = useState(false);
@@ -74,13 +45,14 @@ export default function AdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [collectionCenterId, setCollectionCenterId] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const itemsPerPage = 10;
   const [isTambahModalOpen, setIsTambahModalOpen] = useState(false);
   const [isUbahModalOpen, setIsUbahModalOpen] = useState(false);
   const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
   const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
-  const [selectedAdminIndex, setSelectedAdminIndex] = useState(null);
-  const [customRoles, setCustomRoles] = useState([]);
+  const [selectedAdmin, setSelectedAdmin] = useState(null);
 
   // Initialize react-hook-form for each form with Yup resolver
   const tambahForm = useForm({
@@ -117,34 +89,80 @@ export default function AdminPage() {
     },
   });
 
-  const filteredAdmins = admins.filter((admin) => {
-    let matchesRole = false;
-    if (!isAdminUtama && !isAdminDonasi && !isAdminEvent && !isAdminCabang) {
-      matchesRole = true;
-    } else {
-      matchesRole =
-        (isAdminUtama && admin.role === "Admin Utama") ||
-        (isAdminDonasi && admin.role === "Admin Donasi") ||
-        (isAdminEvent && admin.role === "Admin Event") ||
-        (isAdminCabang && admin.role === "Admin Cabang/Drop Point") ||
-        customRoles.includes(admin.role);
-    }
-
-    const matchesSearch = searchQuery
-      ? admin.nama.toLowerCase().includes(searchQuery.toLowerCase())
-      : true;
-
-    return matchesRole && matchesSearch;
-  });
-
   useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchQuery, isAdminUtama, isAdminDonasi, isAdminEvent, isAdminCabang, admins]);
+    const fetchInitialData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch collection center
+        const center = await administratorService.getUserCollectionCenter();
+        setCollectionCenterId(center.id);
+  
+        // Fetch roles
+        const roles = await administratorService.getRoles(center.id);
+        setCustomRoles(roles.map((role) => role.name));
+  
+        // Fetch admins
+        const members = await administratorService.searchRoleMembers(center.id, "");
+        setAdmins(
+          members.map((member) => ({
+            id: member.id,
+            nama: `${member.user.firstName} ${member.user.lastName}`,
+            email: member.user.email,
+            noTelepon: member.user.phoneNumber,
+            penempatan: `Cabang ${member.collectionCenterId}`, 
+            role: member.role.name,
+          }))
+        );
+      } catch (error) {
+        setErrorMessage(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchInitialData();
+  }, []);
+  
+  // Handle search and filter changes
+  useEffect(() => {
+    const fetchFilteredAdmins = async () => {
+      if (!collectionCenterId) return;
+      setIsLoading(true);
+      try {
+        const members = await administratorService.searchRoleMembers(collectionCenterId, searchQuery);
+        let filteredMembers = members;
+  
+        // Apply role filters
+        if (isAdminUtama || isAdminDonasi || isAdminEvent || isAdminCabang) {
+          filteredMembers = members.filter(
+            (member) =>
+              (isAdminUtama && member.role.name === "Admin Utama") ||
+              (isAdminDonasi && member.role.name === "Admin Donasi") ||
+              (isAdminEvent && member.role.name === "Admin Event") ||
+              (isAdminCabang && member.role.name === "Admin Cabang/Drop Point") ||
+              customRoles.includes(member.role.name)
+          );
+        }
+  
+        setAdmins(
+          filteredMembers.map((member) => ({
+            id: member.id,
+            nama: `${member.user.firstName} ${member.user.lastName}`,
+            email: member.user.email,
+            noTelepon: member.user.phoneNumber,
+            penempatan: `Cabang ${member.collectionCenterId}`, // Placeholder
+            role: member.role.name,
+          }))
+        );
+      } catch (error) {
+        setErrorMessage(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchFilteredAdmins();
+  }, [searchQuery, isAdminUtama, isAdminDonasi, isAdminEvent, isAdminCabang, collectionCenterId]);
 
+  const filteredAdmins = admins; // Already filtered via API
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredAdmins.slice(indexOfFirstItem, indexOfLastItem);
@@ -175,18 +193,16 @@ export default function AdminPage() {
     }
   };
 
-  const toggleUbahModal = (index) => {
-    if (index !== null && admins[index]) {
-      const admin = admins[index];
-      const newNumber = admin.noTelepon
+  const toggleUbahModal = (admin) => {
+    if (admin) {
       ubahForm.reset({
         nama: admin.nama,
         email: admin.email,
-        noTelepon: newNumber.slice(3),
+        noTelepon: admin.noTelepon, 
         penempatan: admin.penempatan,
         role: admin.role,
       });
-      setSelectedAdminIndex(index);
+      setSelectedAdmin(admin);
     }
     setIsUbahModalOpen(!isUbahModalOpen);
     setOpenDropdownIndex(null);
@@ -207,34 +223,149 @@ export default function AdminPage() {
     }
   };
 
-  const handleTambahSubmit = (data) => {
+  const handleTambahSubmit = async (data) => {
     setIsLoading(true);
-    setAdmins((prev) => [...prev, data]);
-    toggleTambahModal();
-    setTimeout(() => setIsLoading(false), 500);
+    try {
+      // Validate role
+      const validRoles = ["Admin Utama", "Admin Donasi", "Admin Event", "Admin Cabang/Drop Point", ...customRoles];
+      if (!validRoles.includes(data.role)) {
+        throw new Error("Role tidak valid");
+      }
+  
+      // Split nama into firstName and lastName
+      const [firstName, ...lastNameParts] = data.nama.split(" ");
+      const lastName = lastNameParts.join(" ") || "";
+  
+      // Prepare user data for creation
+      const userData = {
+        firstName,
+        lastName,
+        email: data.email,
+        phoneNumber: data.noTelepon,
+        collectionCenterId: collectionCenterId,
+      };
+  
+      // Create the user
+      const newUser = await administratorService.assignRoles(collectionCenterId, userData);
+  
+      // // Assign role to the new user using assignRoles endpoint
+      // await administratorService.assignRoles(collectionCenterId, [
+      //   { userId: newUser.id, roleName: data.role },
+      // ]);
+  
+      // Update local state with the new admin
+      setAdmins((prev) => [
+        ...prev,
+        {
+          id: newUser.id,
+          nama: data.nama,
+          email: data.email,
+          noTelepon: data.noTelepon,
+          penempatan: data.penempatan,
+          role: data.role,
+        },
+      ]);
+  
+      // Close modal and reset form
+      toggleTambahModal();
+    } catch (error) {
+      setErrorMessage(error.message || "Gagal menambahkan administrator");
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  const handleUbahSubmit = (data) => {
+  
+  const handleUbahSubmit = async (data) => {
     setIsLoading(true);
-    setAdmins((prev) => {
-      const updatedAdmins = [...prev];
-      updatedAdmins[selectedAdminIndex] = data;
-      return updatedAdmins;
-    });
-    toggleUbahModal(null);
-    setTimeout(() => setIsLoading(false), 500);
+    try {
+      // Validate role
+      const validRoles = ["Admin Utama", "Admin Donasi", "Admin Event", "Admin Cabang/Drop Point", ...customRoles];
+      if (!validRoles.includes(data.role)) {
+        throw new Error("Role tidak valid");
+      }
+  
+      // Split nama into firstName and lastName
+      const [firstName, ...lastNameParts] = data.nama.split(" ");
+      const lastName = lastNameParts.join(" ") || "";
+  
+      // Prepare user data for update
+      const userData = {
+        firstName,
+        lastName,
+        email: data.email,
+        phoneNumber: data.noTelepon,
+        collectionCenterId: collectionCenterId,
+      };
+  
+      // Update the user
+      await administratorService.assignRoles(collectionCenterId, selectedAdmin.id, userData);
+  
+      // // Reassign role using assignRoles endpoint
+      // await administratorService.assignRoles(collectionCenterId, [
+      //   { userId: selectedAdmin.id, roleName: data.role },
+      // ]);
+  
+      // Update local state with the updated admin
+      setAdmins((prev) =>
+        prev.map((admin) =>
+          admin.id === selectedAdmin.id
+            ? {
+                ...admin,
+                nama: data.nama,
+                email: data.email,
+                noTelepon: data.noTelepon,
+                penempatan: data.penempatan,
+                role: data.role,
+              }
+            : admin
+        )
+      );
+  
+      // Close modal
+      toggleUbahModal(null);
+    } catch (error) {
+      setErrorMessage(error.message || "Gagal mengubah data administrator");
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  const handleCreateRoleSubmit = (data) => {
-    setCustomRoles((prev) => [...prev, data.name]);
-    tambahForm.setValue("role", data.name);
-    ubahForm.setValue("role", data.name);
-    toggleCreateRoleModal();
+  
+  const handleCreateRoleSubmit = async (data) => {
+    setIsLoading(true);
+    try {
+      const roleData = {
+        name: data.name,
+        permissions: [
+          ...(data.barangDonasi ? ["CREATE_DONATION", "READ_DONATION"] : []),
+          ...(data.melihatDataDonasi ? ["READ_DONATION"] : []),
+          ...(data.mengaturTanggalPenjemputan ? ["SET_DATE_DONATION"] : []),
+          ...(data.mengubahStatusDonasi ? ["APPROVE_DONATION", "RESTORE_DONATION"] : []),
+          ...(data.mengaturTanggalPengiriman ? ["SET_DATE_DONATION"] : []),
+        ],
+        isCustom: true,
+      };
+      await administratorService.createRole(collectionCenterId, roleData);
+      setCustomRoles((prev) => [...prev, data.name]);
+      tambahForm.setValue("role", data.name);
+      ubahForm.setValue("role", data.name);
+      toggleCreateRoleModal();
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
-
-  const handleDelete = (index) => {
-    setAdmins((prev) => prev.filter((_, i) => i !== index));
-    setOpenDropdownIndex(null);
+  
+  const handleDelete = async (admin) => {
+    setIsLoading(true);
+    try {
+      setAdmins((prev) => prev.filter((a) => a.id !== admin.id));
+      setOpenDropdownIndex(null);
+    } catch (error) {
+      setErrorMessage(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePageChange = (pageNumber) => {
@@ -268,12 +399,15 @@ export default function AdminPage() {
 
       <main className="flex-grow px-8 py-6">
         <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Administrator</h1>
+        {errorMessage && (
+          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">{errorMessage}</div>
+        )}
 
         <div className="flex justify-between items-center mb-6">
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="Search Course"
+              placeholder="Search Administrator"
               value={searchQuery}
               onChange={handleSearchChange}
               className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm text-black"
@@ -321,7 +455,7 @@ export default function AdminPage() {
                     />
                     <span className="text-[#4A2C2A] text-sm">Admin Event</span>
                   </label>
-                  <label className="ownershipflex items-center space-x-2 px-4 py-2 cursor-pointer">
+                  <label className="flex items-center space-x-2 px-4 py-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={isAdminCabang}
@@ -335,7 +469,7 @@ export default function AdminPage() {
                       onClick={handleResetFilters}
                       className="px-3 py-1 bg-[#4A2C2A] text-white rounded-lg text-sm font-medium"
                     >
-                      Filter
+                      Apply
                     </button>
                     <button
                       onClick={handleResetFilters}
@@ -374,7 +508,7 @@ export default function AdminPage() {
               <tbody>
                 {currentItems.length > 0 ? (
                   currentItems.map((admin, index) => (
-                    <tr key={index} className="border-t border-gray-200">
+                    <tr key={admin.id} className="border-t border-gray-200">
                       <td className="p-3 text-black">{admin.nama}</td>
                       <td className="p-3 text-black">{admin.email}</td>
                       <td className="p-3 text-black">{admin.noTelepon}</td>
@@ -392,13 +526,13 @@ export default function AdminPage() {
                           <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
                             <ul className="text-sm text-[#4A2C2A]">
                               <li
-                                onClick={() => toggleUbahModal(indexOfFirstItem + index)}
+                                onClick={() => toggleUbahModal(admin)}
                                 className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
                               >
                                 Ubah Data
                               </li>
                               <li
-                                onClick={() => handleDelete(indexOfFirstItem + index)}
+                                onClick={() => handleDelete(admin)}
                                 className="px-4 py-2 hover:bg-[#F5E9D4] cursor-pointer"
                               >
                                 Hapus Data

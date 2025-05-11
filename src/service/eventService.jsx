@@ -2,14 +2,27 @@ import axios from "axios";
 
 const API_URL = "http://localhost:5000";
 
-const getEvents = async (centerId) => {
+const getEvents = async (centerId, params = {}) => {
   try {
     const token = localStorage.getItem("authToken");
     if (!token) throw new Error("No authentication token found");
 
-    console.log("Fetching events for centerId:", centerId);
+    // Construct query parameters for server-side filtering, searching, and pagination
+    const { search, isActive, page = 1, limit = 10, sortBy = "endDate", sortOrder = "asc" } = params;
+    //gunakan sort dari mat
+    
+    let queryParams = new URLSearchParams();
+    if (search) queryParams.append("search", search);
+    if (isActive) queryParams.append("isActive", isActive);
+    queryParams.append("page", page);
+    queryParams.append("limit", limit);
+    queryParams.append("sortBy", sortBy);
+    queryParams.append("sortOrder", sortOrder);
+
+    console.log("Fetching events for centerId:", centerId, "with params:", Object.fromEntries(queryParams));
+    
     const response = await axios.get(
-      `${API_URL}/collection-centers/${centerId}/events`,
+      `${API_URL}/collection-centers/${centerId}/events?${queryParams.toString()}`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -19,12 +32,23 @@ const getEvents = async (centerId) => {
       }
     );
 
-    const data = response.data.data || response.data;
+    const { data, meta } = response.data;
+    
     if (!Array.isArray(data)) {
       throw new Error("Expected an array of events");
     }
+    
     console.log("Fetched events:", data);
-    return data;
+    console.log("Pagination metadata:", meta);
+    
+    return { 
+      events: data, 
+      pagination: meta.pagination || { 
+        currentPage: 1, 
+        totalPages: 1, 
+        totalItems: data.length 
+      } 
+    };
   } catch (error) {
     console.error("Error fetching events:", error.response?.data || error.message);
     throw new Error(
@@ -91,7 +115,6 @@ const updateEvent = async (centerId, eventId, eventData) => {
   }
 };
 
-// Modified finishEvent function to use the standard update endpoint
 const finishEvent = async (centerId, eventId) => {
   try {
     const token = localStorage.getItem("authToken");

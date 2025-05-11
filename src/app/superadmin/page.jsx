@@ -1,14 +1,12 @@
 "use client";
 
-//get nya yang Get All Collection Center
-// Get All User
-
 import Head from "next/head";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import NavbarAfterLogin from "../navbarAfterLogin/page";
 import Footer from "../footer/page";
-import { Icon } from "@iconify/react"; // Import Iconify
+import { Icon } from "@iconify/react";
+import RolesService from "../../service/superadmin"; // Import the RolesService
 
 export default function Superadmin() {
   const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
@@ -21,43 +19,139 @@ export default function Superadmin() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [shelters, setShelters] = useState([]);
+  
+  // Additional state for summary data
+  const [summaryData, setSummaryData] = useState({
+    totalCollectionCenters: 0,
+    totalDonationsReceived: 0,
+    totalDonationsDistributed: 0,
+  });
 
   const itemsPerPage = 10;
 
-  const [shelters, setShelters] = useState(
-    [...Array(15)].map((_, index) => ({
-      id: index,
-      nama: `Tempat Penampungan Alsut`,
-      email: `tempat-penampungan@alsut.id`,
-      noTelepon: `+62812312312${index < 10 ? "0" + index : index}`,
-      alamat: "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit",
-      penjemputan: "Tersedia",
-      barangDiterima: "Pakaian, Elektronik, Mainan, Buku",
-      status: index % 2 === 0 ? "Disetujui" : "Ditolak",
-      jarakPenjemputan: "10",
-      waktuOperasional: {
-        senin: "10.00-17.00 WIB",
-        selasa: "10.00-17.00 WIB",
-        rabu: "10.00-17.00 WIB",
-      },
-      deskripsi:
-        "Kami adalah lembaga kemasyarakatan yang berfokus pada penanganan bencana alam, peduli terhadap lingkungan, dan membantu masyarakat yang terkena bencana alam. Donasi yang kami terima akan disalurkan langsung kepada masyarakat yang membutuhkan.",
-      foto: "/placeholder-image.jpg",
-    }))
-  );
+  // Fetch collection centers and summary data on component mount
+  useEffect(() => {
+    fetchCollectionCenters();
+    fetchSummaryData();
+  }, []);
+
+  // Function to fetch collection centers from API
+  const fetchCollectionCenters = async () => {
+    setIsLoading(true);
+    try {
+      // Use RolesService.getCollectionCenters with search, pagination, and sorting
+      const response = await RolesService.getCollectionCenters({
+        search: searchQuery,
+        page: currentPage,
+        limit: itemsPerPage,
+      });
+
+      // Assuming response.data contains an array of collection centers
+      // Adjust the data structure based on the actual API response
+      const formattedData = response.data.map((item, index) => ({
+        id: item.id || index,
+        nama: item.name || `Tempat Penampungan ${index + 1}`,
+        email: item.email || `tempat-penampungan@alsut.id`,
+        noTelepon: item.phone || `+62812312312${index < 10 ? "0" + index : index}`,
+        alamat: item.address || "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+        penjemputan: item.pickupAvailable ? "Tersedia" : "Tidak Tersedia",
+        barangDiterima: item.acceptedItems || "Pakaian, Elektronik, Mainan, Buku",
+        status: item.status || (index % 2 === 0 ? "Disetujui" : "Ditolak"),
+        jarakPenjemputan: item.pickupDistance || "10",
+        waktuOperasional: item.operationalHours || {
+          senin: "10.00-17.00 WIB",
+          selasa: "10.00-17.00 WIB",
+          rabu: "10.00-17.00 WIB",
+        },
+        deskripsi:
+          item.description ||
+          "Kami adalah lembaga kemasyarakatan yang berfokus pada penanganan bencana alam, peduli terhadap lingkungan, dan membantu masyarakat yang terkena bencana alam.",
+        foto: item.photo || "/placeholder-image.jpg",
+      }));
+
+      setShelters(formattedData);
+    } catch (error) {
+      console.error("Error fetching collection centers:", error);
+      setError(
+        error.message || "Failed to load collection centers. Please try again later."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to fetch summary data
+  const fetchSummaryData = async () => {
+    try {
+      // Replace with actual API endpoint when available
+      // Example: const response = await RolesService.getSummaryData();
+      // For now, simulating data
+      setTimeout(() => {
+        setSummaryData({
+          totalCollectionCenters: 10,
+          totalDonationsReceived: 100,
+          totalDonationsDistributed: 90,
+        });
+      }, 500);
+    } catch (error) {
+      console.error("Error fetching summary data:", error);
+    }
+  };
+
+  // Function to approve a collection center
+const approveCollectionCenter = async (id) => {
+  setIsLoading(true);
+  try {
+    // Use RolesService.processCollectionCenter to approve the collection center
+    await RolesService.processCollectionCenter(id, { status: "Disetujui" });
+
+    // Update local state
+    setShelters((prevShelters) =>
+      prevShelters.map((shelter) =>
+        shelter.id === id ? { ...shelter, status: "Disetujui" } : shelter
+      )
+    );
+  } catch (error) {
+    console.error("Error approving collection center:", error);
+    setError(error.message || "Failed to approve collection center. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Function to reject a collection center
+const rejectCollectionCenter = async (id) => {
+  setIsLoading(true);
+  try {
+    // Use RolesService.processCollectionCenter to reject the collection center
+    await RolesService.processCollectionCenter(id, { status: "Ditolak" });
+
+    // Update local state
+    setShelters((prevShelters) =>
+      prevShelters.map((shelter) =>
+        shelter.id === id ? { ...shelter, status: "Ditolak" } : shelter
+      )
+    );
+  } catch (error) {
+    console.error("Error rejecting collection center:", error);
+    setError(error.message || "Failed to reject collection center. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  // Update fetchCollectionCenters when searchQuery or currentPage changes
+  useEffect(() => {
+    fetchCollectionCenters();
+  }, [searchQuery, currentPage]);
 
   const filteredShelters = shelters
     .filter((shelter) => {
       if (filterStatus.length > 0) {
         return filterStatus.includes(shelter.status);
-      }
-      return true;
-    })
-    .filter((shelter) => {
-      if (searchQuery) {
-        return shelter.nama.toLowerCase().includes(searchQuery.toLowerCase());
       }
       return true;
     });
@@ -113,15 +207,15 @@ export default function Superadmin() {
     setShelterToApprove(null);
   };
 
-  const confirmApproval = () => {
-    setShelters((prevShelters) =>
-      prevShelters.map((shelter) =>
-        shelter.id === shelterToApprove.id
-          ? { ...shelter, status: "Disetujui" }
-          : shelter
-      )
-    );
-    closeApproveConfirmModal();
+  const confirmApproval = async () => {
+    if (shelterToApprove) {
+      try {
+        await approveCollectionCenter(shelterToApprove.id);
+        closeApproveConfirmModal();
+      } catch (error) {
+        console.error("Error in confirmation approval:", error);
+      }
+    }
   };
 
   const openRejectConfirmModal = (shelter) => {
@@ -135,22 +229,22 @@ export default function Superadmin() {
     setShelterToReject(null);
   };
 
-  const confirmRejection = () => {
-    setShelters((prevShelters) =>
-      prevShelters.map((shelter) =>
-        shelter.id === shelterToReject.id
-          ? { ...shelter, status: "Ditolak" }
-          : shelter
-      )
-    );
-    closeRejectConfirmModal();
+  const confirmRejection = async () => {
+    if (shelterToReject) {
+      try {
+        await rejectCollectionCenter(shelterToReject.id);
+        closeRejectConfirmModal();
+      } catch (error) {
+        console.error("Error in confirmation rejection:", error);
+      }
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FFFFFF]">
-    <div className="sticky top-0 z-50">
-      <NavbarAfterLogin />
-    </div>
+      <div className="sticky top-0 z-50">
+        <NavbarAfterLogin />
+      </div>
 
       {/* Summary Cards Section */}
       <section className="container mx-auto px-6 p-7">
@@ -159,15 +253,21 @@ export default function Superadmin() {
         </h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-[#5C4033] text-white p-6 rounded-lg shadow text-center">
-            <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">10</h2>
+            <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">
+              {summaryData.totalCollectionCenters}
+            </h2>
             <p className="mt-2 text-sm leading-tight font-bold">Tempat Penampungan</p>
           </div>
           <div className="bg-[#5C4033] text-white p-6 rounded-lg shadow text-center">
-            <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">100</h2>
+            <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">
+              {summaryData.totalDonationsReceived}
+            </h2>
             <p className="mt-2 text-sm leading-tight font-bold">Donasi Diterima</p>
           </div>
           <div className="bg-[#5C4033] text-white p-6 rounded-lg shadow text-center">
-            <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">90</h2>
+            <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">
+              {summaryData.totalDonationsDistributed}
+            </h2>
             <p className="mt-2 text-sm leading-tight font-bold">Donasi Telah Disalurkan</p>
           </div>
         </div>
@@ -216,125 +316,147 @@ export default function Superadmin() {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white shadow rounded-lg">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="bg-white">
-                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                      Nama
-                    </th>
-                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                      Email
-                    </th>
-                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                      No Telepon
-                    </th>
-                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                      Penjemputan
-                    </th>
-                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                      Status
-                    </th>
-                    <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
-                      Menu
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentShelters.map((shelter, index) => (
-                    <tr key={shelter.id} className="border-t">
-                      <td className="px-4 py-2 text-sm text-[#232323]">{shelter.nama}</td>
-                      <td className="px-4 py-2 text-sm text-[#232323]">{shelter.email}</td>
-                      <td className="px-4 py-2 text-sm text-[#232323]">{shelter.noTelepon}</td>
-                      <td className="px-4 py-2 text-sm text-[#232323]">{shelter.penjemputan}</td>
-                      <td className="px-4 py-2">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            shelter.status === "Disetujui"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {shelter.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2 relative">
-                        <button
-                          onClick={() => toggleDropdown(index)}
-                          className="text-[#232323] focus:outline-none"
-                        >
-                          <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
-                        </button>
-                        {openDropdownIndex === index && (
-                          <div className="absolute right-2 mt-2 w-32 bg-white border rounded-lg shadow-lg z-10">
-                            <ul className="text-[#232323] text-sm">
-                              <li
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => openDetailModal(shelter)}
-                              >
-                                Lihat Detail
-                              </li>
-                              <li
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => openApproveConfirmModal(shelter)}
-                              >
-                                Setujui
-                              </li>
-                              <li
-                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                onClick={() => openRejectConfirmModal(shelter)}
-                              >
-                                Tolak
-                              </li>
-                            </ul>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {/* Error message */}
+            {error && (
+              <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
+                {error}
+              </div>
+            )}
 
-            {/* Pagination */}
-            {!isLoading && (
-          <div className="flex justify-end mt-4 space-x-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
-              } active:border-none active:bg-transparent`}
-            >
-              <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
-              Previous
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  currentPage === page
-                    ? "bg-[#4A2C2A] text-white"
-                    : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
-              } active:border-none active:bg-transparent`}
-            >
-              Next
-              <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />
-            </button>
-          </div>
-        )}
+            {/* Loading state */}
+            {isLoading ? (
+              <div className="bg-white shadow rounded-lg p-6 flex justify-center">
+                <p className="text-gray-500">Loading collection centers...</p>
+              </div>
+            ) : (
+              /* Table */
+              <div className="bg-white shadow rounded-lg">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="bg-white">
+                      <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                        Nama
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                        Email
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                        No Telepon
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                        Penjemputan
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                        Status
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-[#232323] text-sm uppercase">
+                        Menu
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentShelters.length > 0 ? (
+                      currentShelters.map((shelter, index) => (
+                        <tr key={shelter.id} className="border-t">
+                          <td className="px-4 py-2 text-sm text-[#232323]">{shelter.nama}</td>
+                          <td className="px-4 py-2 text-sm text-[#232323]">{shelter.email}</td>
+                          <td className="px-4 py-2 text-sm text-[#232323]">{shelter.noTelepon}</td>
+                          <td className="px-4 py-2 text-sm text-[#232323]">{shelter.penjemputan}</td>
+                          <td className="px-4 py-2">
+                            <span
+                              className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                shelter.status === "Disetujui"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {shelter.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 relative">
+                            <button
+                              onClick={() => toggleDropdown(index)}
+                              className="text-[#232323] focus:outline-none"
+                            >
+                              <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
+                            </button>
+                            {openDropdownIndex === index && (
+                              <div className="absolute right-2 mt-2 w-32 bg-white border rounded-lg shadow-lg z-10">
+                                <ul className="text-[#232323] text-sm">
+                                  <li
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => openDetailModal(shelter)}
+                                  >
+                                    Lihat Detail
+                                  </li>
+                                  <li
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => openApproveConfirmModal(shelter)}
+                                  >
+                                    Setujui
+                                  </li>
+                                  <li
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                    onClick={() => openRejectConfirmModal(shelter)}
+                                  >
+                                    Tolak
+                                  </li>
+                                </ul>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="6" className="px-4 py-4 text-center text-gray-500">
+                          No collection centers found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination - only show when not loading and we have shelters */}
+            {!isLoading && currentShelters.length > 0 && (
+              <div className="flex justify-end mt-4 space-x-2">
+                <button
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                    currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
+                  } active:border-none active:bg-transparent`}
+                >
+                  <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
+                  Previous
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => handlePageChange(page)}
+                    className={`px-3 py-1 rounded-lg text-sm ${
+                      currentPage === page
+                        ? "bg-[#4A2C2A] text-white"
+                        : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                    currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+                  } active:border-none active:bg-transparent`}
+                >
+                  Next
+                  <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -354,10 +476,20 @@ export default function Superadmin() {
             </div>
 
             <div className="flex flex-col md:flex-row gap-6">
-              {/* Left Section - Photo Placeholder */}
+              {/* Left Section - Photo */}
               <div className="w-full md:w-1/3">
                 <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-500 text-sm">Foto Placeholder</span>
+                  {selectedShelter.foto && selectedShelter.foto !== "/placeholder-image.jpg" ? (
+                    <Image
+                      src={selectedShelter.foto}
+                      alt="Shelter photo"
+                      width={300}
+                      height={250}
+                      className="rounded-lg object-cover h-full w-full"
+                    />
+                  ) : (
+                    <span className="text-gray-500 text-sm">Foto Tidak Tersedia</span>
+                  )}
                 </div>
               </div>
 
@@ -394,18 +526,15 @@ export default function Superadmin() {
 
                 <div className="mb-6">
                   <h4 className="text-md font-semibold text-[#131010] mb-2">Waktu Operasional:</h4>
-                  <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">Senin:</span>{" "}
-                    {selectedShelter.waktuOperasional.senin}
-                  </p>
-                  <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">Selasa:</span>{" "}
-                    {selectedShelter.waktuOperasional.selasa}
-                  </p>
-                  <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">Rabu:</span>{" "}
-                    {selectedShelter.waktuOperasional.rabu}
-                  </p>
+                  {selectedShelter.waktuOperasional &&
+                    Object.entries(selectedShelter.waktuOperasional).map(([day, hours]) => (
+                      <p key={day} className="text-sm text-[#232323] mb-1">
+                        <span className="font-medium">
+                          {day.charAt(0).toUpperCase() + day.slice(1)}:
+                        </span>{" "}
+                        {hours}
+                      </p>
+                    ))}
                 </div>
 
                 <div className="mb-6">
@@ -462,12 +591,14 @@ export default function Superadmin() {
               <button
                 onClick={confirmApproval}
                 className="bg-[#5C4033] text-white px-4 py-2 rounded-lg hover:bg-[#4A3226] focus:outline-none"
+                disabled={isLoading}
               >
-                Konfirmasi
+                {isLoading ? "Memproses..." : "Konfirmasi"}
               </button>
               <button
                 onClick={closeApproveConfirmModal}
                 className="bg-gray-200 text-[#232323] px-4 py-2 rounded-lg hover:bg-gray-300 focus:outline-none"
+                disabled={isLoading}
               >
                 Batal
               </button>
@@ -490,12 +621,14 @@ export default function Superadmin() {
               <button
                 onClick={confirmRejection}
                 className="bg-[#5C4033] text-white px-4 py-2 rounded-lg hover:bg-red-700 focus:outline-none"
+                disabled={isLoading}
               >
-                Konfirmasi
+                {isLoading ? "Memproses..." : "Konfirmasi"}
               </button>
               <button
                 onClick={closeRejectConfirmModal}
                 className="bg-gray-200 text-[#232323] px-4 py-2 rounded-lg hover:bg-gray-300 focus:outline-none"
+                disabled={isLoading}
               >
                 Batal
               </button>

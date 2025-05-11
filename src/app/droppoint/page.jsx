@@ -19,7 +19,7 @@ const validationSchema = Yup.object({
   address: Yup.string().required("Alamat tidak boleh kosong."),
   phoneNumber: Yup.string()
     .required("Nomor telepon tidak boleh kosong.")
-    .matches(/^8/, "Nomor telepon harus diawali dengan angka ‘8’.")
+    .matches(/^8/, "Nomor telepon harus diawali dengan angka '8'.")
     .max(15, "Nomor telepon tidak boleh lebih dari 15 digit.")
     .min(10, "Nomor telepon harus berisi minimal 10 digit."),
   type: Yup.string().required("Tipe tempat harus dipilih."),
@@ -36,11 +36,14 @@ export default function Home() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedDropPoint, setSelectedDropPoint] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
   const [centerId, setCenterId] = useState(null);
+  const [filters, setFilters] = useState({
+    isCabang: false,
+    isDropPoint: false
+  });
   const itemsPerPage = 10;
-
-  const [isCabang, setIsCabang] = useState(false);
-  const [isDropPoint, setIsDropPoint] = useState(false);
 
   // Initialize React Hook Form for Tambah modal
   const tambahForm = useForm({
@@ -64,79 +67,91 @@ export default function Home() {
     },
   });
 
+  const fetchDropPoints = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Build query parameters for server-side filtering and pagination
+      let queryParams = new URLSearchParams();
+      queryParams.append('page', currentPage);
+      queryParams.append('limit', itemsPerPage);
+      
+      if (searchQuery) {
+        queryParams.append('search', searchQuery);
+      }
+      
+      // Handle type filtering
+      if (filters.isCabang && !filters.isDropPoint) {
+        queryParams.append('type', 'BRANCH');
+      } else if (!filters.isCabang && filters.isDropPoint) {
+        queryParams.append('type', 'DROP_POINT');
+      }
+      
+      // Fetch drop points with filters
+      const response = await collectionCenterService.getPostsWithFilters(centerId, queryParams.toString());
+      
+      setDropPoints(response.data);
+      setTotalItems(response.meta.total);
+      setTotalPages(Math.ceil(response.meta.total / itemsPerPage));
+      
+      if (response.data.length === 0) {
+        setError("No drop points found matching your criteria.");
+      }
+    } catch (err) {
+      const errorMessage =
+        err.response?.data?.meta?.message?.join(", ") ||
+        err.message ||
+        "Gagal memuat data. Silakan coba lagi.";
+      setError(errorMessage);
+      console.error("Fetch Drop Points Error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchCollectionCenter = async () => {
       setIsLoading(true);
-      setError(null);
       try {
         // Fetch user's collection center
         const centerData = await collectionCenterService.getUserCollectionCenter();
-        const fetchedCenterId = centerData.id; 
+        const fetchedCenterId = centerData.id;
         setCenterId(fetchedCenterId);
-
-        // Fetch drop points
-        const posts = await collectionCenterService.getPosts(fetchedCenterId);
-        const mappedDropPoints = Array.isArray(posts)
-          ? posts.map((post) => ({
-              id: post.id,
-              name: post.name,
-              address: post.address.detail, 
-              phoneNumber: post.phoneNumber,
-              type: post.type === "Cabang" ? "BRANCH" : post.type,
-              collectionCenterId: post.collectionCenterId,
-              parentId: post.parentId,
-            }))
-          : [];
-        setDropPoints(mappedDropPoints);
-        console.log("Fetched drop points:", posts);
-
-        if (mappedDropPoints.length === 0) {
-          setError("No drop points found for this collection center.");
-        }
       } catch (err) {
         const errorMessage =
           err.response?.data?.meta?.message?.join(", ") ||
           err.message ||
-          "Gagal memuat data. Silakan coba lagi.";
+          "Gagal memuat data pusat pengumpulan. Silakan coba lagi.";
         setError(errorMessage);
-        console.error("Fetch Drop Points Error:", err);
+        console.error("Fetch Collection Center Error:", err);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchData();
+    
+    fetchCollectionCenter();
   }, []);
 
-  const filteredDropPoints = dropPoints.filter((point) => {
-    let matchesType = false;
-    if (!isCabang && !isDropPoint) matchesType = true;
-    else if (isCabang && isDropPoint) matchesType = true;
-    else if (isCabang) matchesType = point.type === "BRANCH";
-    else if (isDropPoint) matchesType = point.type === "DROP_POINT";
+  // Fetch drop points whenever filters, search, or pagination changes
+  useEffect(() => {
+    if (centerId) {
+      fetchDropPoints();
+    }
+  }, [centerId, currentPage, searchQuery, filters.isCabang, filters.isDropPoint]);
 
-    const matchesSearch = searchQuery
-      ? point.name.toLowerCase().includes(searchQuery.toLowerCase())
-      : true;
-
-    return matchesType && matchesSearch;
-  });
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentDropPoints = filteredDropPoints.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
-  const totalPages = Math.ceil(filteredDropPoints.length / itemsPerPage);
-
-  const handleFilterChange = (setter) => (value) => {
-    setter(value);
-    setCurrentPage(1);
+  const handleFilterChange = (filterType) => (value) => {
+    setFilters(prev => ({ ...prev, [filterType]: value }));
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
-    setCurrentPage(1);
+    setCurrentPage(1); // Reset to first page when search changes
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchDropPoints(); // Explicitly trigger search
   };
 
   const toggleDropdown = (index) => {
@@ -154,7 +169,7 @@ export default function Home() {
     if (point) {
       ubahForm.reset({
         name: point.name,
-        address: point.address.detail || "", 
+        address: point.address.detail || "",
         phoneNumber: point.phoneNumber,
         type: point.type,
       });
@@ -176,13 +191,13 @@ export default function Home() {
     try {
       const newDropPoint = {
         name: data.name,
-        address: { detail: data.address }, 
+        address: { detail: data.address },
         phoneNumber: data.phoneNumber,
         type: data.type,
       };
-      const createdPost = await collectionCenterService.createPost(centerId, newDropPoint);
-      setDropPoints((prev) => [...prev, createdPost]);
+      await collectionCenterService.createPost(centerId, newDropPoint);
       toggleTambahModal();
+      fetchDropPoints(); // Refresh the list after adding
     } catch (err) {
       setError(err.message || "Gagal menambahkan cabang. Silakan coba lagi.");
     } finally {
@@ -196,18 +211,14 @@ export default function Home() {
     try {
       const updatedDropPoint = {
         name: data.name,
-        address: { detail: data.address }, 
-        phoneNumber: data.phoneNumber,
+        address: { detail: data.address },
+        phoneNumber: "+62"+ data.phoneNumber,
         type: data.type,
       };
       const postId = selectedDropPoint.id;
-      const updatedPost = await collectionCenterService.updatePost(centerId, postId, updatedDropPoint);
-      setDropPoints((prev) =>
-        prev.map((point) =>
-          point.id === updatedPost.id ? updatedPost : point
-        )
-      );
+      await collectionCenterService.updatePost(centerId, postId, updatedDropPoint);
       toggleUbahModal(null);
+      fetchDropPoints(); // Refresh the list after updating
     } catch (err) {
       setError(err.message || "Gagal memperbarui cabang. Silakan coba lagi.");
     } finally {
@@ -221,15 +232,9 @@ export default function Home() {
     try {
       const postId = selectedDropPoint.id;
       await collectionCenterService.deletePost(centerId, postId);
-      setDropPoints((prev) => prev.filter((point) => point.id !== postId));
       setIsDeleteModalOpen(false);
       setSelectedDropPoint(null);
-      const newTotalPages = Math.ceil((filteredDropPoints.length - 1) / itemsPerPage);
-      if (currentPage > newTotalPages && newTotalPages > 0) {
-        setCurrentPage(newTotalPages);
-      } else if (newTotalPages === 0) {
-        setCurrentPage(1);
-      }
+      fetchDropPoints(); // Refresh the list after deleting
     } catch (err) {
       setError(err.message || "Gagal menghapus cabang. Silakan coba lagi.");
     } finally {
@@ -272,27 +277,29 @@ export default function Home() {
         )}
 
         <div className="flex justify-between items-center mb-6 text-[#C2C2C2]">
-          <div className="relative w-64">
+          <form onSubmit={handleSearch} className="relative w-64">
             <input
               type="text"
               placeholder="Cari cabang atau drop point"
               value={searchQuery}
               onChange={handleSearchChange}
-              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm text-[#131010] placeholder-[#C2C2C2]"
+              className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm text-[#131010] placeholder-[#C2C2C2] w-full"
               aria-label="Cari cabang atau drop point"
             />
-            <Icon
-              icon="mdi:magnify"
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#C2C2C2] w-5 h-5"
-            />
-          </div>
+            <button type="submit" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#C2C2C2]">
+              <Icon
+                icon="mdi:magnify"
+                className="w-5 h-5"
+              />
+            </button>
+          </form>
           <div className="flex items-center space-x-6">
             <label className="flex items-center space-x-2 cursor-pointer accent-[#543A14]">
               <input
                 type="checkbox"
-                checked={isCabang}
+                checked={filters.isCabang}
                 onChange={(e) =>
-                  handleFilterChange(setIsCabang)(e.target.checked)
+                  handleFilterChange("isCabang")(e.target.checked)
                 }
                 className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
               />
@@ -301,9 +308,9 @@ export default function Home() {
             <label className="flex items-center space-x-2 cursor-pointer accent-[#543A14]">
               <input
                 type="checkbox"
-                checked={isDropPoint}
+                checked={filters.isDropPoint}
                 onChange={(e) =>
-                  handleFilterChange(setIsDropPoint)(e.target.checked)
+                  handleFilterChange("isDropPoint")(e.target.checked)
                 }
                 className="h-4 w-4 text-[#4A2C2A] border-gray-300 rounded focus:ring-[#8B5A2B]"
               />
@@ -320,6 +327,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Tambah Modal */}
         {isTambahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
@@ -366,7 +374,7 @@ export default function Home() {
                   <input
                     type="text"
                     {...tambahForm.register("phoneNumber")}
-                    placeholder="Contoh: +6281212312312"
+                    placeholder="Contoh: 81212312312"
                     className="w-full p-2 border border-gray-300 rounded-lg text-sm text-[#131010] focus:outline-none focus:ring-1 focus:ring-[#8B5A2B]"
                   />
                   {tambahForm.formState.errors.phoneNumber && (
@@ -416,6 +424,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* Ubah Modal */}
         {isUbahModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
@@ -509,6 +518,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* Delete Modal */}
         {isDeleteModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-brightness-50">
             <div className="bg-white rounded-lg shadow-lg p-6 w-96">
@@ -554,21 +564,22 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {currentDropPoints.length > 0 ? (
-                  currentDropPoints.map((point, index) => (
+                {dropPoints.length > 0 ? (
+                  dropPoints.map((point, index) => (
                     <tr key={point.id || index} className="border-t border-gray-200">
                       <td className="p-3 text-black">{point.name}</td>
-                      <td className="p-3 text-black">{point.address || "No address available"}</td>
+                      <td className="p-3 text-black">{point.address?.detail || "No address available"}</td>
                       <td className="p-3 text-black">{point.phoneNumber}</td>
                       <td className="p-3">
                         <span
                           className={`px-2 py-0.5 rounded text-xs font-medium ${
-                            point.type === "Cabang"
+                            point.type === "BRANCH" || point.type === "Cabang"
                               ? "bg-green-100 text-green-800"
                               : "bg-blue-100 text-blue-800"
                           }`}
                         >
-                          {point.type}
+                          {point.type === "BRANCH" ? "Cabang" : 
+                           point.type === "DROP_POINT" ? "Drop Point" : point.type}
                         </span>
                       </td>
                       <td className="p-3 relative">
@@ -612,41 +623,46 @@ export default function Home() {
           )}
         </div>
 
-        {!isLoading && (
-          <div className="flex justify-end mt-4 space-x-2">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
-              } active:border-none active:bg-transparent`}
-            >
-              <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
-              Previous
-            </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+        {!isLoading && totalPages > 0 && (
+          <div className="flex justify-between items-center mt-4">
+            <div className="text-sm text-[#4A2C2A]">
+              Menampilkan {dropPoints.length} dari {totalItems} data
+            </div>
+            <div className="flex space-x-2">
               <button
-                key={page}
-                onClick={() => handlePageChange(page)}
-                className={`px-3 py-1 rounded-lg text-sm ${
-                  currentPage === page
-                    ? "bg-[#4A2C2A] text-white"
-                    : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
-                }`}
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                  currentPage === 1 ? "opacity-50 cursor-not-allowed" : ""
+                } active:border-none active:bg-transparent`}
               >
-                {page}
+                <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
+                Previous
               </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
-              } active:border-none active:bg-transparent`}
-            >
-              Next
-              <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />
-            </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-3 py-1 rounded-lg text-sm ${
+                    currentPage === page
+                      ? "bg-[#4A2C2A] text-white"
+                      : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
+                  currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+                } active:border-none active:bg-transparent`}
+              >
+                Next
+                <Icon icon="mdi:arrow-right" className="w-4 h-4 ml-1" />
+              </button>
+            </div>
           </div>
         )}
       </main>
