@@ -1,3 +1,5 @@
+"user client";
+
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { ButtonCustom } from "./button";
@@ -6,14 +8,7 @@ import { useForm } from "react-hook-form";
 
 const DEFAULT_LOCATION = { lat: -6.2088, lng: 106.8456 };
 
-export default function AddressModal({
-  isOpen,
-  handleClose,
-  // control,
-  // register,
-  // watch,
-  setValue,
-}) {
+export default function AddressModal({ isOpen, handleClose, setValue }) {
   const [mapError, setMapError] = useState(null);
   const [geolocationError, setGeolocationError] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -86,6 +81,7 @@ export default function AddressModal({
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
+
   // Function geocode translate koordinat (lat, lng) menjadi alamat lengkap
   const reverseGeocode = (location, callback) => {
     if (!window.google?.maps) {
@@ -101,6 +97,7 @@ export default function AddressModal({
       }
     });
   };
+
   // Fungsi ambil current location ketika modal dibuka
   const initMap = (initialLocation) => {
     if (!mapRef.current || !window.google?.maps) return;
@@ -142,6 +139,7 @@ export default function AddressModal({
       map.panTo(clicked);
     });
   };
+
   // Function update peta dengan lokasi baru (dari user atau hasil pencarian)
   const updateMapWithLocation = (location) => {
     if (!mapInstanceRef.current || !window.google?.maps) return;
@@ -162,6 +160,7 @@ export default function AddressModal({
       setValueDetail("alamat.jalan", address);
     });
   };
+
   // Function untuk mengupdate peta berdasarkan alamat
   const updateMapWithAddress = (address) => {
     if (!address) {
@@ -188,13 +187,14 @@ export default function AddressModal({
       });
     }
   };
+
   // Function reset peta ke lokasi pengguna saat ini
   window.resetToUserLocation = () => {
     getUserLocation((loc) => {
       updateMapWithLocation(loc);
-      console.log(`Lokasi ditemukan dengan akurasi ${loc.accuracy} meter`);
     });
   };
+
   // Function inisialisasi fitur autocomplete alamat (input manual), ketik sendiri dan pilih dari recommended list
   const initAutocomplete = () => {
     if (!streetInputRef.current || !window.google?.maps?.places) return;
@@ -222,6 +222,7 @@ export default function AddressModal({
       }
     });
   };
+
   // Function memuat Gmaps script hanya sekali
   const loadGoogleMapsScript = () => {
     if (scriptLoadedRef.current || window.google?.maps?.places) return;
@@ -239,6 +240,7 @@ export default function AddressModal({
     window.initGoogleMaps = () => setMapError(null);
     document.head.appendChild(script);
   };
+
   // Function handle menyimpan lokasi yang dipilih ke 'alamat'. Pada button 'simpan' di modal
   const handleSaveLocation = () => {
     if (watch("alamat.jalan")) {
@@ -287,10 +289,12 @@ export default function AddressModal({
     }
     initAutocomplete();
   }, [isOpen]);
+
   // Load script hanya saat mount
   useEffect(() => {
     loadGoogleMapsScript();
   }, []);
+
   // Cleanup saat modal ditutup
   useEffect(() => {
     if (!isOpen) {
@@ -309,6 +313,7 @@ export default function AddressModal({
       window.resetToUserLocation = null;
     }
   }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -349,6 +354,7 @@ export default function AddressModal({
               <p className="mt-1 text-sm text-[#E52020]">{geolocationError}</p>
             )}
             <button
+              type="button"
               className="mt-2 flex items-center justify-center bg-[#F0BB78] text-white py-1 rounded-md hover:bg-amber-200 w-full"
               onClick={() => {
                 if (
