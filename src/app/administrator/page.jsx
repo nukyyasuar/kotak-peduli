@@ -8,18 +8,21 @@ import * as Yup from "yup";
 import Footer from "../footer/page";
 import NavbarAfterLoginAdmin from "../../components/navbarAfterLoginAdmin";
 import { Icon } from "@iconify/react";
-import administratorService from "../../service/administratorService"; 
+import administratorService from "../../service/administratorService";
 
 // Yup validation schema for admin forms
 const adminValidationSchema = Yup.object().shape({
   nama: Yup.string().required("Nama tidak boleh kosong"),
   email: Yup.string()
     .required("Email tidak boleh kosong")
-    .email("Format email salah. Masukkan format email yang valid (contoh: user@example.com)"),
+    .email(
+      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)"
+    ),
   noTelepon: Yup.string()
-    .required("Nomor telepon tidak boleh kosong")
-    .min(10, "Nomor telepon harus berisi minimal 10 karakter")
-    .max(15, "Nomor telepon tidak boleh lebih dari 15 karakter"),
+    .required("Nomor telepon tidak boleh kosong.")
+    .matches(/^8\d*$/, "Nomor telepon harus diawali dengan angka ‘8’.")
+    .min(11, "Nomor telepon harus berisi minimal 11 digit.")
+    .max(15, "Nomor telepon tidak boleh lebih dari 15 digit."),
   penempatan: Yup.string().required("Penempatan tidak boleh kosong"),
   role: Yup.string().required("Role tidak boleh kosong"),
 });
@@ -36,6 +39,7 @@ const roleValidationSchema = Yup.object().shape({
 
 export default function AdminPage() {
   const [admins, setAdmins] = useState([]);
+  const [totalItems, setTotalItems] = useState(0);
   const [customRoles, setCustomRoles] = useState([]);
   const [isAdminUtama, setIsAdminUtama] = useState(false);
   const [isAdminDonasi, setIsAdminDonasi] = useState(false);
@@ -53,14 +57,15 @@ export default function AdminPage() {
   const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
   const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
-  const [roleCreationSource, setRoleCreationSource] = useState(null); 
-
+  const [roleCreationSource, setRoleCreationSource] = useState(null);
+  const [selectedRole, setSelectedRole] = useState(null);
 
   const translateRole = (role) => {
+    if (!role) return "Tidak Ada Role";
     // Mapping for standard roles
     const roleMapping = {
-      "Admin": "Admin",
-      "Moderator": "Moderator",
+      Admin: "Admin",
+      Moderator: "Moderator",
       "Moderator Test": "Moderator Uji",
       "Collection Center Donation Admin": "Admin Donasi Pusat Pengumpulan",
       "Collection Center Profile Admin": "Admin Profil Pusat Pengumpulan",
@@ -68,7 +73,7 @@ export default function AdminPage() {
       "Collection Center Post Admin": "Admin Postingan Pusat Pengumpulan",
       "Collection Center Role Admin": "Admin Peran Pusat Pengumpulan",
     };
-    
+
     return roleMapping[role] || role;
   };
 
@@ -114,22 +119,35 @@ export default function AdminPage() {
         // Fetch collection center
         const center = await administratorService.getUserCollectionCenter();
         setCollectionCenterId(center.id);
-  
+
         // Fetch roles
         const roles = await administratorService.getRoles(center.id);
-        setCustomRoles(roles.map((role) => role.name));
-  
-        // Fetch admins
-        const members = await administratorService.searchRoleMembers(center.id, "");
+        setCustomRoles(roles); // Store full role objects
+
+        // Fetch admins (first page)
+        const membersData = await administratorService.searchRoleMembers(
+          center.id,
+          "",
+          1,
+          itemsPerPage
+        );
+        const members = membersData.items || membersData.data || membersData; // fallback for different API shapes
         setAdmins(
           members.map((member) => ({
             id: member.id,
             nama: `${member.user.firstName} ${member.user.lastName}`,
             email: member.user.email,
             noTelepon: member.user.phoneNumber,
-            penempatan: `Cabang ${member.collectionCenterId}`, 
-            role: (member.role.name),
+            penempatan: `Cabang ${member.collectionCenterId}`,
+            role: member.role ? member.role.name : null, // null if no role
+            roleId: member.role ? member.role.id : null,
           }))
+        );
+        setTotalItems(
+          membersData.total ||
+            membersData.totalItems ||
+            membersData.count ||
+            members.length
         );
       } catch (error) {
         setErrorMessage(error.message);
@@ -139,37 +157,52 @@ export default function AdminPage() {
     };
     fetchInitialData();
   }, []);
-  
-  // Handle search and filter changes
+
+  // Handle search and filter changes and pagination
   useEffect(() => {
     const fetchFilteredAdmins = async () => {
       if (!collectionCenterId) return;
       setIsLoading(true);
       try {
-        const members = await administratorService.searchRoleMembers(collectionCenterId, searchQuery);
+        const membersData = await administratorService.searchRoleMembers(
+          collectionCenterId,
+          searchQuery,
+          currentPage,
+          itemsPerPage
+        );
+        let members = membersData.items || membersData.data || membersData;
         let filteredMembers = members;
-  
+
         // Apply role filters
         if (isAdminUtama || isAdminDonasi || isAdminEvent || isAdminCabang) {
           filteredMembers = members.filter(
             (member) =>
-              (isAdminUtama && member.role.name === "Admin Utama") ||
-              (isAdminDonasi && member.role.name === "Admin Donasi") ||
-              (isAdminEvent && member.role.name === "Admin Event") ||
-              (isAdminCabang && member.role.name === "Admin Cabang/Drop Point") ||
-              customRoles.includes(member.role.name)
+              member.role && // Ensure member.role exists
+              ((isAdminUtama && member.role.name === "Admin Utama") ||
+                (isAdminDonasi && member.role.name === "Admin Donasi") ||
+                (isAdminEvent && member.role.name === "Admin Event") ||
+                (isAdminCabang &&
+                  member.role.name === "Admin Cabang/Drop Point") ||
+                customRoles.some((role) => role.name === member.role.name))
           );
         }
-  
+
         setAdmins(
           filteredMembers.map((member) => ({
             id: member.id,
             nama: `${member.user.firstName} ${member.user.lastName}`,
             email: member.user.email,
             noTelepon: member.user.phoneNumber,
-            penempatan: `Cabang ${member.collectionCenterId}`, // Placeholder
-            role: member.role.name,
+            penempatan: `Cabang ${member.collectionCenterId}`,
+            role: member.role ? member.role.name : null, // null if no role
+            roleId: member.role ? member.role.id : null,
           }))
+        );
+        setTotalItems(
+          membersData.total ||
+            membersData.totalItems ||
+            membersData.count ||
+            filteredMembers.length
         );
       } catch (error) {
         setErrorMessage(error.message);
@@ -178,13 +211,20 @@ export default function AdminPage() {
       }
     };
     fetchFilteredAdmins();
-  }, [searchQuery, isAdminUtama, isAdminDonasi, isAdminEvent, isAdminCabang, collectionCenterId]);
+  }, [
+    searchQuery,
+    isAdminUtama,
+    isAdminDonasi,
+    isAdminEvent,
+    isAdminCabang,
+    collectionCenterId,
+    currentPage,
+    itemsPerPage,
+    customRoles,
+  ]);
 
-  const filteredAdmins = admins; // Already filtered via API
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredAdmins.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredAdmins.length / itemsPerPage);
+  const currentItems = admins;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   const handleFilterChange = (setter) => (value) => {
     setter(value);
@@ -208,22 +248,39 @@ export default function AdminPage() {
     setIsTambahModalOpen(!isTambahModalOpen);
     if (isTambahModalOpen) {
       tambahForm.reset();
+      setSelectedRole(null);
     }
   };
 
   const toggleUbahModal = (admin) => {
     if (admin) {
+      // Tentukan value role yang sesuai (id untuk custom, nama untuk standard)
+      let roleValue = "";
+      const standardRoles = [
+        "Admin Utama",
+        "Admin Donasi",
+        "Admin Event",
+        "Admin Cabang/Drop Point",
+      ];
+      if (admin.role && standardRoles.includes(admin.role)) {
+        roleValue = admin.role;
+      } else if (admin.roleId) {
+        roleValue = admin.roleId.toString();
+      } else {
+        roleValue = "";
+      }
       ubahForm.reset({
         nama: admin.nama,
         email: admin.email,
-        noTelepon: admin.noTelepon, 
+        noTelepon: admin.noTelepon,
         penempatan: admin.penempatan,
-        role: admin.role,
+        role: roleValue,
       });
       setSelectedAdmin(admin);
     }
     setIsUbahModalOpen(!isUbahModalOpen);
     setOpenDropdownIndex(null);
+    setSelectedRole(null);
   };
 
   const toggleCreateRoleModal = () => {
@@ -233,45 +290,66 @@ export default function AdminPage() {
     }
   };
 
-  const handleRoleSelect = (role, form) => {
-    if (role === "Buat Role Baru") {
+  const handleRoleSelect = (roleValue, form) => {
+    if (roleValue === "Buat Role Baru") {
+      setRoleCreationSource(form === tambahForm ? "tambah" : "ubah");
       toggleCreateRoleModal();
-    } else {
-      form.setValue("role", role);
+    } else if (!selectedRole) {
+      form.setValue("role", roleValue);
     }
   };
 
   const handleTambahSubmit = async (data) => {
     setIsLoading(true);
     try {
-      // Validate role
-      const validRoles = ["Admin Utama", "Admin Donasi", "Admin Event", "Admin Cabang/Drop Point", ...customRoles];
-      if (!validRoles.includes(data.role)) {
-        throw new Error("Role tidak valid");
+      // Find the selected role object
+      let selectedRoleObj = null;
+      const standardRoles = [
+        { name: "Admin Utama", id: 1 },
+        { name: "Admin Donasi", id: 2 },
+        { name: "Admin Event", id: 3 },
+        { name: "Admin Cabang/Drop Point", id: 4 },
+      ];
+      if (
+        [
+          "Admin Utama",
+          "Admin Donasi",
+          "Admin Event",
+          "Admin Cabang/Drop Point",
+        ].includes(data.role)
+      ) {
+        selectedRoleObj = standardRoles.find((r) => r.name === data.role);
+      } else {
+        selectedRoleObj = customRoles.find(
+          (r) => r.id.toString() === data.role
+        );
       }
-  
+      if (!selectedRoleObj) throw new Error("Role tidak valid");
+
       // Split nama into firstName and lastName
       const [firstName, ...lastNameParts] = data.nama.split(" ");
       const lastName = lastNameParts.join(" ") || "";
-  
+
       // Prepare user data for creation
       const userData = {
         firstName,
         lastName,
         email: data.email,
-        phoneNumber: "+62"+ data.noTelepon,
+        phoneNumber: "+62" + data.noTelepon,
         collectionCenterId: collectionCenterId,
+        roleId: selectedRoleObj.id,
       };
-  
-      // Create the user
-      const newUser = await administratorService.assignRoles(collectionCenterId, userData);
-  
-      // // Assign role to the new user using assignRoles endpoint
-      // await administratorService.assignRoles(collectionCenterId, [
-      //   { userId: newUser.id, roleName: data.role },
-      // ]);
-  
-      // Update local state with the new admin
+
+      // Ensure userData is valid before sending
+      if (!userData.firstName || !userData.email || !userData.roleId) {
+        throw new Error("Invalid user data");
+      }
+
+      const newUser = await administratorService.assignRoles(
+        collectionCenterId,
+        [userData]
+      );
+
       setAdmins((prev) => [
         ...prev,
         {
@@ -280,11 +358,11 @@ export default function AdminPage() {
           email: data.email,
           noTelepon: data.noTelepon,
           penempatan: data.penempatan,
-          role: data.role,
+          role: selectedRoleObj.name,
+          roleId: selectedRoleObj.id,
         },
       ]);
-  
-      // Close modal and reset form
+
       toggleTambahModal();
     } catch (error) {
       setErrorMessage(error.message || "Gagal menambahkan administrator");
@@ -292,38 +370,57 @@ export default function AdminPage() {
       setIsLoading(false);
     }
   };
-  
+
   const handleUbahSubmit = async (data) => {
     setIsLoading(true);
     try {
-      // Validate role
-      const validRoles = ["Admin Utama", "Admin Donasi", "Admin Event", "Admin Cabang/Drop Point", ...customRoles];
-      if (!validRoles.includes(data.role)) {
-        throw new Error("Role tidak valid");
+      // Find the selected role object
+      let selectedRoleObj = null;
+      const standardRoles = [
+        { name: "Admin Utama", id: 1 },
+        { name: "Admin Donasi", id: 2 },
+        { name: "Admin Event", id: 3 },
+        { name: "Admin Cabang/Drop Point", id: 4 },
+      ];
+      if (
+        [
+          "Admin Utama",
+          "Admin Donasi",
+          "Admin Event",
+          "Admin Cabang/Drop Point",
+        ].includes(data.role)
+      ) {
+        selectedRoleObj = standardRoles.find((r) => r.name === data.role);
+      } else {
+        selectedRoleObj = customRoles.find(
+          (r) => r.id.toString() === data.role
+        );
       }
-  
+      if (!selectedRoleObj) throw new Error("Role tidak valid");
+
       // Split nama into firstName and lastName
       const [firstName, ...lastNameParts] = data.nama.split(" ");
       const lastName = lastNameParts.join(" ") || "";
-  
+
       // Prepare user data for update
       const userData = {
         firstName,
         lastName,
         email: data.email,
-        phoneNumber: "+62"+ data.noTelepon,
+        phoneNumber: "+62" + data.noTelepon,
         collectionCenterId: collectionCenterId,
+        roleId: selectedRoleObj.id,
       };
-  
-      // Update the user
-      await administratorService.assignRoles(collectionCenterId, selectedAdmin.id, userData);
-  
-      // // Reassign role using assignRoles endpoint
-      // await administratorService.assignRoles(collectionCenterId, [
-      //   { userId: selectedAdmin.id, roleName: data.role },
-      // ]);
-  
-      // Update local state with the updated admin
+
+      // Ensure userData is valid before sending
+      if (!userData.firstName || !userData.email || !userData.roleId) {
+        throw new Error("Invalid user data");
+      }
+
+      await administratorService.assignRoles(collectionCenterId, [
+        { ...userData, id: selectedAdmin.id },
+      ]);
+
       setAdmins((prev) =>
         prev.map((admin) =>
           admin.id === selectedAdmin.id
@@ -333,13 +430,13 @@ export default function AdminPage() {
                 email: data.email,
                 noTelepon: data.noTelepon,
                 penempatan: data.penempatan,
-                role: data.role,
+                role: selectedRoleObj.name,
+                roleId: selectedRoleObj.id,
               }
             : admin
         )
       );
-  
-      // Close modal
+
       toggleUbahModal(null);
     } catch (error) {
       setErrorMessage(error.message || "Gagal mengubah data administrator");
@@ -347,7 +444,7 @@ export default function AdminPage() {
       setIsLoading(false);
     }
   };
-  
+
   const handleCreateRoleSubmit = async (data) => {
     setIsLoading(true);
     try {
@@ -357,15 +454,27 @@ export default function AdminPage() {
           ...(data.barangDonasi ? ["CREATE_DONATION", "READ_DONATION"] : []),
           ...(data.melihatDataDonasi ? ["READ_DONATION"] : []),
           ...(data.mengaturTanggalPenjemputan ? ["SET_DATE_DONATION"] : []),
-          ...(data.mengubahStatusDonasi ? ["APPROVE_DONATION", "RESTORE_DONATION"] : []),
+          ...(data.mengubahStatusDonasi
+            ? ["APPROVE_DONATION", "RESTORE_DONATION"]
+            : []),
           ...(data.mengaturTanggalPengiriman ? ["SET_DATE_DONATION"] : []),
         ],
         isCustom: true,
       };
-      await administratorService.createRole(collectionCenterId, roleData);
-      setCustomRoles((prev) => [...prev, data.name]);
-      tambahForm.setValue("role", data.name);
-      ubahForm.setValue("role", data.name);
+      const newRole = await administratorService.createRole(
+        collectionCenterId,
+        roleData
+      );
+      setCustomRoles((prev) => [...prev, newRole]);
+      setSelectedRole(newRole.name); // Use role name instead of ID
+
+      // Set the role value based on which form triggered the role creation
+      if (roleCreationSource === "tambah") {
+        tambahForm.setValue("role", newRole.name); // Use role name
+      } else if (roleCreationSource === "ubah") {
+        ubahForm.setValue("role", newRole.name); // Use role name
+      }
+
       toggleCreateRoleModal();
     } catch (error) {
       setErrorMessage(error.message);
@@ -373,10 +482,22 @@ export default function AdminPage() {
       setIsLoading(false);
     }
   };
-  
+
   const handleDelete = async (admin) => {
     setIsLoading(true);
     try {
+      // Hapus role dengan assignRoles dan roleId null
+      await administratorService.assignRoles(collectionCenterId, [
+        {
+          id: admin.id,
+          firstName: admin.nama.split(" ")[0],
+          lastName: admin.nama.split(" ").slice(1).join(" "),
+          email: admin.email,
+          phoneNumber: admin.noTelepon,
+          collectionCenterId: collectionCenterId,
+          roleId: undefined,
+        },
+      ]);
       setAdmins((prev) => prev.filter((a) => a.id !== admin.id));
       setOpenDropdownIndex(null);
     } catch (error) {
@@ -387,6 +508,7 @@ export default function AdminPage() {
   };
 
   const handlePageChange = (pageNumber) => {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
     setCurrentPage(pageNumber);
   };
 
@@ -409,16 +531,23 @@ export default function AdminPage() {
     <div className="flex flex-col min-h-screen bg-[#F5E9D4]">
       <Head>
         <title>Kotak Peduli - Administrator</title>
-        <meta name="description" content="Administrator page for Kotak Peduli" />
+        <meta
+          name="description"
+          content="Administrator page for Kotak Peduli"
+        />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <NavbarAfterLoginAdmin />
 
       <main className="flex-grow px-8 py-6">
-        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">Administrator</h1>
+        <h1 className="text-3xl font-bold text-center mb-8 text-[#4A2C2A] uppercase">
+          Administrator
+        </h1>
         {errorMessage && (
-          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">{errorMessage}</div>
+          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+            {errorMessage}
+          </div>
         )}
 
         <div className="flex justify-between items-center mb-6">
@@ -450,7 +579,9 @@ export default function AdminPage() {
                     <input
                       type="checkbox"
                       checked={isAdminUtama}
-                      onChange={(e) => handleFilterChange(setIsAdminUtama)(e.target.checked)}
+                      onChange={(e) =>
+                        handleFilterChange(setIsAdminUtama)(e.target.checked)
+                      }
                       className="h-4 w-4 accent-[#543A14]"
                     />
                     <span className="text-[#4A2C2A] text-sm">Admin Utama</span>
@@ -459,7 +590,9 @@ export default function AdminPage() {
                     <input
                       type="checkbox"
                       checked={isAdminDonasi}
-                      onChange={(e) => handleFilterChange(setIsAdminDonasi)(e.target.checked)}
+                      onChange={(e) =>
+                        handleFilterChange(setIsAdminDonasi)(e.target.checked)
+                      }
                       className="h-4 w-4 accent-[#543A14]"
                     />
                     <span className="text-[#4A2C2A] text-sm">Admin Donasi</span>
@@ -468,7 +601,9 @@ export default function AdminPage() {
                     <input
                       type="checkbox"
                       checked={isAdminEvent}
-                      onChange={(e) => handleFilterChange(setIsAdminEvent)(e.target.checked)}
+                      onChange={(e) =>
+                        handleFilterChange(setIsAdminEvent)(e.target.checked)
+                      }
                       className="h-4 w-4 accent-[#543A14]"
                     />
                     <span className="text-[#4A2C2A] text-sm">Admin Event</span>
@@ -477,10 +612,14 @@ export default function AdminPage() {
                     <input
                       type="checkbox"
                       checked={isAdminCabang}
-                      onChange={(e) => handleFilterChange(setIsAdminCabang)(e.target.checked)}
+                      onChange={(e) =>
+                        handleFilterChange(setIsAdminCabang)(e.target.checked)
+                      }
                       className="h-4 w-4 accent-[#543A14]"
                     />
-                    <span className="text-[#4A2C2A] text-sm">Admin Cabang / Drop Point</span>
+                    <span className="text-[#4A2C2A] text-sm">
+                      Admin Cabang / Drop Point
+                    </span>
                   </label>
                   <div className="flex justify-between px-4 py-2">
                     <button
@@ -531,16 +670,18 @@ export default function AdminPage() {
                       <td className="p-3 text-black">{admin.email}</td>
                       <td className="p-3 text-black">{admin.noTelepon}</td>
                       <td className="p-3 text-black">{admin.penempatan}</td>
-                      <td className="p-3 text-black">{translateRole(admin.role)}</td>
+                      <td className="p-3 text-black">
+                        {translateRole(admin.role)}
+                      </td>
                       <td className="p-3 relative">
                         <button
-                          onClick={() => toggleDropdown(indexOfFirstItem + index)}
+                          onClick={() => toggleDropdown(index)}
                           className="text-[#4A2C2A] hover:text-[#8B5A2B]"
                           aria-label="Menu"
                         >
                           <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
                         </button>
-                        {openDropdownIndex === indexOfFirstItem + index && (
+                        {openDropdownIndex === index && (
                           <div className="absolute right-4 top-8 bg-white border border-gray-200 rounded-lg shadow-md z-10">
                             <ul className="text-sm text-[#4A2C2A]">
                               <li
@@ -602,7 +743,9 @@ export default function AdminPage() {
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
               className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+                currentPage === totalPages
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               } active:border-none active:bg-transparent`}
             >
               Next
@@ -613,12 +756,20 @@ export default function AdminPage() {
 
         {/* Tambah Administrator Modal */}
         {isTambahModalOpen && (
-          <div className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
+          <div
+            className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50"
+            aria-modal="true"
+            role="dialog"
+          >
             <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-              <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">Tambah Administrator</h2>
+              <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">
+                Tambah Administrator
+              </h2>
               <form onSubmit={tambahForm.handleSubmit(handleTambahSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">Nama</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    Nama
+                  </label>
                   <input
                     id="tambah-nama"
                     type="text"
@@ -626,11 +777,15 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg text-[#131010]"
                   />
                   {tambahForm.formState.errors.nama && (
-                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.nama.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.nama.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1 font-bold">Email</label>
+                  <label className="block text-[#4A2C2A] text-sm mb-1 font-bold">
+                    Email
+                  </label>
                   <input
                     id="tambah-email"
                     type="email"
@@ -638,11 +793,15 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg text-[#131010]"
                   />
                   {tambahForm.formState.errors.email && (
-                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.email.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.email.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">No. Telepon</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    No. Telepon
+                  </label>
                   <input
                     id="tambah-noTelepon"
                     type="text"
@@ -650,11 +809,15 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg text-[#131010]"
                   />
                   {tambahForm.formState.errors.noTelepon && (
-                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.noTelepon.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.noTelepon.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">Penempatan</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    Penempatan
+                  </label>
                   <input
                     id="tambah-penempatan"
                     type="text"
@@ -662,31 +825,48 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg text-[#131010]"
                   />
                   {tambahForm.formState.errors.penempatan && (
-                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.penempatan.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.penempatan.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">Role</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    Role
+                  </label>
                   <select
                     id="tambah-role"
                     {...tambahForm.register("role")}
-                    onChange={(e) => handleRoleSelect(e.target.value, tambahForm)}
+                    onChange={(e) =>
+                      handleRoleSelect(e.target.value, tambahForm)
+                    }
                     className="w-full p-2 border rounded-lg text-[#131010]"
+                    disabled={selectedRole !== null}
                   >
-                    <option value="">Pilih Role</option>
-                    <option value="Admin Utama">Admin Utama</option>
-                    <option value="Admin Donasi">Admin Donasi</option>
-                    <option value="Admin Event">Admin Event</option>
-                    <option value="Admin Cabang/Drop Point">Admin Cabang/Drop Point</option>
-                    {customRoles.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                    <option value="Buat Role Baru">Buat Role Baru</option>
+                    {selectedRole ? (
+                      <option value={selectedRole}>{selectedRole}</option>
+                    ) : (
+                      <>
+                        <option value="">Pilih Role</option>
+                        <option value="Admin Utama">Admin Utama</option>
+                        <option value="Admin Donasi">Admin Donasi</option>
+                        <option value="Admin Event">Admin Event</option>
+                        <option value="Admin Cabang/Drop Point">
+                          Admin Cabang/Drop Point
+                        </option>
+                        {customRoles.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {role.name}
+                          </option>
+                        ))}
+                        <option value="Buat Role Baru">Buat Role Baru</option>
+                      </>
+                    )}
                   </select>
                   {tambahForm.formState.errors.role && (
-                    <p className="text-red-500 text-xs mt-1">{tambahForm.formState.errors.role.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {tambahForm.formState.errors.role.message}
+                    </p>
                   )}
                 </div>
                 <div className="flex space-x-3">
@@ -712,12 +892,20 @@ export default function AdminPage() {
 
         {/* Ubah Data Modal */}
         {isUbahModalOpen && (
-          <div className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
+          <div
+            className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50"
+            aria-modal="true"
+            role="dialog"
+          >
             <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-              <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">Ubah Data Administrator</h2>
+              <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">
+                Ubah Data Administrator
+              </h2>
               <form onSubmit={ubahForm.handleSubmit(handleUbahSubmit)}>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">Nama</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    Nama
+                  </label>
                   <input
                     id="ubah-nama"
                     type="text"
@@ -725,11 +913,15 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg text-[#131010]"
                   />
                   {ubahForm.formState.errors.nama && (
-                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.nama.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.nama.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">Email</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    Email
+                  </label>
                   <input
                     id="ubah-email"
                     type="email"
@@ -737,11 +929,15 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg text-[#131010]"
                   />
                   {ubahForm.formState.errors.email && (
-                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.email.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.email.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">No. Telepon</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    No. Telepon
+                  </label>
                   <input
                     id="ubah-noTelepon"
                     type="text"
@@ -749,11 +945,15 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg text-[#131010]"
                   />
                   {ubahForm.formState.errors.noTelepon && (
-                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.noTelepon.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.noTelepon.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">Penempatan</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    Penempatan
+                  </label>
                   <input
                     id="ubah-penempatan"
                     type="text"
@@ -761,31 +961,46 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg text-[#131010]"
                   />
                   {ubahForm.formState.errors.penempatan && (
-                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.penempatan.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.penempatan.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#131010] text-sm mb-1 font-bold">Role</label>
+                  <label className="block text-[#131010] text-sm mb-1 font-bold">
+                    Role
+                  </label>
                   <select
                     id="ubah-role"
                     {...ubahForm.register("role")}
                     onChange={(e) => handleRoleSelect(e.target.value, ubahForm)}
                     className="w-full p-2 border rounded-lg text-[#131010]"
+                    disabled={selectedRole !== null}
                   >
-                    <option value="">Pilih Role</option>
-                    <option value="Admin Utama">Admin Utama</option>
-                    <option value="Admin Donasi">Admin Donasi</option>
-                    <option value="Admin Event">Admin Event</option>
-                    <option value="Admin Cabang/Drop Point">Admin Cabang/Drop Point</option>
-                    {customRoles.map((role) => (
-                      <option key={role} value={role}>
-                        {role}
-                      </option>
-                    ))}
-                    <option value="Buat Role Baru">Buat Role Baru</option>
+                    {selectedRole ? (
+                      <option value={selectedRole}>{selectedRole}</option>
+                    ) : (
+                      <>
+                        <option value="">Pilih Role</option>
+                        <option value="Admin Utama">Admin Utama</option>
+                        <option value="Admin Donasi">Admin Donasi</option>
+                        <option value="Admin Event">Admin Event</option>
+                        <option value="Admin Cabang/Drop Point">
+                          Admin Cabang/Drop Point
+                        </option>
+                        {customRoles.map((role) => (
+                          <option key={role.id} value={role.id}>
+                            {role.name}
+                          </option>
+                        ))}
+                        <option value="Buat Role Baru">Buat Role Baru</option>
+                      </>
+                    )}
                   </select>
                   {ubahForm.formState.errors.role && (
-                    <p className="text-red-500 text-xs mt-1">{ubahForm.formState.errors.role.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {ubahForm.formState.errors.role.message}
+                    </p>
                   )}
                 </div>
                 <div className="flex space-x-3">
@@ -811,12 +1026,22 @@ export default function AdminPage() {
 
         {/* Buat Role Baru Modal */}
         {isCreateRoleModalOpen && (
-          <div className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50" aria-modal="true" role="dialog">
+          <div
+            className="fixed inset-0 backdrop-brightness-50 flex justify-center items-center z-50"
+            aria-modal="true"
+            role="dialog"
+          >
             <div className="bg-white p-6 rounded-lg shadow-lg w-1/3">
-              <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">Buat Role Baru</h2>
-              <form onSubmit={createRoleForm.handleSubmit(handleCreateRoleSubmit)}>
+              <h2 className="text-xl font-bold text-[#4A2C2A] mb-4">
+                Buat Role Baru
+              </h2>
+              <form
+                onSubmit={createRoleForm.handleSubmit(handleCreateRoleSubmit)}
+              >
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-1">Nama Role</label>
+                  <label className="block text-[#4A2C2A] text-sm mb-1">
+                    Nama Role
+                  </label>
                   <input
                     id="role-name"
                     type="text"
@@ -824,51 +1049,208 @@ export default function AdminPage() {
                     className="w-full p-2 border rounded-lg"
                   />
                   {createRoleForm.formState.errors.name && (
-                    <p className="text-red-500 text-xs mt-1">{createRoleForm.formState.errors.name.message}</p>
+                    <p className="text-red-500 text-xs mt-1">
+                      {createRoleForm.formState.errors.name.message}
+                    </p>
                   )}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[#4A2C2A] text-sm mb-2">Izin Akses</label>
-                  <label className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="checkbox"
-                      {...createRoleForm.register("barangDonasi")}
-                      className="h-4 w-4 accent-[#543A14]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Barang Donasi</span>
+                  <label className="block text-[#4A2C2A] text-sm mb-2">
+                    Izin Akses
                   </label>
-                  <label className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="checkbox"
-                      {...createRoleForm.register("melihatDataDonasi")}
-                      className="h-4 w-4 accent-[#543A14]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Melihat Data Donasi</span>
-                  </label>
-                  <label className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="checkbox"
-                      {...createRoleForm.register("mengaturTanggalPenjemputan")}
-                      className="h-4 w-4 accent-[#543A14]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Mengatur Tanggal Penjemputan</span>
-                  </label>
-                  <label className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="checkbox"
-                      {...createRoleForm.register("mengubahStatusDonasi")}
-                      className="h-4 w-4 accent-[#543A14]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Mengubah Status Donasi</span>
-                  </label>
-                  <label className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="checkbox"
-                      {...createRoleForm.register("mengaturTanggalPengiriman")}
-                      className="h-4 w-4 accent-[#543A14]"
-                    />
-                    <span className="text-[#4A2C2A] text-sm">Mengatur Tanggal Pengiriman</span>
-                  </label>
+                  <div className="max-h-60 overflow-y-auto border rounded-lg p-2">
+                    {/* Barang Donasi Section */}
+                    <div className="mb-3">
+                      <div className="font-semibold text-[#4A2C2A] mb-1">
+                        Barang Donasi
+                      </div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("melihatDataDonasi")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Melihat Data Donasi
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register(
+                            "mengaturTanggalPenjemputan"
+                          )}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Mengatur Tanggal Penjemputan
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("mengubahStatusDonasi")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Mengubah Status Donasi
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register(
+                            "mengaturTanggalPengiriman"
+                          )}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Mengatur Tanggal Pengiriman
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Event Section */}
+                    <div className="mb-3">
+                      <div className="font-semibold text-[#4A2C2A] mb-1">
+                        Event
+                      </div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("melihatDataEvent")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Melihat Data Event
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("menambahkanEvent")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Menambahkan Event
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("mengeditEvent")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Mengedit Event
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("mengubahStatusEvent")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Mengubah Status Event
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Cabang / Drop Point Section */}
+                    <div className="mb-3">
+                      <div className="font-semibold text-[#4A2C2A] mb-1">
+                        Cabang / Drop Point
+                      </div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("melihatDataCabang")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Melihat Data Cabang
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("menambahkanCabang")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Menambahkan Cabang
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("mengeditDataCabang")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Mengedit Data Cabang
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("menghapusCabang")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Menghapus Cabang
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Administrator Section */}
+                    <div>
+                      <div className="font-semibold text-[#4A2C2A] mb-1">
+                        Administrator
+                      </div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("melihatDataAdmin")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Melihat Data Admin
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("menambahkanAdmin")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Menambahkan Admin
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("mengeditDataAdmin")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Mengedit Data Admin
+                        </span>
+                      </label>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <input
+                          type="checkbox"
+                          {...createRoleForm.register("menghapusAdmin")}
+                          className="h-4 w-4 accent-[#543A14]"
+                        />
+                        <span className="text-[#4A2C2A] text-sm">
+                          Menghapus Admin
+                        </span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex justify-end space-x-2">
                   <button

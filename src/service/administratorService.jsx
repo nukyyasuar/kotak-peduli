@@ -24,7 +24,8 @@ const administratorService = {
       return data;
     } catch (error) {
       throw new Error(
-        error.response?.data?.meta?.message?.join(", ") || "Failed to fetch roles"
+        error.response?.data?.meta?.message?.join(", ") ||
+          "Failed to fetch roles"
       );
     }
   },
@@ -51,7 +52,8 @@ const administratorService = {
       return data;
     } catch (error) {
       throw new Error(
-        error.response?.data?.meta?.message?.join(", ") || "Failed to create role"
+        error.response?.data?.meta?.message?.join(", ") ||
+          "Failed to create role"
       );
     }
   },
@@ -78,7 +80,8 @@ const administratorService = {
       return data;
     } catch (error) {
       throw new Error(
-        error.response?.data?.meta?.message?.join(", ") || "Failed to update role"
+        error.response?.data?.meta?.message?.join(", ") ||
+          "Failed to update role"
       );
     }
   },
@@ -104,13 +107,21 @@ const administratorService = {
       return data;
     } catch (error) {
       throw new Error(
-        error.response?.data?.meta?.message?.join(", ") || "Failed to delete role"
+        error.response?.data?.meta?.message?.join(", ") ||
+          "Failed to delete role"
       );
     }
   },
 
-  // Search role members
-  async searchRoleMembers(collectionCenterId, searchQuery) {
+  // Search role members with pagination
+  async searchRoleMembers(
+    collectionCenterId,
+    searchQuery,
+    page = 1,
+    limit = 10,
+    totalPages = 1,
+    total = 5,
+  ) {
     try {
       const token = localStorage.getItem("authToken");
       if (!token) throw new Error("No authentication token found");
@@ -124,6 +135,10 @@ const administratorService = {
           },
           params: {
             search: searchQuery,
+            page,
+            limit,
+            totalPages,
+            total,
           },
           timeout: 10000,
         }
@@ -133,7 +148,8 @@ const administratorService = {
       return data;
     } catch (error) {
       throw new Error(
-        error.response?.data?.meta?.message?.join(", ") || "Failed to search role members"
+        error.response?.data?.meta?.message?.join(", ") ||
+          "Failed to search role members"
       );
     }
   },
@@ -144,9 +160,20 @@ const administratorService = {
       const token = localStorage.getItem("authToken");
       if (!token) throw new Error("No authentication token found");
 
+      // Ensure userAssignments is always an array and not empty
+      const user = Array.isArray(userAssignments)
+        ? userAssignments.filter((u) => u && Object.keys(u).length > 0)
+        : [userAssignments].filter((u) => u && Object.keys(u).length > 0);
+
+      if (user.length === 0) {
+        throw new Error("User assignments cannot be empty");
+      }
+
+      const payload = { user };
+
       const response = await axios.post(
         `${API_URL}/collection-centers/${collectionCenterId}/roles/assign`,
-        { user: userAssignments },
+        payload,
         {
           headers: {
             "Content-Type": "application/json",
@@ -160,11 +187,11 @@ const administratorService = {
       return data;
     } catch (error) {
       throw new Error(
-        error.response?.data?.meta?.message?.join(", ") || "Failed to assign roles"
+        error.response?.data?.meta?.message?.join(", ") ||
+          "Failed to assign roles"
       );
     }
   },
-
 
   // Get user collection center
   async getUserCollectionCenter() {
@@ -187,7 +214,8 @@ const administratorService = {
       return data;
     } catch (error) {
       throw new Error(
-        error.response?.data?.meta?.message?.join(", ") || "Failed to fetch user collection center"
+        error.response?.data?.meta?.message?.join(", ") ||
+          "Failed to fetch user collection center"
       );
     }
   },
@@ -213,7 +241,8 @@ const administratorService = {
       return data;
     } catch (error) {
       throw new Error(
-        error.response?.data?.meta?.message?.join(", ") || "Failed to fetch collection center"
+        error.response?.data?.meta?.message?.join(", ") ||
+          "Failed to fetch collection center"
       );
     }
   },
