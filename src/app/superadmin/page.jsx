@@ -12,9 +12,11 @@ export default function Superadmin() {
   const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedShelter, setSelectedShelter] = useState(null);
-  const [isApproveConfirmModalOpen, setIsApproveConfirmModalOpen] = useState(false);
+  const [isApproveConfirmModalOpen, setIsApproveConfirmModalOpen] =
+    useState(false);
   const [shelterToApprove, setShelterToApprove] = useState(null);
-  const [isRejectConfirmModalOpen, setIsRejectConfirmModalOpen] = useState(false);
+  const [isRejectConfirmModalOpen, setIsRejectConfirmModalOpen] =
+    useState(false);
   const [shelterToReject, setShelterToReject] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterStatus, setFilterStatus] = useState([]);
@@ -22,7 +24,7 @@ export default function Superadmin() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [shelters, setShelters] = useState([]);
-  
+
   // Additional state for summary data
   const [summaryData, setSummaryData] = useState({
     totalCollectionCenters: 0,
@@ -55,10 +57,14 @@ export default function Superadmin() {
         id: item.id || index,
         nama: item.name || `Tempat Penampungan ${index + 1}`,
         email: item.email || `tempat-penampungan@alsut.id`,
-        noTelepon: item.phone || `+62812312312${index < 10 ? "0" + index : index}`,
-        alamat: item.address || "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit",
+        noTelepon:
+          item.phone || `+62812312312${index < 10 ? "0" + index : index}`,
+        alamat:
+          item.address ||
+          "Jl. Lorem ipsum dolor sit amet, consectetur adipiscing elit",
         penjemputan: item.pickupAvailable ? "Tersedia" : "Tidak Tersedia",
-        barangDiterima: item.acceptedItems || "Pakaian, Elektronik, Mainan, Buku",
+        barangDiterima:
+          item.acceptedItems || "Pakaian, Elektronik, Mainan, Buku",
         status: item.status || (index % 2 === 0 ? "Disetujui" : "Ditolak"),
         jarakPenjemputan: item.pickupDistance || "10",
         waktuOperasional: item.operationalHours || {
@@ -76,7 +82,8 @@ export default function Superadmin() {
     } catch (error) {
       console.error("Error fetching collection centers:", error);
       setError(
-        error.message || "Failed to load collection centers. Please try again later."
+        error.message ||
+          "Failed to load collection centers. Please try again later."
       );
     } finally {
       setIsLoading(false);
@@ -102,59 +109,63 @@ export default function Superadmin() {
   };
 
   // Function to approve a collection center
-const approveCollectionCenter = async (id) => {
-  setIsLoading(true);
-  try {
-    // Use RolesService.processCollectionCenter to approve the collection center
-    await RolesService.processCollectionCenter(id, { status: "Disetujui" });
+  const approveCollectionCenter = async (id) => {
+    setIsLoading(true);
+    try {
+      // Use RolesService.processCollectionCenter to approve the collection center
+      await RolesService.processCollectionCenter(id, { status: "Disetujui" });
 
-    // Update local state
-    setShelters((prevShelters) =>
-      prevShelters.map((shelter) =>
-        shelter.id === id ? { ...shelter, status: "Disetujui" } : shelter
-      )
-    );
-  } catch (error) {
-    console.error("Error approving collection center:", error);
-    setError(error.message || "Failed to approve collection center. Please try again.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // Update local state
+      setShelters((prevShelters) =>
+        prevShelters.map((shelter) =>
+          shelter.id === id ? { ...shelter, status: "Disetujui" } : shelter
+        )
+      );
+    } catch (error) {
+      console.error("Error approving collection center:", error);
+      setError(
+        error.message ||
+          "Failed to approve collection center. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-// Function to reject a collection center
-const rejectCollectionCenter = async (id) => {
-  setIsLoading(true);
-  try {
-    // Use RolesService.processCollectionCenter to reject the collection center
-    await RolesService.processCollectionCenter(id, { status: "Ditolak" });
+  // Function to reject a collection center
+  const rejectCollectionCenter = async (id) => {
+    setIsLoading(true);
+    try {
+      // Use RolesService.processCollectionCenter to reject the collection center
+      await RolesService.processCollectionCenter(id, { status: "Ditolak" });
 
-    // Update local state
-    setShelters((prevShelters) =>
-      prevShelters.map((shelter) =>
-        shelter.id === id ? { ...shelter, status: "Ditolak" } : shelter
-      )
-    );
-  } catch (error) {
-    console.error("Error rejecting collection center:", error);
-    setError(error.message || "Failed to reject collection center. Please try again.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+      // Update local state
+      setShelters((prevShelters) =>
+        prevShelters.map((shelter) =>
+          shelter.id === id ? { ...shelter, status: "Ditolak" } : shelter
+        )
+      );
+    } catch (error) {
+      console.error("Error rejecting collection center:", error);
+      setError(
+        error.message || "Failed to reject collection center. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Update fetchCollectionCenters when searchQuery or currentPage changes
   useEffect(() => {
     fetchCollectionCenters();
   }, [searchQuery, currentPage]);
 
-  const filteredShelters = shelters
-    .filter((shelter) => {
-      if (filterStatus.length > 0) {
-        return filterStatus.includes(shelter.status);
-      }
-      return true;
-    });
+  const filteredShelters = shelters.filter((shelter) => {
+    if (filterStatus.length > 0) {
+      return filterStatus.includes(shelter.status);
+    }
+    return true;
+  });
 
   const totalPages = Math.ceil(filteredShelters.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -256,19 +267,25 @@ const rejectCollectionCenter = async (id) => {
             <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">
               {summaryData.totalCollectionCenters}
             </h2>
-            <p className="mt-2 text-sm leading-tight font-bold">Tempat Penampungan</p>
+            <p className="mt-2 text-sm leading-tight font-bold">
+              Tempat Penampungan
+            </p>
           </div>
           <div className="bg-[#5C4033] text-white p-6 rounded-lg shadow text-center">
             <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">
               {summaryData.totalDonationsReceived}
             </h2>
-            <p className="mt-2 text-sm leading-tight font-bold">Donasi Diterima</p>
+            <p className="mt-2 text-sm leading-tight font-bold">
+              Donasi Diterima
+            </p>
           </div>
           <div className="bg-[#5C4033] text-white p-6 rounded-lg shadow text-center">
             <h2 className="text-[40px] font-bold leading-tight text-[#F0BB78]">
               {summaryData.totalDonationsDistributed}
             </h2>
-            <p className="mt-2 text-sm leading-tight font-bold">Donasi Telah Disalurkan</p>
+            <p className="mt-2 text-sm leading-tight font-bold">
+              Donasi Telah Disalurkan
+            </p>
           </div>
         </div>
       </section>
@@ -287,7 +304,7 @@ const rejectCollectionCenter = async (id) => {
                   placeholder="Search courses"
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-sm"
+                  className="p-2 pl-10 rounded-lg shadow-sm focus:outline-none bg-white text-[#131010] text-sm"
                 />
                 <Icon
                   icon="mdi:magnify"
@@ -302,7 +319,9 @@ const rejectCollectionCenter = async (id) => {
                     onChange={() => handleFilterChange("Disetujui")}
                     className="form-checkbox h-5 w-5 accent-[#543A14]"
                   />
-                  <span className="text-sm font-medium text-[#232323]">Disetujui</span>
+                  <span className="text-sm font-medium text-[#232323]">
+                    Disetujui
+                  </span>
                 </label>
                 <label className="flex items-center space-x-2">
                   <input
@@ -311,7 +330,9 @@ const rejectCollectionCenter = async (id) => {
                     onChange={() => handleFilterChange("Ditolak")}
                     className="form-checkbox h-5 w-5 accent-[#543A14]"
                   />
-                  <span className="text-sm font-medium text-[#232323]">Ditolak</span>
+                  <span className="text-sm font-medium text-[#232323]">
+                    Ditolak
+                  </span>
                 </label>
               </div>
             </div>
@@ -358,10 +379,18 @@ const rejectCollectionCenter = async (id) => {
                     {currentShelters.length > 0 ? (
                       currentShelters.map((shelter, index) => (
                         <tr key={shelter.id} className="border-t">
-                          <td className="px-4 py-2 text-sm text-[#232323]">{shelter.nama}</td>
-                          <td className="px-4 py-2 text-sm text-[#232323]">{shelter.email}</td>
-                          <td className="px-4 py-2 text-sm text-[#232323]">{shelter.noTelepon}</td>
-                          <td className="px-4 py-2 text-sm text-[#232323]">{shelter.penjemputan}</td>
+                          <td className="px-4 py-2 text-sm text-[#232323]">
+                            {shelter.nama}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-[#232323]">
+                            {shelter.email}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-[#232323]">
+                            {shelter.noTelepon}
+                          </td>
+                          <td className="px-4 py-2 text-sm text-[#232323]">
+                            {shelter.penjemputan}
+                          </td>
                           <td className="px-4 py-2">
                             <span
                               className={`px-2 py-0.5 rounded text-xs font-medium ${
@@ -378,7 +407,10 @@ const rejectCollectionCenter = async (id) => {
                               onClick={() => toggleDropdown(index)}
                               className="text-[#232323] focus:outline-none"
                             >
-                              <Icon icon="mdi:dots-vertical" className="w-5 h-5" />
+                              <Icon
+                                icon="mdi:dots-vertical"
+                                className="w-5 h-5"
+                              />
                             </button>
                             {openDropdownIndex === index && (
                               <div className="absolute right-2 mt-2 w-32 bg-white border rounded-lg shadow-lg z-10">
@@ -391,13 +423,17 @@ const rejectCollectionCenter = async (id) => {
                                   </li>
                                   <li
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                    onClick={() => openApproveConfirmModal(shelter)}
+                                    onClick={() =>
+                                      openApproveConfirmModal(shelter)
+                                    }
                                   >
                                     Setujui
                                   </li>
                                   <li
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                                    onClick={() => openRejectConfirmModal(shelter)}
+                                    onClick={() =>
+                                      openRejectConfirmModal(shelter)
+                                    }
                                   >
                                     Tolak
                                   </li>
@@ -409,7 +445,10 @@ const rejectCollectionCenter = async (id) => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="px-4 py-4 text-center text-gray-500">
+                        <td
+                          colSpan="6"
+                          className="px-4 py-4 text-center text-gray-500"
+                        >
                           No collection centers found
                         </td>
                       </tr>
@@ -432,24 +471,28 @@ const rejectCollectionCenter = async (id) => {
                   <Icon icon="mdi:arrow-left" className="w-4 h-4 mr-1" />
                   Previous
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`px-3 py-1 rounded-lg text-sm ${
-                      currentPage === page
-                        ? "bg-[#4A2C2A] text-white"
-                        : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 rounded-lg text-sm ${
+                        currentPage === page
+                          ? "bg-[#4A2C2A] text-white"
+                          : "border border-[#4A2C2A] text-[#4A2C2A] hover:bg-[#8B5A2B] hover:text-white"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
                 <button
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   className={`px-3 py-1 rounded-lg text-[#4A2C2A] text-sm flex items-center ${
-                    currentPage === totalPages ? "opacity-50 cursor-not-allowed" : ""
+                    currentPage === totalPages
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
                   } active:border-none active:bg-transparent`}
                 >
                   Next
@@ -466,7 +509,9 @@ const rejectCollectionCenter = async (id) => {
         <div className="fixed inset-0 backdrop-brightness-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl p-8 relative">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-[#131010]">Detail Tempat Penampung</h2>
+              <h2 className="text-2xl font-bold text-[#131010]">
+                Detail Tempat Penampung
+              </h2>
               <button
                 onClick={closeDetailModal}
                 className="text-[#232323] hover:text-gray-600 focus:outline-none"
@@ -479,7 +524,8 @@ const rejectCollectionCenter = async (id) => {
               {/* Left Section - Photo */}
               <div className="w-full md:w-1/3">
                 <div className="bg-gray-200 h-64 rounded-lg flex items-center justify-center">
-                  {selectedShelter.foto && selectedShelter.foto !== "/placeholder-image.jpg" ? (
+                  {selectedShelter.foto &&
+                  selectedShelter.foto !== "/placeholder-image.jpg" ? (
                     <Image
                       src={selectedShelter.foto}
                       alt="Shelter photo"
@@ -488,7 +534,9 @@ const rejectCollectionCenter = async (id) => {
                       className="rounded-lg object-cover h-full w-full"
                     />
                   ) : (
-                    <span className="text-gray-500 text-sm">Foto Tidak Tersedia</span>
+                    <span className="text-gray-500 text-sm">
+                      Foto Tidak Tersedia
+                    </span>
                   )}
                 </div>
               </div>
@@ -500,53 +548,72 @@ const rejectCollectionCenter = async (id) => {
                     Informasi Tempat Penampung
                   </h3>
                   <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">Nama:</span> {selectedShelter.nama}
+                    <span className="font-medium">Nama:</span>{" "}
+                    {selectedShelter.nama}
                   </p>
                   <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">Email:</span> {selectedShelter.email}
+                    <span className="font-medium">Email:</span>{" "}
+                    {selectedShelter.email}
                   </p>
                   <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">No Telepon:</span> {selectedShelter.noTelepon}
+                    <span className="font-medium">No Telepon:</span>{" "}
+                    {selectedShelter.noTelepon}
                   </p>
                   <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">Alamat:</span> {selectedShelter.alamat}
+                    <span className="font-medium">Alamat:</span>{" "}
+                    {selectedShelter.alamat}
                   </p>
                 </div>
 
                 <div className="mb-6">
-                  <h4 className="text-md font-semibold text-[#131010] mb-2">Penjemputan:</h4>
+                  <h4 className="text-md font-semibold text-[#131010] mb-2">
+                    Penjemputan:
+                  </h4>
                   <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">Status:</span> {selectedShelter.penjemputan}
+                    <span className="font-medium">Status:</span>{" "}
+                    {selectedShelter.penjemputan}
                   </p>
                   <p className="text-sm text-[#232323] mb-1">
-                    <span className="font-medium">Batas Jarak Penjemputan (km):</span>{" "}
+                    <span className="font-medium">
+                      Batas Jarak Penjemputan (km):
+                    </span>{" "}
                     {selectedShelter.jarakPenjemputan}
                   </p>
                 </div>
 
                 <div className="mb-6">
-                  <h4 className="text-md font-semibold text-[#131010] mb-2">Waktu Operasional:</h4>
+                  <h4 className="text-md font-semibold text-[#131010] mb-2">
+                    Waktu Operasional:
+                  </h4>
                   {selectedShelter.waktuOperasional &&
-                    Object.entries(selectedShelter.waktuOperasional).map(([day, hours]) => (
-                      <p key={day} className="text-sm text-[#232323] mb-1">
-                        <span className="font-medium">
-                          {day.charAt(0).toUpperCase() + day.slice(1)}:
-                        </span>{" "}
-                        {hours}
-                      </p>
-                    ))}
+                    Object.entries(selectedShelter.waktuOperasional).map(
+                      ([day, hours]) => (
+                        <p key={day} className="text-sm text-[#232323] mb-1">
+                          <span className="font-medium">
+                            {day.charAt(0).toUpperCase() + day.slice(1)}:
+                          </span>{" "}
+                          {hours}
+                        </p>
+                      )
+                    )}
                 </div>
 
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold text-[#131010] mb-2">
                     Barang yang Diterima
                   </h3>
-                  <p className="text-sm text-[#232323]">{selectedShelter.barangDiterima}</p>
+                  <p className="text-sm text-[#232323]">
+                    {selectedShelter.barangDiterima}
+                  </p>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-[#131010] mb-2">Deskripsi Singkat:</h3>
-                  <p className="text-sm text-[#232323]">{selectedShelter.deskripsi}</p>
+                  <h3 className="text-lg font-semibold text-[#131010] mb-2">
+                    Deskripsi Singkat:
+                  </h3>
+                  <p className="text-sm text-[#232323]">
+                    {selectedShelter.deskripsi}
+                  </p>
                 </div>
               </div>
             </div>
@@ -584,8 +651,9 @@ const rejectCollectionCenter = async (id) => {
               Pendaftaran Tempat Penampungan (Disetujui)
             </h2>
             <p className="text-sm text-[#232323] mb-6">
-              Apakah Anda yakin ingin menyetujui pendaftaran tempat penampungan ini? Setelah
-              disetujui, tempat penampungan dapat mulai menerima dan mengelola donasi.
+              Apakah Anda yakin ingin menyetujui pendaftaran tempat penampungan
+              ini? Setelah disetujui, tempat penampungan dapat mulai menerima
+              dan mengelola donasi.
             </p>
             <div className="flex justify-end space-x-4">
               <button
@@ -615,7 +683,8 @@ const rejectCollectionCenter = async (id) => {
               Pendaftaran Tempat Penampungan (Ditolak)
             </h2>
             <p className="text-sm text-[#232323] mb-6">
-              Apakah Anda yakin ingin menolak pendaftaran tempat penampungan ini?
+              Apakah Anda yakin ingin menolak pendaftaran tempat penampungan
+              ini?
             </p>
             <div className="flex justify-end space-x-4">
               <button

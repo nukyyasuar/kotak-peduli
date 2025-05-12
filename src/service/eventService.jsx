@@ -8,19 +8,17 @@ const getEvents = async (centerId, params = {}) => {
     if (!token) throw new Error("No authentication token found");
 
     // Construct query parameters for server-side filtering, searching, and pagination
-    const { search, isActive, page = 1, limit = 10, sortBy = "endDate", sortOrder = "asc" } = params;
-    //gunakan sort dari mat
-    
+    const { search, isActive, page = 1, limit = 10, sortOrder = "asc" } = params;
+
     let queryParams = new URLSearchParams();
     if (search) queryParams.append("search", search);
-    if (isActive) queryParams.append("isActive", isActive);
+    if (typeof isActive === "string") queryParams.append("isActive", isActive);
     queryParams.append("page", page);
     queryParams.append("limit", limit);
-    queryParams.append("sortBy", sortBy);
-    queryParams.append("sortOrder", sortOrder);
+    queryParams.append("sort", `endDate:${sortOrder}`);
 
     console.log("Fetching events for centerId:", centerId, "with params:", Object.fromEntries(queryParams));
-    
+
     const response = await axios.get(
       `${API_URL}/collection-centers/${centerId}/events?${queryParams.toString()}`,
       {
@@ -33,21 +31,22 @@ const getEvents = async (centerId, params = {}) => {
     );
 
     const { data, meta } = response.data;
-    
+
     if (!Array.isArray(data)) {
       throw new Error("Expected an array of events");
     }
-    
+
     console.log("Fetched events:", data);
     console.log("Pagination metadata:", meta);
-    
-    return { 
-      events: data, 
-      pagination: meta.pagination || { 
-        currentPage: 1, 
-        totalPages: 1, 
-        totalItems: data.length 
-      } 
+
+    return {
+      events: data,
+      pagination: meta?.pagination || {
+        currentPage: Number(page),
+        totalPages: Math.ceil(data.length / limit) || 1,
+        totalItems: data.length,
+        limit: Number(limit),
+      },
     };
   } catch (error) {
     console.error("Error fetching events:", error.response?.data || error.message);

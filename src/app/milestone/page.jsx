@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -10,6 +11,7 @@ import { useForm } from "react-hook-form";
 import * as YUP from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
 import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 // Yup validation schema
 const validationSchema = YUP.object({
@@ -47,6 +49,7 @@ const validationSchema = YUP.object({
 });
 
 export default function Home() {
+  // Initialize both checkboxes as true to show all events by default
   const [isAktif, setIsAktif] = useState(false);
   const [isSelesai, setIsSelesai] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +70,6 @@ export default function Home() {
     totalItems: 0,
   });
   const [collectionCenterId, setCollectionCenterId] = useState(null);
-  //bikin untuk pagination dynamic 
 
   // Initialize React Hook Form for Tambah form with Yup validation
   const tambahForm = useForm({
@@ -106,11 +108,11 @@ export default function Home() {
     e.preventDefault();
   };
 
-  // Get status filter value for API
+  // Modified getStatusFilter to handle showing both statuses
   const getStatusFilter = () => {
     if (isAktif && !isSelesai) return "active";
     if (!isAktif && isSelesai) return "finished";
-    return ""; // Both or none selected means no filter
+    return ""; // Both or none selected means no filter (show all)
   };
 
   // Fetch collection center ID once on component mount
@@ -130,34 +132,37 @@ export default function Home() {
     }
   };
 
-  // Fetch events from API with server-side pagination, filtering, and sorting
   const fetchEvents = useCallback(
     async (centerId = collectionCenterId) => {
       if (!centerId) return;
-
+  
       setIsLoading(true);
       setError(null);
-
+  
       try {
-        const params = {
+        // Only include isActive parameter if one status is selected but not both
+        let params = {
           search: searchQuery,
-          isActive: getStatusFilter() === "active" ? "true" : "false",
           page: currentPage,
-          limit: 10, // Match the API's limit
-          sortBy: "endDate",
+          limit: 10,
           sortOrder: sortOrder,
         };
-
+        
+        // Only apply the isActive filter if either only active or only finished is selected
+        if (isAktif !== isSelesai) {
+          params.isActive = isAktif ? "true" : "false";
+        }
+  
         const { events: fetchedEvents, pagination: paginationData } =
           await eventService.getEvents(centerId, params);
-
+  
         const typeToFrontend = {
           CLOTHES: "Pakaian",
           ELECTRONICS: "Elektronik",
           TOYS: "Mainan",
           BOOKS: "Buku",
         };
-
+  
         const mappedEvents = fetchedEvents
           .map(({ id, name, address, endDate, types, isActive }) => {
             // Map the types to Indonesian
@@ -167,7 +172,7 @@ export default function Home() {
                   .filter(Boolean)
                   .join(", ")
               : "";
-
+  
             // Format endDate safely
             let formattedEndDate = "";
             if (endDate) {
@@ -181,7 +186,7 @@ export default function Home() {
                 formattedEndDate = "";
               }
             }
-
+  
             return {
               id,
               name,
@@ -192,10 +197,10 @@ export default function Home() {
             };
           })
           .filter((event) => event !== null);
-
+  
         setEvents(mappedEvents);
         setPagination(paginationData);
-
+  
         if (mappedEvents.length === 0 && currentPage === 1) {
           setError("No events found for this collection center.");
         }

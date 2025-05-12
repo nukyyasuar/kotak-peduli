@@ -53,6 +53,24 @@ export default function AdminPage() {
   const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
   const [openDropdownIndex, setOpenDropdownIndex] = useState(null);
   const [selectedAdmin, setSelectedAdmin] = useState(null);
+  const [roleCreationSource, setRoleCreationSource] = useState(null); 
+
+
+  const translateRole = (role) => {
+    // Mapping for standard roles
+    const roleMapping = {
+      "Admin": "Admin",
+      "Moderator": "Moderator",
+      "Moderator Test": "Moderator Uji",
+      "Collection Center Donation Admin": "Admin Donasi Pusat Pengumpulan",
+      "Collection Center Profile Admin": "Admin Profil Pusat Pengumpulan",
+      "Collection Center Event Admin": "Admin Acara Pusat Pengumpulan",
+      "Collection Center Post Admin": "Admin Postingan Pusat Pengumpulan",
+      "Collection Center Role Admin": "Admin Peran Pusat Pengumpulan",
+    };
+    
+    return roleMapping[role] || role;
+  };
 
   // Initialize react-hook-form for each form with Yup resolver
   const tambahForm = useForm({
@@ -110,7 +128,7 @@ export default function AdminPage() {
             email: member.user.email,
             noTelepon: member.user.phoneNumber,
             penempatan: `Cabang ${member.collectionCenterId}`, 
-            role: member.role.name,
+            role: (member.role.name),
           }))
         );
       } catch (error) {
@@ -241,7 +259,7 @@ export default function AdminPage() {
         firstName,
         lastName,
         email: data.email,
-        phoneNumber: data.noTelepon,
+        phoneNumber: "+62"+ data.noTelepon,
         collectionCenterId: collectionCenterId,
       };
   
@@ -293,7 +311,7 @@ export default function AdminPage() {
         firstName,
         lastName,
         email: data.email,
-        phoneNumber: data.noTelepon,
+        phoneNumber: "+62"+ data.noTelepon,
         collectionCenterId: collectionCenterId,
       };
   
@@ -513,7 +531,7 @@ export default function AdminPage() {
                       <td className="p-3 text-black">{admin.email}</td>
                       <td className="p-3 text-black">{admin.noTelepon}</td>
                       <td className="p-3 text-black">{admin.penempatan}</td>
-                      <td className="p-3 text-black">{admin.role}</td>
+                      <td className="p-3 text-black">{translateRole(admin.role)}</td>
                       <td className="p-3 relative">
                         <button
                           onClick={() => toggleDropdown(indexOfFirstItem + index)}

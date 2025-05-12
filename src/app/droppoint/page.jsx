@@ -192,7 +192,7 @@ export default function Home() {
       const newDropPoint = {
         name: data.name,
         address: { detail: data.address },
-        phoneNumber: data.phoneNumber,
+        phoneNumber: "+62"+ data.phoneNumber,
         type: data.type,
       };
       await collectionCenterService.createPost(centerId, newDropPoint);
@@ -205,6 +205,7 @@ export default function Home() {
     }
   };
 
+
   const handleUbahSubmit = async (data) => {
     setIsLoading(true);
     setError(null);
@@ -216,6 +217,7 @@ export default function Home() {
         type: data.type,
       };
       const postId = selectedDropPoint.id;
+      console.log(updatedDropPoint)
       await collectionCenterService.updatePost(centerId, postId, updatedDropPoint);
       toggleUbahModal(null);
       fetchDropPoints(); // Refresh the list after updating
@@ -394,8 +396,8 @@ export default function Home() {
                     <option value="" disabled>
                       Pilih tipe tempat
                     </option>
-                    <option value="Cabang">Cabang</option>
-                    <option value="Drop Point">Drop Point</option>
+                    <option value="BRANCH">Cabang</option>
+                    <option value="DROP_POINT">Drop Point</option>
                   </select>
                   {tambahForm.formState.errors.type && (
                     <p className="text-red-600 text-xs mt-1">
