@@ -1,6 +1,6 @@
 import * as yup from "yup";
 
-const registrationSchema = yup.object().shape({
+export const registrationSchema = yup.object().shape({
   firstName: yup
     .string()
     .required("Nama depan tidak boleh kosong")
@@ -40,4 +40,19 @@ const registrationSchema = yup.object().shape({
     ),
 });
 
-export default registrationSchema;
+export const loginSchema = yup.object().shape({
+  email: yup
+    .string()
+    .required("Email tidak boleh kosong")
+    .email(
+      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)"
+    ),
+  password: yup
+    .string()
+    .required("Password tidak boleh kosong")
+    .min(8, "Password harus berisi minimal 8 karakter")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+      "Password harus mengandung huruf besar, huruf kecil, dan angka"
+    ),
+});
