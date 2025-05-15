@@ -3,18 +3,20 @@ import * as yup from "yup";
 const donationSchema = yup.object().shape({
   namaLengkap: yup.string().required("Nama lengkap wajib diisi."),
   nomorTelepon: yup
-    .number()
+    .string()
     .required("Nomor telepon wajib diisi.")
     .matches(/^[0-9]+$/, "Nomor telepon hanya boleh berisi angka.")
-    .min(13, "Nomor telepon minimal terdiri dari 13 digit.")
-    .max(15, "Nomor telepon maksimal terdiri dari 15 digit.")
+    .min(10, "Nomor telepon minimal terdiri dari 10 digit.")
+    .max(13, "Nomor telepon maksimal terdiri dari 13 digit.")
     .matches(
       /^8\d{9,14}$/,
       "Nomor telepon harus dimulai dengan angka ‘8’ (contoh: 81231231231)"
     ),
-  alamat: yup.string().required("Alamat lengkap wajib diisi."),
-  jalan: yup.string().required("Nama jalan wajib diisi."),
-  patokan: yup.string().required("Patokan wajib diisi."),
+  alamat: yup
+    .object()
+    .test("not-empty", "Alamat lengkap wajib diisi.", (value) => {
+      return value && value.jalan && value.latitude && value.longitude;
+    }),
   tempatPenampung: yup
     .string()
     .required("Pilih salah satu tempat penampung yang sesuai."),
@@ -38,34 +40,34 @@ const donationSchema = yup.object().shape({
           .typeError("Total berat barang wajib diisi.")
           .required("Total berat barang wajib diisi.")
           .min(1, "Total berat barang minimal 1 kg."),
-        event: yup.string().required("Pilih salah satu event yang sesuai."),
+        event: yup.string(),
         foto: yup
-          .mixed()
-          .required("Foto barang donasi wajib diunggah.")
+          .array()
+          .min(1, "Foto barang donasi wajib diunggah.")
           .test(
             "fileSize",
             "Ukuran file terlalu besar. Maksimal 5MB.",
-            (value) => {
-              return value && value.size <= 5 * 1024 * 1024;
+            (files) => {
+              return files?.every((file) => file.size <= 5 * 1024 * 1024);
             }
           )
           .test(
             "fileType",
             "Format file tidak didukung. Hanya JPG, JPEG, PNG yang diperbolehkan.",
-            (value) => {
-              return (
-                value &&
-                ["image/jpeg", "image/jpg", "image/png"].includes(value.type)
+            (files) => {
+              return files?.every((file) =>
+                ["image/jpeg", "image/jpg", "image/png"].includes(file.type)
               );
             }
           ),
         tipeElektronik: yup.array().when("jenis", {
-          is: "alat_elektronik",
-          then: yup
-            .array()
-            .min(1, "Pilih tipe elektronik yang sesuai.")
-            .of(yup.string().required()),
-          otherwise: yup.array().notRequired(),
+          is: "ELECTRONICS",
+          then: () =>
+            yup
+              .array()
+              .min(1, "Pilih tipe elektronik yang sesuai.")
+              .of(yup.object().required("Tipe elektronik wajib diisi.")),
+          otherwise: () => yup.array().notRequired(),
         }),
       })
     )
