@@ -49,4 +49,42 @@ const days = [
   { label: "Minggu", value: "SUNDAY" },
 ];
 
-export { statusList, donationTypes, shippingTypes, electronicOptions, days };
+const goodsTypes = [
+  {
+    src: "tabler:book-filled",
+    alt: "Book",
+    text: "Buku",
+    variant: "white",
+    value: "BOOKS",
+  },
+  {
+    src: "material-symbols:smart-toy",
+    alt: "Robot toy head",
+    text: "Mainan",
+    variant: "white",
+    value: "TOYS",
+  },
+  {
+    src: "healthicons:electricity",
+    alt: "Electronic part",
+    text: "Alat Elektronik",
+    variant: "white",
+    value: "ELECTRONICS",
+  },
+  {
+    src: "tabler:shirt-filled",
+    alt: "T-shirt",
+    text: "Pakaian",
+    variant: "white",
+    value: "CLOTHES",
+  },
+];
+
+export {
+  statusList,
+  donationTypes,
+  shippingTypes,
+  electronicOptions,
+  days,
+  goodsTypes,
+};
