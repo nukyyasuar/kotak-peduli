@@ -1,9 +1,16 @@
+import { toast } from "react-toastify";
+
 const createRequestOptions = (method, body) => {
   const isFormData = body instanceof FormData;
 
   return {
     method,
-    headers: isFormData ? {} : { "Content-Type": "application/json" },
+    headers: isFormData
+      ? { "ngrok-skip-browser-warning": "69420" }
+      : {
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "69420",
+        },
     body: isFormData ? body : JSON.stringify(body),
     redirect: "follow",
     credentials: "include",
@@ -43,6 +50,7 @@ const fetchWithAuth = async (url, options) => {
 
   if (response.status === 401) {
     const refreshToken = localStorage.getItem("refreshToken");
+
     if (!refreshToken) throw new Error("Refresh token tidak ditemukan");
 
     const refreshRes = await fetch(
@@ -53,8 +61,20 @@ const fetchWithAuth = async (url, options) => {
         body: JSON.stringify({ refreshToken }),
       }
     );
-
     const refreshData = await refreshRes.json();
+    if (refreshRes.status !== 201) {
+      toast.error("Refresh token tidak valid. Silahkan login kembali");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("refreshToken");
+      window.location.href = "/login";
+      return;
+    }
+
+    if (!refreshRes.ok) {
+      const err = await refreshRes.text();
+      console.error("Refresh error:", err);
+    }
+
     const newToken = refreshData?.data?.accessToken;
     if (!newToken) throw new Error("Gagal memperbarui token");
 
@@ -73,4 +93,9 @@ const fetchWithAuth = async (url, options) => {
   return response;
 };
 
-export { createRequestOptions, handleApiResponse, fetchWithAuth };
+export {
+  createRequestOptions,
+  handleApiResponse,
+  fetchWithAuth,
+  axiosInstance,
+};
