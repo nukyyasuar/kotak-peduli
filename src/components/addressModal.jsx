@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+
 import { ButtonCustom } from "./button";
 import { FormInput } from "./formInput";
-import { useForm } from "react-hook-form";
+import addressDetailSchema from "./schema/addresDetailSchema";
 
 const DEFAULT_LOCATION = { lat: -6.2088, lng: 106.8456 };
 
@@ -25,7 +28,10 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
     register,
     watch,
     setValue: setValueDetail,
+    formState: { errors },
+    handleSubmit,
   } = useForm({
+    resolver: yupResolver(addressDetailSchema),
     defaultValues: {
       alamat: {
         latitude: "",
@@ -189,7 +195,7 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
   };
 
   // Function reset peta ke lokasi pengguna saat ini
-  window.resetToUserLocation = () => {
+  const resetToUserLocation = () => {
     getUserLocation((loc) => {
       updateMapWithLocation(loc);
     });
@@ -255,6 +261,11 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
     handleClose();
   };
 
+  const handleCloseVariant = () => {
+    setValue("alamat.summary", watch("alamat.summary"));
+    handleClose();
+  };
+
   // Saat modal dibuka, inisialisasi map & autocomplete
   useEffect(() => {
     if (!isOpen || !window.google?.maps?.places) return;
@@ -310,7 +321,6 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
         window.currentMarker.setMap(null);
         window.currentMarker = null;
       }
-      window.resetToUserLocation = null;
     }
   }, [isOpen]);
 
@@ -334,6 +344,8 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
             }
             onChange={(val) => setValueDetail("alamat.jalan", val)}
             disabled={isLocating}
+            errors={errors?.alamat?.jalan?.message}
+            required
           />
           <FormInput
             inputType="text"
@@ -356,14 +368,7 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
             <button
               type="button"
               className="mt-2 flex items-center justify-center bg-[#F0BB78] text-white py-1 rounded-md hover:bg-amber-200 w-full"
-              onClick={() => {
-                if (
-                  typeof window !== "undefined" &&
-                  window.resetToUserLocation
-                ) {
-                  window.resetToUserLocation();
-                }
-              }}
+              onClick={resetToUserLocation}
               disabled={isLocating}
             >
               <Icon icon="mdi:map-marker" className="h-5 w-5" />
@@ -375,14 +380,14 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
         <div className="flex justify-end space-x-3 rounded-b-lg h-10">
           <ButtonCustom
             label="Simpan"
-            onClick={handleSaveLocation}
+            onClick={handleSubmit(handleSaveLocation)}
             variant="brown"
             className="w-full"
             type="button"
           />
           <ButtonCustom
             label="Batal"
-            onClick={handleClose}
+            onClick={handleCloseVariant}
             variant="white"
             className="w-full"
             type="button"
