@@ -15,10 +15,7 @@ const logout = async () => {
     );
     const result = await handleApiResponse(response);
 
-    console.log(result);
-    console.log(response);
-
-    return result.data;
+    return result;
   } catch (error) {
     throw new Error(error.message);
   }
