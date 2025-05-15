@@ -1,4 +1,8 @@
-import { createRequestOptions, handleApiResponse } from "../helpers";
+import {
+  createRequestOptions,
+  handleApiResponse,
+  fetchWithAuth,
+} from "../helpers";
 
 const getCollectionCenters = async () => {
   try {
@@ -28,4 +32,18 @@ const getOneCollectionCenter = async (id) => {
   }
 };
 
-export { getCollectionCenters, getOneCollectionCenter };
+const createCollectionCenter = async (payload) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers`,
+      createRequestOptions("POST", payload)
+    );
+    const result = await handleApiResponse(response);
+
+    return result.data;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+export { getCollectionCenters, getOneCollectionCenter, createCollectionCenter };
