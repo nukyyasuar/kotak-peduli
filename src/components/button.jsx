@@ -1,4 +1,5 @@
 import { Icon } from "@iconify/react";
+import { BeatLoader } from "react-spinners";
 
 const baseClass =
   "text-base py-2 rounded-lg font-bold px-7 flex items-center justify-center gap-1";
@@ -10,6 +11,7 @@ const variantStyles = {
     "border border-[#F0BB78] text-black hover:bg-[#F0BB78] hover:text-white",
   outlineBrown:
     "border border-[#543A14] text-black hover:bg-[#543a14] hover:text-white",
+  disabled: "bg-[#EDEDED] cursor-not-allowed",
 };
 
 const ButtonCustom = ({
@@ -19,19 +21,33 @@ const ButtonCustom = ({
   icon,
   className,
   type,
-  newKey,
   disabled,
+  isLoading,
+  ...rest
 }) => {
   return (
     <button
+      key={label}
       type={type}
-      key={newKey}
       className={`${baseClass} ${variantStyles[variant]} ${className} ${disabled ? `cursor-not-allowed` : `cursor-pointer`}`}
       onClick={onClick}
       disabled={disabled}
+      {...rest}
     >
-      {icon && <Icon icon={icon} width={20} height={20} />}
-      {label}
+      {isLoading ? (
+        <BeatLoader
+          color="white"
+          loading={isLoading}
+          size={5}
+          aria-label="Loading Spinner"
+          data-testid="loader"
+        />
+      ) : (
+        <>
+          {icon && <Icon icon={icon} width={20} height={20} />}
+          {label}
+        </>
+      )}
     </button>
   );
 };
