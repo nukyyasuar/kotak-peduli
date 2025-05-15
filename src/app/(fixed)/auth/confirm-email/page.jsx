@@ -17,17 +17,19 @@ export default function ConfirmEmail() {
           token: token,
         };
 
-        const response = await confirmEmail(payload);
+        await confirmEmail(payload);
 
-        if (response) {
-          toast.success("Email berhasil diverifikasi.");
-          setStatus("success");
+        toast.success("Email berhasil diverifikasi.");
+        setStatus("success");
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1000);
+      } catch (error) {
+        if (error.message === "Token expired") {
+          toast.error("Token sudah kadaluarsa.");
         } else {
           toast.error("Verifikasi gagal. Silakan coba lagi.");
-          setStatus("error");
         }
-      } catch (error) {
-        toast.error("Terjadi kesalahan. Silakan coba lagi.");
         setStatus("error");
       }
     };
