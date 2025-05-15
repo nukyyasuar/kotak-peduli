@@ -1,23 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Icon } from "@iconify/react";
 import { useForm } from "react-hook-form";
 import Image from "next/image";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { toast } from "react-toastify";
+import { ClipLoader } from "react-spinners";
 
 import { FormInput } from "src/components/formInput";
 import AddressModal from "src/components/addressModal";
 import { ButtonCustom } from "src/components/button";
 import OperationalModal from "src/components/operationalModal";
-import { donationTypes } from "src/components/options";
-import goodsShelterRegistSchema from "src/components/schema/goodsShelterRegistSchema";
+import { donationTypes, days } from "src/components/options";
+import handleOutsideModal from "src/components/handleOutsideModal";
+
+import collectionCenterRegistSchema from "src/components/schema/collectionCenterRegistSchema";
 
 import {
   createCollectionCenter,
   getOneCollectionCenter,
 } from "src/services/api/collectionCenter";
 import { getProfile } from "src/services/api/profile";
+
+import {
+  onAuthStateChange,
+  sendPhoneVerificationCode,
+  setupRecaptcha,
+  verifyPhoneCode,
+} from "src/app/auth/auth";
 
 export default function DaftarTempatPenampung() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,6 +39,21 @@ export default function DaftarTempatPenampung() {
   const [isApproved, setIsApproved] = useState(false);
   const [isDecline, setIsDecline] = useState(false);
   const [dataProfile, setDataProfile] = useState(null);
+  const [isLoadingCreateCollectionCenter, setIsLoadingCreateCollectionCenter] =
+    useState(false);
+  const [isLoadingCollectionCenter, setIsLoadingCollectionCenter] =
+    useState(false);
+
+  const [isEditPhoneNumber, setIsEditPhoneNumber] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const inputRefs = useRef([]);
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isLoadingSendOtp, setIsLoadingSendOtp] = useState(false);
+  const [isLoadingVerifyOtp, setIsLoadingVerifyOtp] = useState(false);
+  const editPhoneNumberModalRef = useRef();
+  const [idTokenValue, setIdTokenValue] = useState(null);
+  const [phoneNumberHolder, setPhoneNumberHolder] = useState(null);
 
   const {
     register,
@@ -36,14 +62,16 @@ export default function DaftarTempatPenampung() {
     watch,
     setValue,
     formState: { errors },
+    clearErrors,
+    reset,
   } = useForm({
+    resolver: yupResolver(collectionCenterRegistSchema),
+    mode: "onBlur",
     defaultValues: {
       namaTempatPenampung: "",
       email: "",
       nomorTelepon: "",
-      alamat: "",
-      jalan: "",
-      patokan: "",
+      alamat: {},
       penjemputan: "",
       batasJarak: "",
       waktuOperasional: [],
@@ -51,15 +79,28 @@ export default function DaftarTempatPenampung() {
       deskripsi: "",
       foto: "",
     },
-    resolver: yupResolver(goodsShelterRegistSchema),
   });
 
   const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+  const watchPhoneNumber = watch("nomorTelepon");
+
+  handleOutsideModal({
+    ref: editPhoneNumberModalRef,
+    isOpen: isEditPhoneNumber,
+    onClose: () => {
+      setValue("nomorTelepon", dataProfile?.phoneNumber?.slice(3));
+      setIsOtpSent(false);
+      setIsEditPhoneNumber(false);
+    },
+  });
+
+  console.log("otpsent", isOtpSent);
+  console.log(watch("nomorTelepon"));
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setValue("foto", file);
+      setValue("foto", file, { shouldValidate: true });
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
     }
@@ -71,6 +112,8 @@ export default function DaftarTempatPenampung() {
 
     const { alamat } = data;
     formData.append("name", data.namaTempatPenampung);
+    formData.append("phoneNumber", `+62${data.nomorTelepon}`);
+    formData.append("email", data.email);
     formData.append("description", data.deskripsi);
     formData.append("file", data.foto);
     formData.append("distanceLimitKm", data.batasJarak);
@@ -96,32 +139,43 @@ export default function DaftarTempatPenampung() {
       );
     });
 
-    console.log(formData);
+    if (idTokenValue) {
+      formData.append("idToken", idTokenValue);
+    }
+
+    console.log("Submitted formdata:", formData);
 
     try {
+      setIsLoadingCreateCollectionCenter(true);
       createCollectionCenter(formData)
         .then((response) => {
           console.log("Response:", response);
-          alert(
+          toast.success(
             "Pendaftaran berhasil. Pendaftaran akan diverifikasi terlebih dahulu oleh admin."
           );
           setIsSubmitted(true);
           setIsPending(true);
+          setTimeout(() => {
+            location.reload();
+          }, 2000);
         })
         .catch((error) => {
           console.error("Error:", error);
-          alert("Pendaftaran gagal");
+          toast.error("Pendaftaran gagal");
           setIsSubmitted(false);
         });
     } catch (error) {
       console.error("Error:", error);
-      alert("Pendaftaran gagal");
+      toast.error("Pendaftaran gagal");
       setIsSubmitted(false);
+    } finally {
+      setIsLoadingCreateCollectionCenter(false);
     }
   };
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setIsLoadingCollectionCenter(true);
       try {
         const data = await getProfile();
         setDataProfile(data);
@@ -143,14 +197,148 @@ export default function DaftarTempatPenampung() {
         }
       } catch (error) {
         console.error("Error fetching profile data:", error);
+      } finally {
+        setIsLoadingCollectionCenter(false);
       }
     };
     fetchProfile();
   }, []);
 
-  console.log(errors);
+  useEffect(() => {
+    if (watch("alamat.summary")) {
+      clearErrors("alamat");
+    }
+  }, [watch("alamat.summary")]);
 
-  return (
+  useEffect(() => {
+    if (watch("waktuOperasional")) {
+      clearErrors("waktuOperasional");
+    }
+  }, [watch("waktuOperasional")]);
+
+  useEffect(() => {
+    if (dataProfile) {
+      const formattedPhoneNumber = dataProfile?.phoneNumber?.startsWith("+62")
+        ? dataProfile?.phoneNumber.slice(3)
+        : dataProfile?.phoneNumber;
+
+      reset({
+        nomorTelepon: formattedPhoneNumber || "",
+        email: dataProfile.email || "",
+      });
+      setPhoneNumberHolder(formattedPhoneNumber);
+    }
+  }, [dataProfile, reset]);
+
+  useEffect(() => {
+    if (watchPhoneNumber !== dataProfile?.phoneNumber.slice(3)) {
+      console.log("cek");
+    }
+  }, [watchPhoneNumber, dataProfile]);
+
+  // OTP Verification
+  const handleOtpChange = (element, index, event) => {
+    if (isNaN(element.value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = element.value;
+    setOtp(newOtp);
+
+    if (element.value && index < otp.length - 1) {
+      inputRefs.current[index + 1].focus();
+    }
+
+    if (!element.value && index > 0 && event.key === "Backspace") {
+      inputRefs.current[index - 1].focus();
+    }
+  };
+
+  const handleKeyDown = (event, index) => {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      const newOtp = [...otp];
+      newOtp[index - 1] = "";
+      setOtp(newOtp);
+      inputRefs.current[index - 1].focus();
+    } else if (event.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1].focus();
+    } else if (event.key === "ArrowRight" && index < otp.length - 1) {
+      inputRefs.current[index + 1].focus();
+    }
+  };
+
+  const handleSendOtp = async () => {
+    setIsLoadingSendOtp(true);
+    const phoneNumber = watch("nomorTelepon");
+
+    if (!phoneNumber || phoneNumber.length < 9) {
+      toast.error("Masukkan nomor telepon yang valid.");
+      setIsLoadingSendOtp(false);
+      return;
+    }
+
+    try {
+      const confirmation = await sendPhoneVerificationCode("+62" + phoneNumber);
+      setConfirmationResult(confirmation);
+      setIsOtpSent(true);
+      toast.success("OTP berhasil dikirim ke nomor Anda");
+    } catch (err) {
+      setIsOtpSent(false);
+      console.error("Error during OTP sending:", err);
+      toast.error(err.message || "Terjadi kesalahan saat mengirim OTP");
+    } finally {
+      setIsLoadingSendOtp(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    setIsLoadingVerifyOtp(true);
+    try {
+      const user = await verifyPhoneCode(confirmationResult, otp.join(""));
+      if (user) {
+        const idToken = await user.getIdToken();
+        setIdTokenValue(idToken);
+        setPhoneNumberHolder(watchPhoneNumber);
+        console.log("watchPhoneNumber", watchPhoneNumber);
+        toast.success("Verifikasi nomor telepon berhasil");
+      } else {
+        toast.error("Gagal memverifikasi nomor telepon");
+      }
+    } catch (error) {
+      {
+        error?.code === "auth/invalid-verification-code"
+          ? toast.error("Kode OTP salah. Silakan coba lagi.")
+          : error?.code === "auth/session-expired"
+            ? toast.error(
+                "Sesi OTP telah kedaluwarsa. Silakan minta kode baru."
+              )
+            : error?.message?.includes("Data registrasi tidak lengkap")
+              ? toast.error(error.message)
+              : toast.error(
+                  `Gagal memverifikasi OTP: ${error.message || "Terjadi kesalahan"}`
+                );
+      }
+    } finally {
+      setIsOtpSent(false);
+      setIsEditPhoneNumber(false);
+      setOtp(["", "", "", "", "", ""]);
+      setConfirmationResult(null);
+      setIsLoadingVerifyOtp(false);
+    }
+  };
+
+  console.log("isSubmitted", watch("nomorTelepon"));
+
+  return isLoadingCreateCollectionCenter || isLoadingCollectionCenter ? (
+    <div className="flex items-center justify-center h-screen">
+      <ClipLoader
+        color="#F5A623"
+        loading={isLoadingCreateCollectionCenter || isLoadingCollectionCenter}
+        size={50}
+        aria-label="Loading Spinner"
+        data-testid="loader"
+      />
+    </div>
+  ) : (
     <div className="space-y-3">
       <div className="mb-6 text-[#543A14] space-y-2">
         <h2 className="text-xl font-bold">
@@ -198,13 +386,108 @@ export default function DaftarTempatPenampung() {
                   type="email"
                   placeholder="Contoh: user@example.com"
                   register={register("email")}
+                  required
+                  errors={errors?.email?.message}
                 />
-                <FormInput
-                  label="Nomor Telepon (Whatsapp)"
-                  inputType="text"
-                  placeholder="Contoh: 81212312312"
-                  register={register("nomorTelepon")}
-                />
+                <div className="flex items-end">
+                  <FormInput
+                    label="Nomor Telepon (Whatsapp)"
+                    inputType="text"
+                    placeholder="Contoh: 81212312312"
+                    value={phoneNumberHolder || ""}
+                    errors={errors?.nomorTelepon?.message}
+                    inputStyles={"border-none"}
+                    required
+                    disabled
+                  />
+                  <ButtonCustom
+                    variant="orange"
+                    type="button"
+                    label={`Ubah Nomor Telepon`}
+                    className="ml-3 text-nowrap h-12"
+                    onClick={() => setIsEditPhoneNumber(true)}
+                  />
+                  {isEditPhoneNumber && (
+                    <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
+                      <div
+                        ref={editPhoneNumberModalRef}
+                        className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
+                      >
+                        <h3 className="text-xl font-bold">
+                          Ubah Nomor Telepon
+                        </h3>
+
+                        <div className="flex items-end">
+                          <FormInput
+                            label="Nomor Telepon (Whatsapp)"
+                            inputType="text"
+                            placeholder="Contoh: 81212312312"
+                            register={register("nomorTelepon")}
+                            inputStyles={`w-full`}
+                          />
+                          {dataProfile?.phoneNumber !==
+                            "+62" + watch("nomorTelepon") && (
+                            <ButtonCustom
+                              variant="orange"
+                              type="button"
+                              label={`Kirim OTP`}
+                              className="h-12 ml-3 text-nowrap"
+                              isLoading={isLoadingSendOtp}
+                              onClick={handleSendOtp}
+                            />
+                          )}
+                        </div>
+
+                        <div id="recaptcha-container" />
+
+                        {isOtpSent && (
+                          <div className="pt-5 border-t space-y-3">
+                            <h3 className="text-lg font-bold">
+                              Verifikasi OTP
+                            </h3>
+                            <div className="flex gap-3">
+                              <div className="flex gap-3">
+                                {otp.map((data, index) => (
+                                  <input
+                                    key={index}
+                                    type="text"
+                                    maxLength="1"
+                                    value={data}
+                                    onChange={(e) =>
+                                      handleOtpChange(e.target, index, e)
+                                    }
+                                    onKeyDown={(e) => handleKeyDown(e, index)}
+                                    ref={(el) =>
+                                      (inputRefs.current[index] = el)
+                                    }
+                                    className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
+                                    style={{
+                                      color: data ? "#131010" : "#000",
+                                      outlineColor: data
+                                        ? "#131010"
+                                        : "#C2C2C2",
+                                    }}
+                                    aria-label={`OTP digit ${index + 1}`}
+                                    aria-required="true"
+                                    autoComplete="one-time-code"
+                                  />
+                                ))}
+                              </div>
+                              <ButtonCustom
+                                type="button"
+                                variant="orange"
+                                label="Konfirmasi"
+                                onClick={handleVerifyOtp}
+                                isLoading={isLoadingVerifyOtp}
+                                className="min-w-[146px]"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <FormInput
@@ -215,6 +498,8 @@ export default function DaftarTempatPenampung() {
                   register={register("alamat")}
                   onClick={() => setIsModalOpen(!isModalOpen)}
                   className="flex-1"
+                  required
+                  errors={errors?.alamat?.message}
                 />
                 {/* Modal Alamat Lengkap */}
                 <AddressModal
@@ -234,20 +519,23 @@ export default function DaftarTempatPenampung() {
                     { label: "Tersedia", value: "PICKED_UP" },
                     { label: "Tidak Tersedia", value: "DELIVERED" },
                   ]}
+                  required
+                  errors={errors?.penjemputan?.message}
                 />
-                <FormInput
-                  label="Batas Jarak Penjemputan (KM)"
-                  inputType="text"
-                  placeholder="Contoh: 10"
-                  register={register("batasJarak")}
-                />
+                {watch("penjemputan") === "PICKED_UP" && (
+                  <FormInput
+                    label="Batas Jarak Penjemputan (KM)"
+                    inputType="text"
+                    placeholder="Contoh: 10"
+                    register={register("batasJarak")}
+                  />
+                )}
               </div>
               <div className="flex gap-3">
                 <FormInput
                   label="Waktu Operasional (WIB)"
                   inputType="text"
                   placeholder="Pilih hari dan jam operasional yang sesuai"
-                  register={register("waktuOperasional")}
                   onClick={() => {
                     setIsModalOperationalOpen(!isModalOperationalOpen);
                   }}
@@ -255,13 +543,17 @@ export default function DaftarTempatPenampung() {
                     Array.isArray(watch("waktuOperasional")) &&
                     watch("waktuOperasional").length > 0
                       ? watch("waktuOperasional")
-                          .map(
-                            (item) =>
-                              `${capitalize(item.day)} ${item.openHour}:${item.openMinute} - ${item.closeHour}:${item.closeMinute}`
-                          )
+                          .map((item) => {
+                            const dayLabel =
+                              days.find((d) => d.value === item.day)?.label ||
+                              item.day;
+                            return `${dayLabel} ${item.openHour}:${item.openMinute} - ${item.closeHour}:${item.closeMinute}`;
+                          })
                           .join(", ")
                       : ""
                   }
+                  required
+                  errors={errors?.waktuOperasional?.message}
                 />
                 {/* Modal Waktu Operasional */}
                 <OperationalModal
@@ -278,6 +570,8 @@ export default function DaftarTempatPenampung() {
                   name="jenisBarang"
                   placeholder="Pilih jenis barang yang diterima"
                   type="checkbox"
+                  required
+                  errors={errors?.jenisBarang?.message}
                 />
               </div>
 
@@ -286,11 +580,13 @@ export default function DaftarTempatPenampung() {
                 inputType="textArea"
                 placeholder="Contoh:  Kami adalah lembaga kemanusiaan yang berfokus pada bantuan darurat untuk korban bencana alam. Donasi yang kami terima akan disalurkan langsung kepada mereka yang terdampak bencana alam."
                 register={register("deskripsi")}
+                required
+                errors={errors?.deskripsi?.message}
               />
 
               {/* Input Foto + Preview */}
               <div className="flex w-full">
-                <div className="flex gap-3 w-full">
+                <div className="flex gap-3 w-full mt-1">
                   <div className="flex flex-col items-center">
                     <div className="w-60 h-40 bg-gray-100 rounded-lg mb-3 flex items-center justify-center relative group">
                       {previewUrl ? (
@@ -327,10 +623,18 @@ export default function DaftarTempatPenampung() {
                     <FormInput
                       inputType="text"
                       placeholder=".jpg, .png"
-                      label="Foto Barang"
+                      label="Foto Tempat Penampung"
                       className="pointer-events-none"
-                      value={watch("foto").name}
+                      value={watch("foto")?.name}
+                      register={register("foto")}
+                      required
+                      errors={errors?.foto?.message}
                     />
+                    {errors?.foto && (
+                      <p className="text-[#E52020] text-sm -mt-2">
+                        {errors?.foto?.message}
+                      </p>
+                    )}
                     <div className="text-sm text-black">
                       <p>*Ukuran maksimal 5MB</p>
                       <p>*Format .jpg atau .png</p>
