@@ -5,6 +5,24 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 
+import { logout } from "src/services/api/logout";
+import { getProfile } from "src/services/api/profile";
+import { toast } from "react-toastify";
+
+const baseMenuList = [
+  { href: "/cerita-kami", text: "Cerita Kami" },
+  { href: "/tempat-penampung", text: "Tempat Penampung" },
+  { href: "/", text: "Barang Donasi", type: "admin" },
+  { href: "/", text: "Event", type: "admin" },
+  { href: "/", text: "Cabang", type: "admin" },
+  { href: "/", text: "Administrator", type: "admin" },
+];
+
+const buttonMenuList = [
+  { href: "/daftar", text: "Daftar" },
+  { href: "/login", text: "Masuk" },
+];
+
 function NavBtn({ href, text, variant = "nav" }) {
   const baseClasses = "px-7 rounded-lg flex items-center";
 
@@ -20,9 +38,45 @@ function NavBtn({ href, text, variant = "nav" }) {
   );
 }
 
+const LogoutMenu = ({ handleLogout }) => {
+  return (
+    <div className="absolute w-10 h-12 py-2 text-black">
+      <div className="absolute bg-white shadow-lg border border-[#C2C2C2] rounded-lg z-20 w-fit right-0">
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 rounded-lg text-sm w-full hover:bg-[#E52020] hover:text-white cursor-pointer"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [role, setRole] = useState("null");
+  const [showLogout, setShowLogout] = useState(false);
+  const [dataProfile, setDataProfile] = useState(null);
+
+  const handleLogout = async () => {
+    try {
+      const result = await logout();
+
+      if (result.meta.message[0] === "Request successful") {
+        toast.success("Logout successful");
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("refreshToken");
+        // window.location.href = "/";
+        setIsLoggedIn(false);
+        setRole(null);
+      } else {
+        toast.error("Logout failed");
+      }
+    } catch (error) {
+      toast.error("Logout failed:", error);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -31,12 +85,24 @@ export default function Header() {
     if (token) {
       setIsLoggedIn(true);
       if (userRole) {
-        setRole(userRole); // admin ato user
+        setRole(userRole);
       }
     } else {
       setIsLoggedIn(false);
       setRole(null);
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const data = await getProfile();
+        setDataProfile(data);
+      } catch (error) {
+        console.error("Error fetching profile data:", error);
+      }
+    };
+    fetchProfile();
   }, []);
 
   return (
@@ -57,19 +123,31 @@ export default function Header() {
             </div>
             {/* Navigasi */}
             <div className="flex gap-2">
-              {role === "admin" ? (
-                <>
-                  <NavBtn href="/" text="Barang Donasi" />
-                  <NavBtn href="/" text="Event" />
-                  <NavBtn href="/" text="Cabang" />
-                  <NavBtn href="/" text="Administrator" />
-                </>
-              ) : (
-                <>
-                  <NavBtn href="/about" text="Cerita Kami" />
-                  <NavBtn href="/tempat-penampung" text="Tempat Penampung" />
-                </>
-              )}
+              {role === "admin"
+                ? baseMenuList.map((item, index) => {
+                    if (item.type === "admin") {
+                      return (
+                        <NavBtn
+                          key={index}
+                          index={index}
+                          href={item.href}
+                          text={item.text}
+                        />
+                      );
+                    }
+                  })
+                : baseMenuList.map((item, index) => {
+                    if (item.type !== "admin") {
+                      return (
+                        <NavBtn
+                          key={index}
+                          index={index}
+                          href={item.href}
+                          text={item.text}
+                        />
+                      );
+                    }
+                  })}
             </div>
           </div>
 
@@ -78,24 +156,48 @@ export default function Header() {
             {role === "admin" ? null : (
               <Link
                 href="/donasi"
-                className="text-[#FFF0DC] font-bold h-10 px-7 bg-[#543a14] flex items-center rounded-lg hover:bg-[#6B4D20]"
+                // href={localStorage.getItem("authToken") ? "/donasi" : "/login"}
+                className="text-[#FFF0DC] font-bold h-10 px-7 bg-[#543a14] flex items-center rounded-lg hover:bg-[#6B4D20] z-10"
               >
                 Donasi Sekarang
               </Link>
             )}
             {isLoggedIn ? (
-              <Link href="/profile">
-                <Link href="/profile">
-                  <div className="w-10 h-10 bg-[#543a14] hover:bg-[#6B4D20] flex items-center justify-center rounded-full">
+              <div
+                className="relative z-0"
+                onMouseEnter={() => setShowLogout(true)}
+                onMouseLeave={() => setShowLogout(false)}
+              >
+                <Link
+                  href="/akun"
+                  className="w-10 h-10 bg-[#543a14] hover:bg-[#6B4D20] flex items-center justify-center rounded-full cursor-pointer"
+                >
+                  {dataProfile?.avatar?.file ? (
+                    <Image
+                      src={dataProfile.avatar.file.path}
+                      alt="profile"
+                      className="rounded-full object-cover aspect-square"
+                      fill="true"
+                    />
+                  ) : (
                     <Icon icon="mdi:user" width={30} height={30} />
-                  </div>
+                  )}
                 </Link>
-              </Link>
+
+                {showLogout && <LogoutMenu handleLogout={handleLogout} />}
+              </div>
             ) : (
-              <>
-                <NavBtn href="/login" text="Masuk" variant="btn" />
-                <NavBtn href="/registration" text="Daftar" variant="btn" />
-              </>
+              buttonMenuList.map((item, index) => {
+                return (
+                  <NavBtn
+                    key={index}
+                    index={index}
+                    href={item.href}
+                    text={item.text}
+                    variant="btn"
+                  />
+                );
+              })
             )}
           </div>
         </div>
