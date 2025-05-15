@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { useForm, useWatch } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { components } from "react-select";
 import { Tooltip } from "react-tooltip";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { toast } from "react-toastify";
 
 import { FormInput } from "src/components/formInput";
 import { ButtonCustom } from "src/components/button";
 import AddressModal from "src/components/addressModal";
+import donationSchema from "src/components/schema/donationSchema";
 
 import {
   getCollectionCenters,
@@ -19,27 +22,7 @@ import { getProfile } from "src/services/api/profile";
 import { createDonation } from "src/services/api/donation";
 import { getEvents } from "src/services/api/event";
 
-const dummyOptions = [
-  { value: "opsi_satu", label: "Opsi 1" },
-  { value: "opsi_dua", label: "Opsi 2" },
-  { value: "opsi_tiga", label: "Opsi 3" },
-];
-const electronicOptions = [
-  { label: "Laptop", value: "laptop" },
-  { label: "Televisi", value: "tv" },
-  { label: "Kulkas", value: "kulkas" },
-  { label: "Mesin Cuci", value: "mesin_cuci" },
-  { label: "Microwave", value: "microwave" },
-  { label: "AC", value: "ac" },
-  { label: "Kipas Angin", value: "kipas_angin" },
-  { label: "Setrika", value: "setrika" },
-  { label: "Blender", value: "blender" },
-  { label: "Rice Cooker", value: "rice_cooker" },
-  { label: "Speaker", value: "speaker" },
-  { label: "Printer", value: "printer" },
-  { label: "Monitor", value: "monitor" },
-  { label: "Proyektor", value: "proyektor" },
-];
+import { electronicOptions } from "src/components/options";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,7 +36,18 @@ export default function Home() {
   const [events, setEvents] = useState({});
   const [isCalculating, setIsCalculating] = useState(false);
 
-  const { register, handleSubmit, control, watch, setValue } = useForm({
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+    clearErrors,
+    setError,
+  } = useForm({
+    resolver: yupResolver(donationSchema),
     defaultValues: {
       namaLengkap: "",
       nomorTelepon: "",
@@ -63,6 +57,10 @@ export default function Home() {
       tipePengiriman: "",
       barangDonasi: [],
     },
+  });
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "barangDonasi",
   });
 
   const selectedTempatPenampung = watch("tempatPenampung");
@@ -87,7 +85,7 @@ export default function Home() {
     dataProfile?.firstName && dataProfile?.lastName
       ? dataProfile?.firstName + " " + dataProfile?.lastName
       : "";
-  const dummyDonationTypes = dataCollectionCenter?.types?.map((item) => ({
+  const donationTypeOptions = dataCollectionCenter?.types?.map((item) => ({
     value: item,
     label:
       item === "CLOTHES"
@@ -100,6 +98,12 @@ export default function Home() {
               ? "Buku"
               : item,
   }));
+
+  const isEmptyObject = (obj) => {
+    return Object.keys(obj).length === 0;
+  };
+  const calculatingBtnDisabled =
+    isEmptyObject(watch("alamat")) || !selectedTempatPenampung || isCalculating;
 
   const handleAddDonationType = (value, label) => {
     setIsAddDonationType(!isAddDonationType);
@@ -114,7 +118,7 @@ export default function Home() {
           jumlah: "",
           berat: "",
           event: "",
-          foto: "",
+          foto: [],
           tipeElektronik: [],
         },
       ]);
@@ -122,9 +126,26 @@ export default function Home() {
   };
 
   const handleRemoveDonationItem = (valueToRemove) => {
+    const errorPathsToClear = [];
+    watch("barangDonasi").forEach((item, index) => {
+      if (item.jenis === valueToRemove) {
+        errorPathsToClear.push(
+          `barangDonasi.${index}.jumlah`,
+          `barangDonasi.${index}.berat`,
+          `barangDonasi.${index}.event`,
+          `barangDonasi.${index}.foto`,
+          `barangDonasi.${index}.tipeElektronik`
+        );
+      }
+    });
+    if (errorPathsToClear.length > 0) {
+      clearErrors(errorPathsToClear);
+    }
+
     const updatedItems = watch("barangDonasi").filter(
       (item) => item.jenis !== valueToRemove
     );
+
     setValue("barangDonasi", updatedItems);
   };
 
@@ -141,8 +162,6 @@ export default function Home() {
         ? selectedDataPost.longitude
         : dataCollectionCenter.longitude,
     };
-    console.log(selectedDataPost.latitude);
-    console.log(dataCollectionCenter.longitude);
 
     try {
       setIsCalculating(true);
@@ -184,15 +203,21 @@ export default function Home() {
       formData.append(`donations[${index}][donationType]`, item.jenis);
       formData.append(`donations[${index}][quantity]`, item.jumlah);
       formData.append(`donations[${index}][weight]`, item.berat);
-      formData.append(`donations[${index}][eventId]`, item.event);
+      if (item.event !== "") {
+        formData.append(`donations[${index}][eventId]`, item.event);
+      }
       item.foto.forEach((file) => {
         formData.append(`donations[${index}][files]`, file);
       });
 
-      // Kalau ada tipeElektronik dan isinya array
-      // item.tipeElektronik.forEach((tipe, i) => {
-      //   formData.append(`donations[${index}].electornicType[${i}]`, tipe);
-      // });
+      const electronicTypesString = item.tipeElektronik
+        .map((tipe) => tipe.value)
+        .join(", ")
+        .toLowerCase();
+      formData.append(
+        `donations[${index}][electronicType]`,
+        electronicTypesString
+      );
     });
 
     console.log("data mentah:", data);
@@ -203,6 +228,8 @@ export default function Home() {
         .then((res) => {
           console.log("Berhasil mengirim data:", res);
           alert("Berhasil mengirim data");
+          reset();
+          window.location.href("/akun/riwayat-donasi");
         })
         .catch((err) => {
           console.error("Gagal mengirim data:", err);
@@ -218,13 +245,16 @@ export default function Home() {
     const fetchCollectionCenters = async () => {
       try {
         const data = await getCollectionCenters();
-        const formatted = data.map((item) => ({
+        const approvedData = data.filter(
+          (item) => item.approval.latestStatus === "APPROVED"
+        );
+        const formatted = approvedData.map((item) => ({
           value: item.id,
           label: item.name,
         }));
         setCollectionCenters(formatted);
       } catch (error) {
-        console.error("Error fetching collection centers:", error);
+        toast.error("Gagal memuat data tempat penampung");
       }
     };
 
@@ -283,12 +313,23 @@ export default function Home() {
       try {
         const data = await getProfile();
         setDataProfile(data);
+        reset((prevValues) => ({
+          ...prevValues,
+          namaLengkap: data.firstName + " " + data.lastName,
+          nomorTelepon: data.phoneNumber.slice(3),
+        }));
       } catch (error) {
         console.error("Error fetching profile data:", error);
       }
     };
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (watch("alamat.summary")) {
+      clearErrors("alamat");
+    }
+  }, [watch("alamat.summary")]);
 
   return (
     <section className="bg-white py-12 flex flex-col justify-center text-black">
@@ -315,30 +356,40 @@ export default function Home() {
               <h3 className="text-xl font-bold">Informasi Donatur</h3>
               <div className="grid grid-cols-2 gap-5">
                 <FormInput
+                  name="namaLengkap"
                   label="Nama Lengkap"
+                  required
                   inputType="text"
                   placeholder="Contoh: Matthew Emmanuel"
                   value={namaLengkap}
                   register={register("namaLengkap")}
-                  inputStyles="bg-[#D9D9D9] cursor-not-allowed"
+                  errors={errors?.namaLengkap?.message}
+                  disabled
                 />
                 <FormInput
+                  name="nomorTelepon"
                   label="Nomor Telepon (Whatsapp)"
                   inputType="text"
+                  required
                   value={dataProfile?.phoneNumber?.slice(3) || ""}
                   placeholder="Contoh: 81212312312"
                   register={register("nomorTelepon")}
                   inputStyles="bg-[#D9D9D9] cursor-not-allowed"
+                  errors={errors?.nomorTelepon?.message}
+                  disabled
                 />
               </div>
               <FormInput
                 label="Alamat Lengkap"
                 inputType="textArea"
+                name="alamat"
+                required
                 placeholder="Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
                 value={watch("alamat.summary") || ""}
                 register={register("alamat")}
                 onClick={() => setIsModalOpen(!isModalOpen)}
                 className="flex-1"
+                errors={errors?.alamat?.message}
               />
 
               {/* Modal Alamat Lengkap */}
@@ -354,6 +405,7 @@ export default function Home() {
                 inputType="dropdownInput"
                 label="Tempat Penampung"
                 name="tempatPenampung"
+                required
                 control={control}
                 options={collectionCenters}
                 placeholder="Pilih tempat penampung tujuan donasi"
@@ -361,33 +413,39 @@ export default function Home() {
                   setValue("tempatPenampung", selected?.value || "");
                   setValue("cabang", "");
                 }}
+                errors={errors?.tempatPenampung?.message}
               />
-              <FormInput
-                key={selectedTempatPenampung}
-                inputType="dropdownInput"
-                label="Cabang / Drop Point"
-                name="cabang"
-                control={control}
-                options={posts}
-                placeholder="Pilih cabang atau drop point (jika tersedia)"
-              />
+              {posts.length > 0 && (
+                <FormInput
+                  key={selectedTempatPenampung}
+                  inputType="dropdownInput"
+                  label="Cabang / Drop Point (opsional)"
+                  name="cabang"
+                  control={control}
+                  options={posts}
+                  placeholder="Pilih cabang atau drop point"
+                />
+              )}
               <ButtonCustom
-                variant="orange"
+                variant={calculatingBtnDisabled ? "disabled" : "orange"}
                 label={`Hitung Jarak Alamat Ke ${selectedCabang ? "Cabang" : "Tempat Penampung"}`}
                 type="button"
-                className="w-full h-12"
+                className="w-full h-12 text-[#C2C2C2]"
                 onClick={calculateAddressDistance}
+                disabled={calculatingBtnDisabled}
               />
               <FormInput
                 inputType="dropdownInput"
                 label="Metode Pengiriman"
                 name="tipePengiriman"
+                required
                 control={control}
                 options={pickupTypes}
-                placeholder={`${selectedTempatPenampung ? (isCalculating ? "Sedang menghitung jarak..." : "Hitung jarak terlebih dahulu") : "Pilih tempat penampung tujuan donasi terlebih dahulu"}`}
+                placeholder={`${!isEmptyObject(watch("alamat")) ? (selectedTempatPenampung ? (isCalculating ? "Sedang menghitung jarak..." : addressDistance ? "Pilih metode pengiriman yang sesuai" : "Hitung jarak terlebih dahulu") : "Pilih tempat penampung terlebih dahulu") : "Masukkan alamat lengkap terlebih dahulu"}`}
                 disabled={
                   !selectedTempatPenampung || isCalculating || !addressDistance
                 }
+                errors={errors?.tipePengiriman?.message}
                 customMenu={(props) => (
                   <components.Menu {...props}>
                     <div className="px-3 py-2 border-b text-sm text-gray-700">
@@ -417,7 +475,6 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Opsi dropdown */}
                     {props.children}
                   </components.Menu>
                 )}
@@ -449,7 +506,7 @@ export default function Home() {
                 </button>
                 <div className="space-y-3">
                   {/* Tipe Barang (Elektronik) */}
-                  {item.label === "Elektronik" && (
+                  {item.jenis === "ELECTRONICS" && (
                     <FormInput
                       inputType="dropdownChecklistOther"
                       options={electronicOptions}
@@ -457,6 +514,11 @@ export default function Home() {
                       label="Tipe Barang"
                       name={`barangDonasi.${index}.tipeElektronik`}
                       control={control}
+                      inputStyles="bg-white"
+                      errors={
+                        errors?.barangDonasi?.[index]?.tipeElektronik?.message
+                      }
+                      required
                     />
                   )}
                   {/* Jumlah & Berat */}
@@ -464,20 +526,28 @@ export default function Home() {
                     <FormInput
                       label="Jumlah Barang"
                       inputType="text"
+                      type="number"
                       placeholder="Contoh: 20"
                       register={register(`barangDonasi.${index}.jumlah`)}
+                      inputStyles="bg-white"
+                      errors={errors?.barangDonasi?.[index]?.jumlah?.message}
+                      required
                     />
                     <FormInput
                       label="Total Berat Barang (kg)"
                       inputType="text"
+                      type="number"
                       placeholder="Contoh: 10"
                       register={register(`barangDonasi.${index}.berat`)}
+                      inputStyles="bg-white"
+                      errors={errors?.barangDonasi?.[index]?.berat?.message}
+                      required
                     />
                   </div>
                   {/* Foto & Event */}
-                  <div className="flex gap-5 items-center">
-                    <div className="flex items-end gap-3 flex-1">
-                      <FormInput
+                  <div className="flex gap-5">
+                    <div className="flex-1">
+                      {/* <FormInput
                         inputType="text"
                         placeholder=".jpg, .png. Bisa memilih beberapa gambar"
                         label="Foto Barang"
@@ -489,37 +559,113 @@ export default function Home() {
                                 .join(", ")
                             : watch(`barangDonasi.${index}.foto`)?.name || ""
                         }
-                      />
-                      <div className="flex">
-                        <label
-                          htmlFor={`fotoBarang-${index}`}
-                          className="px-4 py-3 bg-[#F0BB78] text-nowrap rounded-lg font-semibold text-white cursor-pointer"
-                        >
-                          Pilih File
-                        </label>
-                        <input
-                          id={`fotoBarang-${index}`}
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="hidden"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files);
-                            if (files.length > 0) {
-                              setValue(`barangDonasi.${index}.foto`, files);
-                            }
-                          }}
+                        register={register(`barangDonasi.${index}.foto`)}
+                        inputStyles="bg-white relative"
+                        errors={errors?.barangDonasi?.[index]?.foto?.message}
+                        required
+                      /> */}
+                      <div className="flex w-full items-end gap-3">
+                        <FormInput
+                          inputType="custom"
+                          label="Foto Barang"
+                          className=""
+                          inputStyles="bg-white relative min-h-[3rem] flex items-center gap-2 px-2 py-1 border rounded-lg max-w-[461px] overflow-scroll"
+                          errors={errors?.barangDonasi?.[index]?.foto?.message}
+                          required
+                          customValueRender={() => (
+                            <>
+                              {Array.isArray(
+                                watch(`barangDonasi.${index}.foto`)
+                              ) &&
+                                watch(`barangDonasi.${index}.foto`).map(
+                                  (file, fileIndex) => (
+                                    <div
+                                      key={fileIndex}
+                                      className="flex items-center bg-[#EDEDED] rounded-xs px-3 text-nowrap text-sm"
+                                    >
+                                      {file.name}
+                                      <button
+                                        type="button"
+                                        className="ml-2 text-[#E52020] font-bold hover:text-red-700 cursor-pointer"
+                                        onClick={() => {
+                                          const updated = watch(
+                                            `barangDonasi.${index}.foto`
+                                          ).filter((_, i) => i !== fileIndex);
+                                          setValue(
+                                            `barangDonasi.${index}.foto`,
+                                            updated,
+                                            { shouldValidate: true }
+                                          );
+                                        }}
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  )
+                                )}
+                            </>
+                          )}
                         />
+                        <div className="flex">
+                          <label
+                            htmlFor={`fotoBarang-${index}`}
+                            className="px-4 py-3 bg-[#F0BB78] text-nowrap rounded-lg font-semibold text-white cursor-pointer"
+                          >
+                            Pilih File
+                          </label>
+                          <input
+                            id={`fotoBarang-${index}`}
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                              const newFiles = Array.from(e.target.files);
+
+                              const existingFiles =
+                                watch(`barangDonasi.${index}.foto`) || [];
+
+                              const mergedFiles = [
+                                ...existingFiles,
+                                ...newFiles,
+                              ].filter(
+                                (file, i, self) =>
+                                  i ===
+                                  self.findIndex(
+                                    (f) =>
+                                      f.name === file.name &&
+                                      f.size === file.size
+                                  )
+                              );
+
+                              setValue(
+                                `barangDonasi.${index}.foto`,
+                                mergedFiles,
+                                {
+                                  shouldValidate: true,
+                                }
+                              );
+
+                              e.target.value = "";
+                            }}
+                          />
+                        </div>
                       </div>
+                      {errors?.barangDonasi?.[index]?.foto && (
+                        <p className="text-[#E52020] text-sm mt-1">
+                          {errors?.barangDonasi?.[index]?.foto?.message}
+                        </p>
+                      )}
                     </div>
                     <FormInput
                       inputType="dropdownInput"
-                      label="Event"
+                      label="Event (opsional)"
                       name={`barangDonasi.${index}.event`}
                       control={control}
                       options={events}
                       placeholder="Pilih event tujuan donasi (jika tersedia)"
                       className="flex-1"
+                      inputStyles="bg-white"
                     />
                   </div>
                 </div>
@@ -527,12 +673,14 @@ export default function Home() {
             ))}
 
             {/* Button Tambah Jenis Barang */}
-            {watch("barangDonasi").length !== dummyDonationTypes?.length && (
+            {watch("barangDonasi").length !== donationTypeOptions?.length && (
               <div className="flex gap-6 max-h-10">
                 <ButtonCustom
-                  variant="orange"
+                  variant={!watch("tipePengiriman") ? "disabled" : `orange`}
                   label="Tambah Jenis Barang"
-                  onClick={() => setIsAddDonationType(!isAddDonationType)}
+                  onClick={() => {
+                    setIsAddDonationType(!isAddDonationType);
+                  }}
                   icon="mdi:plus"
                   className="max-w-1/4 text-nowrap"
                   type="button"
@@ -543,7 +691,7 @@ export default function Home() {
 
                 {isAddDonationType && (
                   <div className="flex gap-3">
-                    {dummyDonationTypes?.map(({ value, label }) => {
+                    {donationTypeOptions?.map(({ value, label }) => {
                       const isDisabled = watch("barangDonasi").some(
                         (item) => item.jenis === value
                       );
