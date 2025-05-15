@@ -7,7 +7,7 @@ import {
 const getCollectionCenters = async () => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers?limit=100`,
+      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers?limit=50&sort=name:asc`,
       createRequestOptions("GET")
     );
     const result = await handleApiResponse(response);
