@@ -39,4 +39,14 @@ const electronicOptions = [
   { label: "Proyektor", value: "proyektor" },
 ];
 
-export { statusList, donationTypes, shippingTypes, electronicOptions };
+const days = [
+  { label: "Senin", value: "MONDAY" },
+  { label: "Selasa", value: "TUESDAY" },
+  { label: "Rabu", value: "WEDNESDAY" },
+  { label: "Kamis", value: "THURSDAY" },
+  { label: "Jumat", value: "FRIDAY" },
+  { label: "Sabtu", value: "SATURDAY" },
+  { label: "Minggu", value: "SUNDAY" },
+];
+
+export { statusList, donationTypes, shippingTypes, electronicOptions, days };
