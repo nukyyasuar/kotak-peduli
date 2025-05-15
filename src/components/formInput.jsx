@@ -49,8 +49,8 @@ const customStyles = {
 };
 
 const baseClass =
-  "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base bg-white";
-const disabledClass = "bg-[#494949] cursor-not-allowed";
+  "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base ";
+const disabledClass = "bg-[#EDEDED] cursor-not-allowed";
 
 const FormInput = ({
   name,
@@ -74,19 +74,32 @@ const FormInput = ({
   customMenu,
   setValue,
   errors,
+  key,
+  onMenuOpen,
+  required,
+  customValueRender,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   // inputType === dropdown || dropdownInput
-  const mappedValue = options.find((opt) => (opt.value ?? opt) === value);
-  const formattedOptions = options.map((opt) =>
-    typeof opt === "string" ? { label: opt, value: opt } : opt
-  );
+  const mappedValue = Array.isArray(options)
+    ? options.find((opt) => (opt.value ?? opt) === value)
+    : [];
+  const formattedOptions = Array.isArray(options)
+    ? options.map((opt) =>
+        typeof opt === "string" ? { label: opt, value: opt } : opt
+      )
+    : [];
   // END
 
   return (
     <div className={`flex flex-col gap-1 w-full ${className}`}>
-      {label && <label className="text-base font-bold">{label}</label>}
+      {label && (
+        <label className="text-base font-bold">
+          {label}
+          {required && <span className="text-[#E52020]">*</span>}
+        </label>
+      )}
 
       {inputType === "dropdown" && (
         <Select
@@ -120,19 +133,27 @@ const FormInput = ({
           render={({ field }) => (
             <Select
               {...field}
+              key={key}
               isMulti={type === "checkbox"}
               isSearchable={true}
+              isDisabled={disabled}
               value={formattedOptions.find((opt) => opt.value === field.value)}
               onChange={
                 type === "checkbox"
-                  ? (selected) =>
-                      field.onChange(selected.map((option) => option.value))
-                  : (selected) => field.onChange(selected?.value)
+                  ? (selected) => {
+                      const value = selected.map((option) => option.value);
+                      field.onChange(value);
+                      onChange?.(value);
+                    }
+                  : (selected) => {
+                      field.onChange(selected?.value);
+                      onChange?.(selected);
+                    }
               }
               options={formattedOptions}
               placeholder={placeholder}
               styles={customStyles}
-              onMenuOpen={() => setIsOpen(true)}
+              onMenuOpen={onMenuOpen}
               onMenuClose={() => setIsOpen(false)}
               components={{
                 DropdownIndicator: () => (
@@ -140,10 +161,13 @@ const FormInput = ({
                     icon="ep:arrow-up-bold"
                     width={16}
                     height={16}
-                    className={`${isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"}`}
+                    className={`${
+                      isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"
+                    }`}
                   />
                 ),
                 IndicatorSeparator: () => null,
+                ...(customMenu && { Menu: customMenu }),
               }}
               className={inputStyles}
             />
@@ -225,10 +249,13 @@ const FormInput = ({
           ref={ref}
           name={name}
           value={value}
-          onChange={(e) => onChange?.(e.target.value)}
+          onChange={(e) => {
+            onChange?.(e.target.value);
+          }}
           placeholder={placeholder}
-          className={`${baseClass} flex-1`}
+          className={`${baseClass} ${inputStyles} flex-1`}
           onClick={onClick}
+          readOnly={label.toLowerCase().includes("alamat")}
           {...register}
         />
       ) : inputType === "text" ? (
@@ -240,8 +267,9 @@ const FormInput = ({
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           placeholder={placeholder}
-          className={`${baseClass} ${inputStyles} ${value && `border-black`}`}
+          className={`${baseClass} ${inputStyles} ${value && `border-black`} ${disabled ? disabledClass : ""} max-h-12`}
           onClick={onClick}
+          disabled={disabled}
           {...register}
         />
       ) : null}
@@ -273,8 +301,16 @@ const FormInput = ({
         />
       )}
 
-      {errors && errors[name] && (
-        <p className="text-red-500 text-sm mt-1">{errors[name]?.message}</p>
+      {inputType === "custom" && (
+        <div
+          className={`${baseClass} ${inputStyles} ${disabled ? disabledClass : ""}`}
+        >
+          {customValueRender?.()}
+        </div>
+      )}
+
+      {errors && (!label || !label.toLowerCase().includes("foto")) && (
+        <p className="text-[#E52020] text-sm">{errors}</p>
       )}
     </div>
   );
