@@ -14,6 +14,7 @@ import {
   getProfile,
   updateProfile,
   updateAvatar,
+  verifyOtp,
 } from "src/services/api/profile";
 import { verifyEmail } from "src/services/api/verifyEmail";
 
@@ -36,6 +37,14 @@ export default function Akun() {
   const [isEmailVerifModalOpen, setIsEmailVerifModalOpen] = useState(false);
   const [isEmailVerifSent, setIsEmailVerifSent] = useState(false);
   const [dataProfile, setDataProfile] = useState({});
+
+  const editPhoneNumberModalRef = useRef();
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const inputRefs = useRef([]);
+  const [isOtpSent, setIsOtpSent] = useState(false);
+  const [isLoadingSendOtp, setIsLoadingSendOtp] = useState(false);
+  const [isLoadingVerifyOtp, setIsLoadingVerifyOtp] = useState(false);
 
   const { register, handleSubmit, control, watch, setValue, reset } = useForm({
     defaultValues: {
@@ -123,6 +132,14 @@ export default function Akun() {
     onClose: () => setIsEmailVerifModalOpen(false),
   });
 
+  handleOutsideModal({
+    ref: editPhoneNumberModalRef,
+    isOpen: isEditPhoneNumber,
+    onClose: () => setIsEditPhoneNumber(false),
+  });
+
+  console.log(isEditPhoneNumber);
+
   const onSubmit = async (data) => {
     if (!isEditPhoneNumber) {
       const payload = buildUpdatedPayload(data, dataProfile);
@@ -159,7 +176,9 @@ export default function Akun() {
   const handleVerifyEmail = async () => {
     try {
       await verifyEmail();
-      toast.success("Tautan verifikasi email berhasil dikirim");
+      toast.success(
+        "Tautan verifikasi email berhasil dikirim. Silahkan periksa email Anda."
+      );
       setIsEmailVerifSent(true);
     } catch (error) {
       if (error.message === "Email already verified") {
@@ -222,13 +241,6 @@ export default function Akun() {
   }, [watchedValues, dataProfile]);
 
   // OTP Verification
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const inputRefs = useRef([]);
-  const [isOtpSent, setIsOtpSent] = useState(false);
-  const [isLoadingSendOtp, setIsLoadingSendOtp] = useState(false);
-  const [isLoadingVerifyOtp, setIsLoadingVerifyOtp] = useState(false);
-
   const handleOtpChange = (element, index, event) => {
     if (isNaN(element.value)) return;
 
@@ -285,21 +297,31 @@ export default function Akun() {
   const handleVerifyOtp = async () => {
     setIsLoadingVerifyOtp(true);
     try {
-      await verifyPhoneCode(confirmationResult, otp.join(""));
-      toast.success("Nomor telepon berhasil diverifikasi");
-      try {
-        await updateProfile({
-          phoneNumber: "+62" + watch("nomorTelepon"),
-        });
-        toast.success("Nomor telepon berhasil diperbarui");
-      } catch (error) {
-        console.log("Error updating phone number:", error.message);
-        if (error.message === "Unique constraint failed") {
-          toast.error("Nomor telepon sudah terdaftar");
-        } else {
-          toast.error("Gagal memperbarui nomor telepon");
+      const user = await verifyPhoneCode(confirmationResult, otp.join(""));
+      if (user) {
+        const idToken = await user.getIdToken();
+
+        try {
+          await updateProfile({
+            phoneNumber: "+62" + watch("nomorTelepon"),
+          });
+          try {
+            await verifyOtp(idToken);
+            toast.success("Nomor telepon berhasil diverifikasi dan diperbarui");
+          } catch (error) {
+            toast.error(error.message || "Gagal memverifikasi nomor telepon");
+          }
+        } catch (error) {
+          console.log("Error updating phone number:", error.message);
+          if (error.message === "Unique constraint failed") {
+            toast.error("Nomor telepon sudah terdaftar");
+          } else {
+            toast.error("Gagal memperbarui nomor telepon");
+          }
+          setValue("nomorTelepon", dataProfile.phoneNumber.slice(3));
         }
-        setValue("nomorTelepon", dataProfile.phoneNumber.slice(3));
+      } else {
+        toast.error("Gagal memverifikasi nomor telepon");
       }
     } catch (error) {
       {
@@ -321,6 +343,9 @@ export default function Akun() {
       setOtp(["", "", "", "", "", ""]);
       setConfirmationResult(null);
       setIsLoadingVerifyOtp(false);
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
     }
   };
 
@@ -360,9 +385,8 @@ export default function Akun() {
                 inputType="text"
                 placeholder="Contoh: 81212312312"
                 value={dataProfile?.phoneNumber?.slice(3) || ""}
-                // register={register("nomorTelepon")}
                 inputStyles={`w-full border-none`}
-                disabled={true}
+                disabled
               />
               <ButtonCustom
                 variant="orange"
@@ -373,7 +397,10 @@ export default function Akun() {
               />
               {isEditPhoneNumber && (
                 <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
-                  <div className="bg-white rounded-lg flex flex-col p-8 text-black gap-6">
+                  <div
+                    ref={editPhoneNumberModalRef}
+                    className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
+                  >
                     <h3 className="text-xl font-bold">Ubah Nomor Telepon</h3>
 
                     <div className="flex items-end">
@@ -441,25 +468,35 @@ export default function Akun() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3 items-end">
+            <div className="flex gap-3 items-end relative">
               <FormInput
                 label="Email"
                 inputType="text"
                 type="email"
                 placeholder="Contoh: user@example.com"
                 register={register("email")}
-                inputStyles={`w-full bg-white`}
+                inputStyles={`w-full bg-white relative`}
               />
-              <ButtonCustom
-                type="button"
-                variant="orange"
-                label="Verifikasi Email"
-                onClick={() => {
-                  handleVerifyEmail();
-                  setIsEmailVerifModalOpen(true);
-                }}
-                className="h-12 text-nowrap"
-              />
+              {dataProfile?.emailVerifiedAt ? (
+                <Icon
+                  icon="icon-park-solid:check-one"
+                  width={32}
+                  height={32}
+                  color="#1F7D53"
+                  className="absolute right-2 bottom-2"
+                />
+              ) : (
+                <ButtonCustom
+                  type="button"
+                  variant="orange"
+                  label="Verifikasi Email"
+                  onClick={() => {
+                    handleVerifyEmail();
+                    setIsEmailVerifModalOpen(true);
+                  }}
+                  className="h-12 text-nowrap"
+                />
+              )}
               {isEmailVerifModalOpen && (
                 <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
                   <div
@@ -491,7 +528,7 @@ export default function Akun() {
                             Kami telah mengirimkan tautan verifikasi ke email
                             Anda, berikut:
                           </span>
-                          <span className="font-bold">example@gmail.com</span>
+                          <span className="font-bold">{watch("email")}</span>
                         </div>
                         {/* <ButtonCustom
                     type="button"
