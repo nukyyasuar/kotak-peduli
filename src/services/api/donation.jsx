@@ -5,7 +5,6 @@ import {
   handleApiResponse,
   fetchWithAuth,
 } from "../helpers";
-// const accessToken = localStorage.getItem("authToken");
 
 const createDonation = async (payload) => {
   try {
@@ -68,4 +67,24 @@ const getAttachment = async (fileName) => {
   }
 };
 
-export { createDonation, getDonations, getOneDonation, getAttachment };
+const updateDonorShippingDate = async (id, payload) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/donation-items/${id}`,
+      createRequestOptions("PATCH", payload)
+    );
+    const result = await handleApiResponse(response);
+
+    return result;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+export {
+  createDonation,
+  getDonations,
+  getOneDonation,
+  getAttachment,
+  updateDonorShippingDate,
+};
