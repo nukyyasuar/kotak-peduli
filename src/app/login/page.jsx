@@ -40,7 +40,7 @@ export default function Login() {
     setIsFormLoading(true);
     try {
       await loginWithEmail(data.email, data.password);
-      toast.success("Berhasil login!");
+      toast.success("Berhasil login! Anda akan diarahkan ke halaman utama.");
       router.push("/");
     } catch (err) {
       if (err.message === "This resource does not exist") {
