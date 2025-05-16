@@ -7,6 +7,7 @@ import { components } from "react-select";
 import { Tooltip } from "react-tooltip";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { toast } from "react-toastify";
+import { PulseLoader } from "react-spinners";
 
 import { FormInput } from "src/components/formInput";
 import { ButtonCustom } from "src/components/button";
@@ -22,7 +23,7 @@ import { getProfile } from "src/services/api/profile";
 import { createDonation } from "src/services/api/donation";
 import { getEvents } from "src/services/api/event";
 
-import { electronicOptions } from "src/components/options";
+import { electronicOptions, donationTypes } from "src/components/options";
 
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,8 +34,10 @@ export default function Home() {
   const [dataCollectionCenter, setDataCollectionCenter] = useState({});
   const [selectedDataPost, setSelectedPostData] = useState({});
   const [dataProfile, setDataProfile] = useState({});
-  const [events, setEvents] = useState({});
+  const [dataEvents, setDataEvents] = useState({});
   const [isCalculating, setIsCalculating] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState(null);
+  const [isCreateDonationLoading, setIsCreateDonationLoading] = useState(false);
 
   const {
     register,
@@ -45,7 +48,6 @@ export default function Home() {
     reset,
     formState: { errors },
     clearErrors,
-    setError,
   } = useForm({
     resolver: yupResolver(donationSchema),
     defaultValues: {
@@ -85,25 +87,50 @@ export default function Home() {
     dataProfile?.firstName && dataProfile?.lastName
       ? dataProfile?.firstName + " " + dataProfile?.lastName
       : "";
-  const donationTypeOptions = dataCollectionCenter?.types?.map((item) => ({
-    value: item,
-    label:
-      item === "CLOTHES"
-        ? "Pakaian"
-        : item === "TOYS"
-          ? "Mainan"
-          : item === "ELECTRONICS"
-            ? "Elektronik"
-            : item === "BOOKS"
-              ? "Buku"
-              : item,
-  }));
+  const donationTypeOptions = dataCollectionCenter?.types?.map((item) => {
+    const matchedDonationType = donationTypes.find(
+      (type) => type.value === item
+    );
+    return {
+      value: item,
+      label: matchedDonationType?.label || item,
+    };
+  });
+  const selectedDataEvent =
+    dataEvents?.find?.((item) => item.value === selectedEventId) || null;
+  const barangDonasi = watch("barangDonasi") || [];
+  const jenisArray = barangDonasi.map((item) => item.jenis);
+  const isAnyJenisMatch = jenisArray.every((jenis) =>
+    selectedDataEvent?.types?.includes(jenis)
+  );
+  console.log("jenisArray", jenisArray);
+  console.log("isAnyJenisMatch", isAnyJenisMatch);
+
+  const invalidJenisIndexes = barangDonasi.reduce((acc, item, index) => {
+    const selectedEvent = dataEvents.find(
+      (event) => event.value === item.event
+    );
+    const jenis = item.jenis;
+
+    if (selectedEvent && !selectedEvent.types.includes(jenis)) {
+      acc.push(index);
+    }
+
+    return acc;
+  }, []);
+  console.log("invalidJenisIndexes", invalidJenisIndexes);
 
   const isEmptyObject = (obj) => {
     return Object.keys(obj).length === 0;
   };
   const calculatingBtnDisabled =
     isEmptyObject(watch("alamat")) || !selectedTempatPenampung || isCalculating;
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // blokir submit ketika tekan Enter
+    }
+  };
 
   const handleAddDonationType = (value, label) => {
     setIsAddDonationType(!isAddDonationType);
@@ -185,7 +212,27 @@ export default function Home() {
     }
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
+    setIsCreateDonationLoading(true);
+
+    const hasInvalidJenis = data.barangDonasi.some((item) => {
+      const selectedEvent = dataEvents.find(
+        (event) => event.value.toString() === item.event
+      );
+
+      if (!selectedEvent) return false;
+
+      const isInvalid = !selectedEvent.types.includes(item.jenis);
+      return isInvalid;
+    });
+
+    if (hasInvalidJenis) {
+      toast.error(
+        "Ada jenis barang donasi yang tidak sesuai dengan tipe yang diperbolehkan pada event yang dipilih."
+      );
+      return;
+    }
+
     const formData = new FormData();
 
     const { alamat, barangDonasi, tempatPenampung, tipePengiriman } = data;
@@ -220,24 +267,17 @@ export default function Home() {
       );
     });
 
-    console.log("data mentah:", data);
     console.log("formdata:", formData);
 
     try {
-      createDonation(formData)
-        .then((res) => {
-          console.log("Berhasil mengirim data:", res);
-          alert("Berhasil mengirim data");
-          reset();
-          window.location.href("/akun/riwayat-donasi");
-        })
-        .catch((err) => {
-          console.error("Gagal mengirim data:", err);
-          alert("Gagal mengirim data");
-        });
+      await createDonation(formData);
+      toast.success("Berhasil mengirim data");
+      window.location.href("/akun/riwayat-donasi");
     } catch (error) {
       console.error("Error creating donation:", error);
-      alert("Gagal mengirim data");
+      toast.error("Gagal mengirim data");
+    } finally {
+      setIsCreateDonationLoading(true);
     }
   };
 
@@ -286,8 +326,9 @@ export default function Home() {
         const formattedEvents = events.map((item) => ({
           value: item.id,
           label: item.name,
+          ...item,
         }));
-        setEvents(formattedEvents);
+        setDataEvents(formattedEvents);
       } catch (error) {
         console.error("Error fetching data for tempatPenampung:", error);
       }
@@ -331,6 +372,14 @@ export default function Home() {
     }
   }, [watch("alamat.summary")]);
 
+  useEffect(() => {
+    const subscription = watch((values) => {
+      setSelectedEventId(values.barangDonasi?.[0]?.event);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [watch]);
+
   return (
     <section className="bg-white py-12 flex flex-col justify-center text-black">
       <div className="max-w-[1200px] mx-auto">
@@ -349,6 +398,7 @@ export default function Home() {
         {/* Form General Info */}
         <form
           onSubmit={handleSubmit(onSubmit)}
+          onKeyDown={handleKeyDown}
           className="flex flex-col items-center w-[1200px] gap-5"
         >
           <div className="flex gap-5 w-full">
@@ -486,191 +536,213 @@ export default function Home() {
             <h3 className="text-xl font-bold mb-3">Jenis Barang Donasi</h3>
 
             {/* Form Detail Barang */}
-            {watch("barangDonasi").map((item, index) => (
-              <div
-                key={index}
-                className="bg-[#FFF0DC] px-5 pb-5 rounded-lg mb-3 relative"
-              >
-                {/* Jenis Barang */}
-                <div className="w-full flex justify-center mb-3">
-                  <p className="text-base font-bold text-white bg-[#543a14] text-center px-6 py-2 w-fit rounded-b-lg">
-                    {item.label}
-                  </p>
-                </div>
-                <button
-                  className="absolute top-0 right-0 px-2 bg-[#E52020] h-9 rounded-bl-lg cursor-pointer"
-                  onClick={() => handleRemoveDonationItem(item.jenis)}
-                  type="button"
-                >
-                  <Icon icon="mdi:trash" width={20} color="white" />
-                </button>
-                <div className="space-y-3">
-                  {/* Tipe Barang (Elektronik) */}
-                  {item.jenis === "ELECTRONICS" && (
-                    <FormInput
-                      inputType="dropdownChecklistOther"
-                      options={electronicOptions}
-                      placeholder="Pilih tipe barang elektronik yang sesuai"
-                      label="Tipe Barang"
-                      name={`barangDonasi.${index}.tipeElektronik`}
-                      control={control}
-                      inputStyles="bg-white"
-                      errors={
-                        errors?.barangDonasi?.[index]?.tipeElektronik?.message
-                      }
-                      required
-                    />
+            {watch("barangDonasi").map((item, index) => {
+              const selectedEvent = dataEvents.find(
+                (event) => event.value === item.event
+              );
+              const isJenisInvalid =
+                selectedEvent && !selectedEvent.types.includes(item.jenis);
+
+              return (
+                <>
+                  {selectedEvent && isJenisInvalid && (
+                    <p className="text-[#E52020] text-sm font-medium mb-2">
+                      Jenis barang donasi tidak sesuai dengan tipe yang
+                      diperbolehkan pada event{" "}
+                      <span className="font-bold">({selectedEvent?.name})</span>{" "}
+                      yang dipilih, hanya menerima{" "}
+                      <span className="font-bold">
+                        (
+                        {selectedEvent.types
+                          .map(
+                            (type) =>
+                              donationTypes.find(
+                                (donation) => donation.value === type
+                              )?.label
+                          )
+                          .filter(Boolean)
+                          .join(", ")}
+                        )
+                      </span>
+                      . Mohon periksa kembali jenis barang donasi Anda.
+                    </p>
                   )}
-                  {/* Jumlah & Berat */}
-                  <div className="flex gap-5">
-                    <FormInput
-                      label="Jumlah Barang"
-                      inputType="text"
-                      type="number"
-                      placeholder="Contoh: 20"
-                      register={register(`barangDonasi.${index}.jumlah`)}
-                      inputStyles="bg-white"
-                      errors={errors?.barangDonasi?.[index]?.jumlah?.message}
-                      required
-                    />
-                    <FormInput
-                      label="Total Berat Barang (kg)"
-                      inputType="text"
-                      type="number"
-                      placeholder="Contoh: 10"
-                      register={register(`barangDonasi.${index}.berat`)}
-                      inputStyles="bg-white"
-                      errors={errors?.barangDonasi?.[index]?.berat?.message}
-                      required
-                    />
-                  </div>
-                  {/* Foto & Event */}
-                  <div className="flex gap-5">
-                    <div className="flex-1">
-                      {/* <FormInput
-                        inputType="text"
-                        placeholder=".jpg, .png. Bisa memilih beberapa gambar"
-                        label="Foto Barang"
-                        className="pointer-events-none"
-                        value={
-                          Array.isArray(watch(`barangDonasi.${index}.foto`))
-                            ? watch(`barangDonasi.${index}.foto`)
-                                .map((file) => file.name)
-                                .join(", ")
-                            : watch(`barangDonasi.${index}.foto`)?.name || ""
-                        }
-                        register={register(`barangDonasi.${index}.foto`)}
-                        inputStyles="bg-white relative"
-                        errors={errors?.barangDonasi?.[index]?.foto?.message}
-                        required
-                      /> */}
-                      <div className="flex w-full items-end gap-3">
-                        <FormInput
-                          inputType="custom"
-                          label="Foto Barang"
-                          className=""
-                          inputStyles="bg-white relative min-h-[3rem] flex items-center gap-2 px-2 py-1 border rounded-lg max-w-[461px] overflow-scroll"
-                          errors={errors?.barangDonasi?.[index]?.foto?.message}
-                          required
-                          customValueRender={() => (
-                            <>
-                              {Array.isArray(
-                                watch(`barangDonasi.${index}.foto`)
-                              ) &&
-                                watch(`barangDonasi.${index}.foto`).map(
-                                  (file, fileIndex) => (
-                                    <div
-                                      key={fileIndex}
-                                      className="flex items-center bg-[#EDEDED] rounded-xs px-3 text-nowrap text-sm"
-                                    >
-                                      {file.name}
-                                      <button
-                                        type="button"
-                                        className="ml-2 text-[#E52020] font-bold hover:text-red-700 cursor-pointer"
-                                        onClick={() => {
-                                          const updated = watch(
-                                            `barangDonasi.${index}.foto`
-                                          ).filter((_, i) => i !== fileIndex);
-                                          setValue(
-                                            `barangDonasi.${index}.foto`,
-                                            updated,
-                                            { shouldValidate: true }
-                                          );
-                                        }}
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  )
-                                )}
-                            </>
-                          )}
-                        />
-                        <div className="flex">
-                          <label
-                            htmlFor={`fotoBarang-${index}`}
-                            className="px-4 py-3 bg-[#F0BB78] text-nowrap rounded-lg font-semibold text-white cursor-pointer"
-                          >
-                            Pilih File
-                          </label>
-                          <input
-                            id={`fotoBarang-${index}`}
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            className="hidden"
-                            onChange={(e) => {
-                              const newFiles = Array.from(e.target.files);
-
-                              const existingFiles =
-                                watch(`barangDonasi.${index}.foto`) || [];
-
-                              const mergedFiles = [
-                                ...existingFiles,
-                                ...newFiles,
-                              ].filter(
-                                (file, i, self) =>
-                                  i ===
-                                  self.findIndex(
-                                    (f) =>
-                                      f.name === file.name &&
-                                      f.size === file.size
-                                  )
-                              );
-
-                              setValue(
-                                `barangDonasi.${index}.foto`,
-                                mergedFiles,
-                                {
-                                  shouldValidate: true,
-                                }
-                              );
-
-                              e.target.value = "";
-                            }}
-                          />
-                        </div>
-                      </div>
-                      {errors?.barangDonasi?.[index]?.foto && (
-                        <p className="text-[#E52020] text-sm mt-1">
-                          {errors?.barangDonasi?.[index]?.foto?.message}
-                        </p>
-                      )}
+                  <div
+                    key={index}
+                    className="bg-[#FFF0DC] px-5 pb-5 rounded-lg mb-3 relative"
+                  >
+                    {/* Jenis Barang */}
+                    <div className="w-full flex justify-center mb-3">
+                      <p className="text-base font-bold text-white bg-[#543a14] text-center px-6 py-2 w-fit rounded-b-lg">
+                        {item.label}
+                      </p>
                     </div>
-                    <FormInput
-                      inputType="dropdownInput"
-                      label="Event (opsional)"
-                      name={`barangDonasi.${index}.event`}
-                      control={control}
-                      options={events}
-                      placeholder="Pilih event tujuan donasi (jika tersedia)"
-                      className="flex-1"
-                      inputStyles="bg-white"
-                    />
+                    <button
+                      className="absolute top-0 right-0 px-2 bg-[#E52020] h-9 rounded-bl-lg cursor-pointer"
+                      onClick={() => handleRemoveDonationItem(item.jenis)}
+                      type="button"
+                    >
+                      <Icon icon="mdi:trash" width={20} color="white" />
+                    </button>
+                    <div className="space-y-3">
+                      {/* Tipe Barang (Elektronik) */}
+                      {item.jenis === "ELECTRONICS" && (
+                        <FormInput
+                          inputType="dropdownChecklistOther"
+                          options={electronicOptions}
+                          placeholder="Pilih tipe barang elektronik yang sesuai"
+                          label="Tipe Barang"
+                          name={`barangDonasi.${index}.tipeElektronik`}
+                          control={control}
+                          inputStyles="bg-white"
+                          errors={
+                            errors?.barangDonasi?.[index]?.tipeElektronik
+                              ?.message
+                          }
+                          required
+                        />
+                      )}
+                      {/* Jumlah & Berat */}
+                      <div className="flex gap-5">
+                        <FormInput
+                          label="Jumlah Barang"
+                          inputType="text"
+                          type="number"
+                          placeholder="Contoh: 20"
+                          register={register(`barangDonasi.${index}.jumlah`)}
+                          inputStyles="bg-white"
+                          errors={
+                            errors?.barangDonasi?.[index]?.jumlah?.message
+                          }
+                          required
+                        />
+                        <FormInput
+                          label="Total Berat Barang (kg)"
+                          inputType="text"
+                          type="number"
+                          placeholder="Contoh: 10"
+                          register={register(`barangDonasi.${index}.berat`)}
+                          inputStyles="bg-white"
+                          errors={errors?.barangDonasi?.[index]?.berat?.message}
+                          required
+                        />
+                      </div>
+                      {/* Foto & Event */}
+                      <div className="flex gap-5">
+                        <div className="flex-1">
+                          <div className="flex w-full items-end gap-3">
+                            <FormInput
+                              inputType="custom"
+                              label="Foto Barang"
+                              className=""
+                              inputStyles="bg-white relative min-h-[3rem] flex items-center gap-2 px-2 py-1 border rounded-lg max-w-[461px] overflow-scroll"
+                              errors={
+                                errors?.barangDonasi?.[index]?.foto?.message
+                              }
+                              required
+                              customValueRender={() => (
+                                <>
+                                  {Array.isArray(
+                                    watch(`barangDonasi.${index}.foto`)
+                                  ) &&
+                                    watch(`barangDonasi.${index}.foto`).map(
+                                      (file, fileIndex) => (
+                                        <div
+                                          key={fileIndex}
+                                          className="flex items-center bg-[#EDEDED] rounded-xs px-3 text-nowrap text-sm"
+                                        >
+                                          {file.name}
+                                          <button
+                                            type="button"
+                                            className="ml-2 text-[#E52020] font-bold hover:text-red-700 cursor-pointer"
+                                            onClick={() => {
+                                              const updated = watch(
+                                                `barangDonasi.${index}.foto`
+                                              ).filter(
+                                                (_, i) => i !== fileIndex
+                                              );
+                                              setValue(
+                                                `barangDonasi.${index}.foto`,
+                                                updated,
+                                                { shouldValidate: true }
+                                              );
+                                            }}
+                                          >
+                                            ×
+                                          </button>
+                                        </div>
+                                      )
+                                    )}
+                                </>
+                              )}
+                            />
+                            <div className="flex">
+                              <label
+                                htmlFor={`fotoBarang-${index}`}
+                                className="px-4 py-3 bg-[#F0BB78] text-nowrap rounded-lg font-semibold text-white cursor-pointer"
+                              >
+                                Pilih File
+                              </label>
+                              <input
+                                id={`fotoBarang-${index}`}
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                className="hidden"
+                                onChange={(e) => {
+                                  const newFiles = Array.from(e.target.files);
+
+                                  const existingFiles =
+                                    watch(`barangDonasi.${index}.foto`) || [];
+
+                                  const mergedFiles = [
+                                    ...existingFiles,
+                                    ...newFiles,
+                                  ].filter(
+                                    (file, i, self) =>
+                                      i ===
+                                      self.findIndex(
+                                        (f) =>
+                                          f.name === file.name &&
+                                          f.size === file.size
+                                      )
+                                  );
+
+                                  setValue(
+                                    `barangDonasi.${index}.foto`,
+                                    mergedFiles,
+                                    {
+                                      shouldValidate: true,
+                                    }
+                                  );
+
+                                  e.target.value = "";
+                                }}
+                              />
+                            </div>
+                          </div>
+                          {errors?.barangDonasi?.[index]?.foto && (
+                            <p className="text-[#E52020] text-sm mt-1">
+                              {errors?.barangDonasi?.[index]?.foto?.message}
+                            </p>
+                          )}
+                        </div>
+                        <FormInput
+                          inputType="dropdownInput"
+                          label="Event (opsional)"
+                          name={`barangDonasi.${index}.event`}
+                          control={control}
+                          options={dataEvents}
+                          placeholder="Pilih event tujuan donasi (jika tersedia)"
+                          className="flex-1"
+                          inputStyles="bg-white"
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                </>
+              );
+            })}
 
             {/* Button Tambah Jenis Barang */}
             {watch("barangDonasi").length !== donationTypeOptions?.length && (
@@ -730,7 +802,15 @@ export default function Home() {
             type="submit"
             className="w-full bg-[#543a14] hover:bg-[#6B4D20] text-white h-12 rounded-lg font-bold"
           >
-            Kirim
+            {isCreateDonationLoading ? (
+              <PulseLoader
+                color="white"
+                loading={isCreateDonationLoading}
+                size={10}
+              />
+            ) : (
+              "Kirim Donasi"
+            )}
           </button>
         </form>
       </div>
