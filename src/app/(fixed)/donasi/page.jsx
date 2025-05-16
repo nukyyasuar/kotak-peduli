@@ -121,7 +121,7 @@ export default function Home() {
           label: label,
           jumlah: "",
           berat: "",
-          event: "",
+          event: [],
           foto: [],
           tipeElektronik: [],
         },
@@ -214,9 +214,12 @@ export default function Home() {
 
     const formData = new FormData();
 
-    const { alamat, barangDonasi, tempatPenampung, tipePengiriman } = data;
+    const { alamat, barangDonasi, tempatPenampung, tipePengiriman, cabang } =
+      data;
 
     formData.append("collectionCenterId", tempatPenampung);
+    formData.append("postId", cabang);
+
     formData.append("address[detail]", alamat.jalan);
     if (alamat.patokan) {
       formData.append("address[reference]", alamat.patokan);
@@ -251,9 +254,9 @@ export default function Home() {
     try {
       await createDonation(formData);
       toast.success(
-        "Donasi kamu berhasil dibuat. Terima kasih atas kebaikanmu!"
+        "Donasi kamu berhasil dibuat. Terima kasih atas kebaikanmu! Anda akan diarahkan ke halaman riwayat donasi"
       );
-      window.location.href("/akun/riwayat-donasi");
+      window.location.href = "/akun/riwayat-donasi";
     } catch (error) {
       toast.error(`Maaf, donasi gagal dibuat. Silakan coba lagi.`);
       console.error("Error creating donation:", error);
@@ -321,7 +324,7 @@ export default function Home() {
             const formattedEvents = events.map((item) => ({
               value: item.id,
               label: item.name,
-              types: item.donationTypes,
+              ...item,
             }));
             setDataEvents(formattedEvents);
           }
@@ -563,7 +566,9 @@ export default function Home() {
                     <p className="text-[#E52020] text-sm font-medium mb-2">
                       Jenis barang donasi tidak sesuai dengan tipe yang
                       diperbolehkan pada event{" "}
-                      <span className="font-bold">({selectedEvent?.name})</span>{" "}
+                      <span className="font-bold">
+                        ({selectedEvent?.name || "-"})
+                      </span>{" "}
                       yang dipilih, hanya menerima{" "}
                       <span className="font-bold">
                         (
@@ -575,10 +580,10 @@ export default function Home() {
                               )?.label
                           )
                           .filter(Boolean)
-                          .join(", ")}
+                          .join(", ") || "(-)"}
                         )
-                      </span>
-                      . Mohon periksa kembali jenis barang donasi Anda.
+                      </span>{" "}
+                      {}. Mohon periksa kembali jenis barang donasi Anda.
                     </p>
                   )}
                   <div
