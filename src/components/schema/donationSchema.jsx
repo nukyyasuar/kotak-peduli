@@ -6,7 +6,7 @@ const donationSchema = yup.object().shape({
     .string()
     .required("Nomor telepon wajib diisi.")
     .matches(/^[0-9]+$/, "Nomor telepon hanya boleh berisi angka.")
-    .min(10, "Nomor telepon minimal terdiri dari 10 digit.")
+    .min(11, "Nomor telepon minimal terdiri dari 11 digit.")
     .max(13, "Nomor telepon maksimal terdiri dari 13 digit.")
     .matches(
       /^8\d{9,14}$/,
@@ -32,12 +32,12 @@ const donationSchema = yup.object().shape({
           .required("Pilih satu atau lebih jenis barang yang sesuai."),
         jumlah: yup
           .number()
-          .typeError("Jumlah barang wajib diisi.")
+          .typeError("Jumlah barang hanya boleh berisi angka.")
           .required("Jumlah barang wajib diisi.")
           .min(1, "Jumlah barang minimal 1."),
         berat: yup
           .number()
-          .typeError("Total berat barang wajib diisi.")
+          .typeError("Total berat hanya boleh berisi angka.")
           .required("Total berat barang wajib diisi.")
           .min(1, "Total berat barang minimal 1 kg."),
         event: yup.string(),
