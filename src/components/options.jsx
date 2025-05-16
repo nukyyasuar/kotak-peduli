@@ -2,6 +2,7 @@ const statusList = [
   { label: "Semua", value: "" },
   { label: "Pemeriksaan Digital", value: "DIGITAL_CHECKING" },
   { label: "Pengiriman", value: "TRANSPORTING" },
+  { label: "Pemeriksaan Digital (Disetujui)", value: "PENDING" },
   { label: "Penjemputan", value: "penjemputan" },
   { label: "Dalam Perjalanan", value: "IN_TRANSIT" },
   { label: "Pemeriksaan Fisik", value: "PHYSICAL_CHECKING" },
