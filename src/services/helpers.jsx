@@ -36,8 +36,10 @@ const handleApiResponse = async (response) => {
   return result;
 };
 
+let refreshTokenPromise = null;
 const fetchWithAuth = async (url, options) => {
   const accessToken = localStorage.getItem("authToken");
+
   const withAuthOptions = {
     ...options,
     headers: {
@@ -49,44 +51,59 @@ const fetchWithAuth = async (url, options) => {
   let response = await fetch(url, withAuthOptions);
 
   if (response.status === 401) {
-    const refreshToken = localStorage.getItem("refreshToken");
+    // Jika belum ada proses refresh yang sedang berjalan
+    if (!refreshTokenPromise) {
+      const refreshToken = localStorage.getItem("refreshToken");
 
-    if (!refreshToken) throw new Error("Refresh token tidak ditemukan");
+      if (!refreshToken) throw new Error("Refresh token tidak ditemukan");
 
-    const refreshRes = await fetch(
-      `${process.env.NEXT_PUBLIC_DOMAIN}/auth/refresh`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-      }
-    );
-    const refreshData = await refreshRes.json();
-    if (refreshRes.status !== 201) {
-      toast.error("Refresh token tidak valid. Silahkan login kembali");
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("refreshToken");
-      window.location.href = "/login";
-      return;
+      // Simpan promise untuk mencegah multiple refresh
+      refreshTokenPromise = fetch(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/auth/refresh`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        }
+      )
+        .then(async (res) => {
+          const data = await res.json();
+
+          if (res.status !== 201) {
+            toast.error("Sesi Anda telah habis. Silakan login kembali.");
+            localStorage.removeItem("authToken");
+            localStorage.removeItem("refreshToken");
+            window.location.href = "/login";
+            throw new Error("Refresh token gagal");
+          }
+
+          const newAccessToken = data?.data?.tokens?.accessToken;
+          const newRefreshToken = data?.data?.tokens?.refreshToken;
+
+          if (!newAccessToken) throw new Error("Gagal memperbarui token");
+
+          localStorage.setItem("authToken", newAccessToken);
+          localStorage.setItem("refreshToken", newRefreshToken);
+
+          return newAccessToken;
+        })
+        .finally(() => {
+          // Reset promise setelah selesai
+          refreshTokenPromise = null;
+        });
     }
 
-    if (!refreshRes.ok) {
-      const err = await refreshRes.text();
-      console.error("Refresh error:", err);
-    }
-
-    const newToken = refreshData?.data?.accessToken;
-    if (!newToken) throw new Error("Gagal memperbarui token");
-
-    localStorage.setItem("authToken", newToken);
+    // Tunggu refresh token selesai dan dapatkan access token baru
+    const newAccessToken = await refreshTokenPromise;
 
     const retryOptions = {
       ...options,
       headers: {
         ...options.headers,
-        Authorization: `Bearer ${newToken}`,
+        Authorization: `Bearer ${newAccessToken}`,
       },
     };
+
     response = await fetch(url, retryOptions);
   }
 
