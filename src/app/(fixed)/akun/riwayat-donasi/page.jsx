@@ -8,6 +8,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { id } from "date-fns/locale";
 import { format } from "date-fns";
 import Image from "next/image";
+import { ClipLoader } from "react-spinners";
 
 import { FormInput } from "src/components/formInput";
 import { ButtonCustom } from "src/components/button";
@@ -20,7 +21,12 @@ import {
   shippingTypes,
 } from "src/components/options";
 
-import { getDonations, getOneDonation } from "src/services/api/donation";
+import {
+  getDonations,
+  getOneDonation,
+  updateDonorShippingDate,
+} from "src/services/api/donation";
+import { toast } from "react-toastify";
 
 export default function RiwayatDonasi() {
   const [selectedStatus, setSelectedStatus] = useState("");
@@ -29,16 +35,15 @@ export default function RiwayatDonasi() {
   const detailModalRef = useRef(null);
   const shippingDateModalRef = useRef(null);
   const [isDonorShippingDate, setIsDonorShippingDate] = useState([]);
-  const [isShelterShippingDate, setIsShelterShippingDate] = useState(
-    "10/11/2025 08:00 WIB"
-  );
+  const [isShelterShippingDate, setIsShelterShippingDate] = useState(false);
   const [imgSrc, setImgSrc] = useState("");
   const [imageSrcList, setImageSrcList] = useState([]);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [donations, setDonations] = useState([]);
   const [detailDonation, setDetailDonation] = useState();
   const [selectedIdDonation, setSelectedIdDonation] = useState();
   const [imageUrls, setImageUrls] = useState([]);
+  const [isCreateShippingDateLoading, setIsCreateShippingDateLoading] =
+    useState(false);
 
   const { control, setValue, watch, reset, handleSubmit, register } = useForm({
     defaultValues: {
@@ -72,19 +77,6 @@ export default function RiwayatDonasi() {
     },
   });
 
-  // const handleImageLoaded = (src, index) => {
-  //   setImageSrcList((prev) => {
-  //     const updated = [...prev];
-  //     updated[index] = src;
-
-  //     if (index === 0 && !imgSrc) {
-  //       setImgSrc(src);
-  //     }
-
-  //     return updated;
-  //   });
-  // };
-
   const handleImageLoaded = (url, index) => {
     setImageUrls((prev) => ({ ...prev, [index]: url }));
 
@@ -101,7 +93,7 @@ export default function RiwayatDonasi() {
   };
 
   const handleCloseShippingDateModal = () => {
-    if (isDonorShippingDate.length > 0) {
+    if (isDonorShippingDate?.length > 0) {
       reset({
         waktuPengiriman: isDonorShippingDate.map((date) => ({
           date: new Date(date),
@@ -115,8 +107,10 @@ export default function RiwayatDonasi() {
     setIsShippingDateModalOpen(false);
   };
 
-  const onSubmit = (data) => {
-    const waktuPengirimanFormatted = data.waktuPengiriman.map((item) => {
+  const onSubmit = async (data) => {
+    setIsCreateShippingDateLoading(true);
+
+    const waktuPengirimanFormatted = data?.waktuPengiriman?.map((item) => {
       const newDate = new Date(item.date);
       newDate.setHours(Number(item.hour));
       console.log("Hour:", item.hour);
@@ -126,13 +120,23 @@ export default function RiwayatDonasi() {
       return newDate.toISOString();
     });
 
-    console.log("Formatted:", waktuPengirimanFormatted);
-    setIsDonorShippingDate(waktuPengirimanFormatted);
+    const payload = {
+      details: waktuPengirimanFormatted,
+    };
+    console.log("Payload:", payload);
 
-    setIsSubmitted(true);
-
-    console.log("Data yang dikirim:", data);
-    setIsShippingDateModalOpen(false);
+    try {
+      await updateDonorShippingDate(selectedIdDonation, payload);
+      toast.success(
+        "Tanggal pengiriman berhasil diatur. Tempat penampung akan mengkonfirmasi pilihan Anda."
+      );
+      // setIsDonorShippingDate(waktuPengirimanFormatted);
+    } catch (error) {
+      toast.error("Gagal mengatur tanggal pengiriman");
+    } finally {
+      setIsCreateShippingDateLoading(false);
+      // setIsShippingDateModalOpen(false);
+    }
   };
 
   useEffect(() => {
@@ -204,92 +208,115 @@ export default function RiwayatDonasi() {
         ))}
       </div>
 
+      <ButtonCustom
+        label="Atur tanggal pengiriman"
+        variant="orange"
+        type="button"
+        onClick={() => setIsShippingDateModalOpen(true)}
+      />
+
       {/* Riwayat Donasi */}
       <div className="space-y-3">
-        {donations.map((donation, index) => (
-          <>
-            <div
-              className="rounded-lg p-3 pt-0 flex gap-8 hover:shadow-lg border"
-              key={index}
-              onClick={() => {
-                setIsDetailModalOpen(true);
-                setSelectedIdDonation(donation.id);
-              }}
-            >
-              <div className="min-w-[180px] aspect-square bg-[#C2C2C2] rounded-b-lg relative">
-                {/* <Image
+        {donations.map((donation, index) => {
+          const status =
+            statusList.find(
+              (status) => status.value === donation.approvals.latestStatus
+            )?.label || donation.approvals.latestStatus;
+
+          return (
+            <>
+              <div
+                className="rounded-lg p-3 pt-0 flex gap-8 hover:shadow-lg border"
+                key={index}
+                onClick={() => {
+                  setIsDetailModalOpen(true);
+                  setSelectedIdDonation(donation.id);
+                }}
+              >
+                <div className="min-w-[180px] aspect-square bg-[#C2C2C2] rounded-b-lg relative">
+                  {/* <Image
                   src={imgSrc}
                   alt="Donation item image large"
                   fill
                   className="object-cover rounded-lg"
                 /> */}
-                <AttachmentImage
-                  fileName={donation.attachments?.files?.[0].name}
-                  index={index}
-                  onLoad={handleImageLoaded}
-                  onSelect={(url) => {
-                    setImgSrc(url);
-                  }}
-                />
-              </div>
-
-              <div className="w-full">
-                <div className="flex flex-col justify-between text-black text-sm h-full">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1 pt-3">
-                      <span className="font-bold">
-                        {donation.collectionCenter.name}
-                      </span>
-                      <span>{donation.post}</span>
-                    </div>
-                    <span className="bg-[#543a14] text-white px-6 py-2 font-bold rounded-b-lg">
-                      {statusList.find(
-                        (status) =>
-                          status.value === donation.approvals.latestStatus
-                      )?.label || donation.approvals.latestStatus}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <div className="space-y-1">
-                      <div className="flex gap-2">
-                        <span>Event:</span>
-                        <span>{donation?.event?.name || "-"}</span>
-                      </div>
-                      <span>
-                        {donationTypes.find(
-                          (type) => type.value === donation.donationType
-                        )?.label || donation.donationType}{" "}
-                        ({donation.quantity}pcs, {donation.weight}kg)
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex gap-2">
-                        <span>Metode Pengiriman:</span>
-                        <span>
-                          {shippingTypes.find(
-                            (type) => type.value === donation.pickupType
-                          )?.label || donation.pickupType}
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <span>Tanggal Pengiriman:</span>
-                        <span className="font-bold text-[#F0BB78]">
-                          Menunggu pemeriksaan digital
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <ButtonCustom
-                    variant="outlineOrange"
-                    type="button"
-                    label="Hubungi Tempat Penampung"
-                    className="w-fit"
+                  <AttachmentImage
+                    fileName={donation.attachments?.files?.[0].name}
+                    index={index}
+                    onLoad={handleImageLoaded}
+                    onSelect={(url) => {
+                      setImgSrc(url);
+                    }}
                   />
                 </div>
+
+                <div className="w-full">
+                  <div className="flex flex-col justify-between text-black text-sm h-full">
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col gap-1 pt-3">
+                        <span className="font-bold">
+                          {donation.collectionCenter.name}
+                        </span>
+                        <span>{donation.post}</span>
+                      </div>
+                      <span className="bg-[#543a14] text-white px-6 py-2 font-bold rounded-b-lg">
+                        {status}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <div className="space-y-1">
+                        <div className="flex gap-2">
+                          <span>Event:</span>
+                          <span>{donation?.event?.name || "-"}</span>
+                        </div>
+                        <span>
+                          {donationTypes.find(
+                            (type) => type.value === donation.donationType
+                          )?.label || donation.donationType}{" "}
+                          ({donation.quantity}pcs, {donation.weight}kg)
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex gap-2">
+                          <span>Metode Pengiriman:</span>
+                          <span>
+                            {shippingTypes.find(
+                              (type) => type.value === donation.pickupType
+                            )?.label || donation.pickupType}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <span>Tanggal Pengiriman:</span>
+                          <span className="font-bold text-[#F0BB78]">
+                            {donation?.approvals?.latestStatus === "PENDING"
+                              ? isDonorShippingDate.length > 0
+                                ? isDonorShippingDate.map((date, index) => (
+                                    <span key={index}>
+                                      {format(
+                                        new Date(date),
+                                        "dd/MM/yyyy HH:mm"
+                                      )}{" "}
+                                      WIB
+                                    </span>
+                                  ))
+                                : "Menunggu opsi donatur"
+                              : "Menunggu pemeriksaan digital"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <ButtonCustom
+                      variant="outlineOrange"
+                      type="button"
+                      label="Hubungi Tempat Penampung"
+                      className="w-fit"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </>
-        ))}
+            </>
+          );
+        })}
       </div>
 
       {/* Modal Detail */}
@@ -397,7 +424,7 @@ export default function RiwayatDonasi() {
                     )?.label || detailDonation?.pickupType,
                     <TextBetween
                       label="Tanggal Pengajuan"
-                      value={[
+                      value={
                         isDonorShippingDate.length > 0 ? (
                           isDonorShippingDate.map((date, index) => (
                             <span key={index}>
@@ -408,10 +435,9 @@ export default function RiwayatDonasi() {
                           <span className="font-bold text-[#F0BB78]">
                             Menunggu opsi donatur
                           </span>
-                        ),
-                      ]}
+                        )
+                      }
                       className="border-b border-[#C2C2C2] pb-1 text-end"
-                      type="list"
                     />,
                     <TextBetween
                       label={
@@ -544,7 +570,17 @@ export default function RiwayatDonasi() {
               ))}
               <div className="flex justify-end space-x-3 mt-4">
                 <ButtonCustom
-                  label="Kirim"
+                  label={
+                    isCreateShippingDateLoading ? (
+                      <ClipLoader
+                        color="#fff"
+                        size={20}
+                        className="text-white"
+                      />
+                    ) : (
+                      "Kirim"
+                    )
+                  }
                   variant="brown"
                   type="submit"
                   onClick={onSubmit}
