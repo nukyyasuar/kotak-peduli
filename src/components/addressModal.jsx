@@ -263,6 +263,10 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
 
   const handleCloseVariant = () => {
     setValue("alamat.summary", watch("alamat.summary"));
+    setValue("alamat.latitude", watch("alamat.latitude"));
+    setValue("alamat.longitude", watch("alamat.longitude"));
+    setValue("alamat.jalan", watch("alamat.jalan"));
+    setValue("alamat.patokan", watch("alamat.patokan"));
     handleClose();
   };
 
