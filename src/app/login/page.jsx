@@ -1,370 +1,221 @@
-'use client'
+"use client";
 
-import Image from 'next/image';
-import Head from 'next/head';
-import { useState, useEffect } from 'react';
-import { FcGoogle } from "react-icons/fc";
-import {
-  registerWithEmail,
-  loginWithEmail,
-  logout,
-  onAuthStateChange,
-  loginWithGoogle,
-} from '../auth/auth';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import * as Yup from 'yup';
-import { yupResolver } from '@hookform/resolvers/yup';
+import Image from "next/image";
+import Head from "next/head";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { ClipLoader } from "react-spinners";
 
-// Define Yup validation schema
-const validationSchema = Yup.object().shape({
-  email: Yup.string()
-    .email('Email tidak valid')
-    .required('Email wajib diisi'),
-  password: Yup.string()
-    .min(6, 'Password minimal 6 karakter')
-    .required('Password wajib diisi'),
-  firstName: Yup.string().when('$isLogin', {
-    is: false,
-    then: (schema) => schema.required('Nama depan wajib diisi'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  lastName: Yup.string().when('$isLogin', {
-    is: false,
-    then: (schema) => schema.required('Nama belakang wajib diisi'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-  phoneNumber: Yup.string().when('$isLogin', {
-    is: false,
-    then: (schema) => schema
-      .matches(/^\+?\d{10,}$/, 'Nomor telepon tidak valid')
-      .required('Nomor telepon wajib diisi'),
-    otherwise: (schema) => schema.notRequired(),
-  }),
-});
+import { FormInput } from "src/components/formInput";
+import { ButtonCustom } from "src/components/button";
+import { loginSchema } from "src/components/schema/registrationSchema";
+import { Spacer, TextWithLink } from "src/components/text";
+
+import { loginWithEmail, loginWithGoogle } from "src/services/api/login";
 
 export default function Login() {
-  const [user, setUser] = useState(null);
-  const [error, setError] = useState('');
-  const [isLogin, setIsLogin] = useState(true);
-  const [isLoading, setIsLoading] = useState(false); // New loading state
+  const [isFormLoading, setIsFormLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
 
-  const { 
-    register, 
-    handleSubmit, 
+  const {
+    register,
+    watch,
+    handleSubmit,
     formState: { errors },
-    reset 
+    reset,
   } = useForm({
-    resolver: yupResolver(validationSchema, { context: { isLogin } }),
+    resolver: yupResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
-      firstName: '',
-      lastName: '',
-      phoneNumber: ''
-    }
+      email: "",
+      password: "",
+    },
   });
 
-  // useEffect(() => {
-  //   const unsubscribe = onAuthStateChange((currentUser) => {
-  //     setUser(currentUser);
-  //     if (currentUser) {
-  //       router.push('/');
-  //     }
-  //   });
-  //   return () => unsubscribe();
-  // }, [router]);
-
   const onSubmit = async (data) => {
-    setError('');
-    setIsLoading(true); // Start loading
+    setIsFormLoading(true);
     try {
-      if (isLogin) {
-        await loginWithEmail(data.email, data.password);
-      } else {
-        await registerWithEmail(
-          data.email,
-          data.password,
-          data.firstName,
-          data.lastName,
-          data.phoneNumber
-        );
-      }
-      reset();
-      router.push('/homepage');
+      await loginWithEmail(data.email, data.password);
+      toast.success("Berhasil login!");
+      router.push("/");
     } catch (err) {
-      setError(err.message);
+      if (err.message === "This resource does not exist") {
+        toast.error("Email atau password salah");
+      } else {
+        toast.error("Terjadi kesalahan. Silakan coba lagi.");
+      }
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsFormLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
-    setError('');
-    setIsLoading(true); // Start loading
+    setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
-      router.push('/homepage');
+      toast.success("Login dengan Google berhasil!");
+      router.push("/");
     } catch (err) {
-      setError(err.message);
+      toast.error("Login Google gagal: " + err.message);
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsGoogleLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    setError('');
-    setIsLoading(true); // Start loading
-    try {
-      await logout();
-      setUser(null);
-      reset();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false); // Stop loading
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("code");
+
+    if (code) {
+      const fetchGoogleLogin = async () => {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_DOMAIN}/auth/google`,
+            createRequestOptions("GET", { code })
+          );
+          const result = await handleApiResponse(response);
+          localStorage.setItem("authToken", result.data?.tokens?.accessToken);
+
+          toast.success("Login Google berhasil!");
+          router.push("/");
+        } catch (error) {
+          toast.error("Login Google gagal: " + error.message);
+        }
+      };
+      fetchGoogleLogin();
     }
-  };
+  }, []);
 
   return (
-    <div className="min-h-screen flex bg-white">
+    <div className="h-dvh flex bg-white text-black">
       <Head>
-        <title>Beri Barang - {isLogin ? 'Login' : 'Register'}</title>
-        <meta name="description" content={isLogin ? 'Login to Beri Barang' : 'Register to Beri Barang'} />
+        <title>Beri Barang - Login</title>
+        <meta name="description" content="Login to Beri Barang" />
       </Head>
-      
-      <div className="w-full max-w-4xl mx-auto flex flex-col md:flex-row items-center p-4">
-        {/* Left side with illustration */}
-        <div className="w-full md:w-1/2 mb-6 md:mb-0">
-          <div className="p-4">
-            <div className="absolute top-0 left-0 cursor-pointer">
-              <div className="flex items-center">
-                <Image
-                  src="/Main Design Skripsi Frame 431.webp"
-                  alt="Beri Barang Logo"
-                  width={188}
-                  height={80}
-                />
-              </div>
-            </div>
-            <div className="bg-[#FDF6E7] rounded-2xl p-4">
-              <div className="relative h-80 w-full">
-                <Image
-                  src="/Main Design Frame.webp"
-                  alt="Donation Illustration"
-                  fill
-                  className="object-contain"
-                />
-              </div>
+
+      <div className="w-full max-w-6xl mx-auto py-12 flex flex-col md:flex-row items-center">
+        {/* Left Section */}
+        <div className="md:w-1/2 mb-8 md:mb-0 flex justify-center">
+          <div className="bg-[#FFF0DC] rounded-lg p-8">
+            <div className="relative">
+              <Image
+                src="/Main Design Frame.webp"
+                alt="Donation Illustration"
+                width={400}
+                height={400}
+                className="object-contain"
+              />
             </div>
           </div>
         </div>
-        
-        {/* Right side with form */}
-        <div className="w-full md:w-1/2 p-6">
-          <div className="max-w-md mx-auto">
-            <h1 className="text-4xl font-bold text-center mb-1 text-black">HALO,</h1>
-            <p className="text-center mb-8 text-black">
-              {isLogin ? 'Selamat datang kembali!' : 'Buat akun baru Anda!'}
-            </p>
-            
-            {error && (
-              <p className="text-red-500 text-center mb-4">{error}</p>
-            )}
-            
-            {user && (
-              <div className="text-center mb-4">
-                <p className="text-green-500 mb-2">
-                  Anda sudah login sebagai {user.email}.
-                </p>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm text-gray-600 hover:text-amber-600 underline"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Memproses...' : 'Gunakan akun lain'}
-                </button>
-              </div>
-            )}
 
-            <form onSubmit={handleSubmit(onSubmit)}>
-              {!isLogin && (
-                <>
-                  <div className="mb-4">
-                    <label htmlFor="firstName" className="block text-gray-700 mb-2">Nama Depan</label>
-                    <input
-                      type="text"
-                      id="firstName"
-                      className={`w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                        errors.firstName ? 'border-red-500' : ''
-                      }`}
-                      placeholder="Masukkan nama depan"
-                      {...register('firstName')}
-                      disabled={isLoading}
-                    />
-                    {errors.firstName && (
-                      <p className="text-red-500 text-sm mt-1">{errors.firstName.message}</p>
-                    )}
-                  </div>
+        {/* Right Section */}
+        <div className="w-full md:w-1/2 p-6 text-black">
+          <div className="max-w-md mx-auto space-y-5">
+            <div>
+              <h1 className="text-4xl font-bold text-center mb-1">HALO,</h1>
+              <p className="text-center">Selamat Datang Kembali</p>
+            </div>
 
-                  <div className="mb-4">
-                    <label htmlFor="lastName" className="block text-gray-700 mb-2">Nama Belakang</label>
-                    <input
-                      type="text"
-                      id="lastName"
-                      className={`w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                        errors.lastName ? 'border-red-500' : ''
-                      }`}
-                      placeholder="Masukkan nama belakang"
-                      {...register('lastName')}
-                      disabled={isLoading}
-                    />
-                    {errors.lastName && (
-                      <p className="text-red-500 text-sm mt-1">{errors.lastName.message}</p>
-                    )}
-                  </div>
-
-                  <div className="mb-4">
-                    <label htmlFor="phoneNumber" className="block text-gray-700 mb-2">Nomor Telepon</label>
-                    <input
-                      type="text"
-                      id="phoneNumber"
-                      className={`w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                        errors.phoneNumber ? 'border-red-500' : ''
-                      }`}
-                      placeholder="+6281234567890"
-                      {...register('phoneNumber')}
-                      disabled={isLoading}
-                    />
-                    {errors.phoneNumber && (
-                      <p className="text-red-500 text-sm mt-1">{errors.phoneNumber.message}</p>
-                    )}
-                  </div>
-                </>
-              )}
-
-              <div className="mb-4">
-                <label htmlFor="email" className="block text-gray-700 mb-2 font-bold">Email</label>
-                <input
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 mb-5">
+              <div className="space-y-3">
+                <FormInput
+                  inputType="text"
                   type="email"
-                  id="email"
-                  className={`w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                    errors.email ? 'border-red-500' : ''
-                  }`}
-                  placeholder="example@email.com"
-                  {...register('email')}
-                  disabled={isLoading}
+                  name="email"
+                  register={register("email")}
+                  value={watch("email")}
+                  label="Email"
+                  placeholder="Contoh: user@example.com"
+                  errors={errors?.email?.message}
+                  required
+                  disabled={isFormLoading}
                 />
-                {errors.email && (
-                  <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
-                )}
-              </div>
-              
-              <div className="mb-6">
-                <label htmlFor="password" className="block text-gray-700 mb-2 font-bold">Password</label>
-                <input
+                <FormInput
+                  inputType="text"
                   type="password"
-                  id="password"
-                  className={`w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-amber-400 ${
-                    errors.password ? 'border-red-500' : ''
-                  }`}
+                  name="password"
+                  register={register("password")}
+                  value={watch("password")}
+                  label="Password"
                   placeholder="Masukkan minimum 6 karakter"
-                  {...register('password')}
-                  disabled={isLoading}
+                  errors={errors?.password?.message}
+                  required
+                  disabled={isFormLoading}
                 />
-                {errors.password && (
-                  <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
-                )}
               </div>
-              
-              <button
+
+              <ButtonCustom
                 type="submit"
-                className="w-full bg-[#F2CB92] hover:bg-amber-400 transition text-black py-3 chase:animate-pulse px-4 rounded-lg font-medium mb-4 flex items-center justify-center"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <svg
-                      className="animate-spin h-5 w-5 mr-2 text-black"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Memproses...
-                  </>
-                ) : (
-                  isLogin ? 'Masuk' : 'Buat Akun'
-                )}
-              </button>
-              
-              <div className="flex items-center justify-center mb-4">
-                <div className="h-px bg-gray-300 flex-1"></div>
-                <p className="mx-4 text-sm text-gray-500">atau</p>
-                <div className="h-px bg-gray-300 flex-1"></div>
-              </div>
-              
-              <button
+                disabled={isFormLoading}
+                variant="orange"
+                className="h-12 w-full"
+                label={[
+                  isFormLoading ? (
+                    <ClipLoader
+                      color="white"
+                      loading={isFormLoading}
+                      size={5}
+                      aria-label="Loading Spinner"
+                      data-testid="loader"
+                    />
+                  ) : (
+                    "Masuk"
+                  ),
+                ]}
+              />
+            </form>
+
+            <div className="space-y-5">
+              <Spacer text="atau menggunakan" />
+
+              <ButtonCustom
                 type="button"
                 onClick={handleGoogleLogin}
-                className="w-full flex items-center justify-center border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium mb-4"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <svg
-                      className="animate-spin h-5 w-5 mr-2 text-gray-700"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <FcGoogle size={20} />
-                    <span className='ml-2 font-bold'>Google</span>
-                  </>
-                )}
-              </button>
+                variant="outlineOrange"
+                icon="devicon:google"
+                className="w-full h-12 gap-2"
+                disabled={isGoogleLoading}
+                label={[
+                  isGoogleLoading ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 mr-2 text-gray-700"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Memproses...
+                    </>
+                  ) : (
+                    "Google"
+                  ),
+                ]}
+              />
 
-              <button
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="w-full text-center text-sm text-gray-600 hover:text-amber-600"
-                disabled={isLoading}
-              >
-                {isLogin ? 'Belum punya akun? Daftar' : 'Sudah punya akun? Masuk'}
-              </button>
-            </form>
+              <TextWithLink
+                href="/daftar"
+                text="Belum punya akun?"
+                label="Daftar"
+              />
+            </div>
           </div>
         </div>
       </div>
