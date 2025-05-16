@@ -9,7 +9,9 @@ const collectionCenterRegistSchema = yup.object().shape({
   email: yup
     .string()
     .required("Email wajib diisi.")
-    .email("Format email tidak valid."),
+    .email(
+      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)"
+    ),
   nomorTelepon: yup
     .string()
     .required("Nomor telepon wajib diisi.")
@@ -30,7 +32,7 @@ const collectionCenterRegistSchema = yup.object().shape({
     .required("Pilih salah satu ketersediaan penjemputan yang sesuai."),
   batasJarak: yup
     .number()
-    .typeError("Batas jarak penjemputan harus berupa angka.")
+    .typeError("Batas jarak penjemputan hanya boleh berisi angka.")
     .min(1, "Batas jarak penjemputan minimal 1 km."),
   waktuOperasional: yup.array().min(1, "Waktu operasional wajib diisi."),
   jenisBarang: yup.array().min(1, "Barang donasi wajib diisi."),
