@@ -56,6 +56,12 @@ export default function RiwayatDonasi() {
     name: "waktuPengiriman",
   });
 
+  const statusDetailDonation = detailDonation?.approvals?.latestStatus;
+  const STATUS_GREEN = ["PENDING", "DISTRIBUTED"];
+  const STATUS_RED = ["REJECTED", "REDIRECTED"];
+  const statusGreenDetailDonation = STATUS_GREEN.includes(statusDetailDonation);
+  const statusRedDetailDonation = STATUS_RED.includes(statusDetailDonation);
+
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   const hours = Array.from({ length: 24 }, (_, i) => ({
@@ -130,12 +136,13 @@ export default function RiwayatDonasi() {
       toast.success(
         "Tanggal pengiriman berhasil diatur. Tempat penampung akan mengkonfirmasi pilihan Anda."
       );
-      // setIsDonorShippingDate(waktuPengirimanFormatted);
+      setIsDonorShippingDate(waktuPengirimanFormatted);
     } catch (error) {
+      console.error("Error updating shipping date:", error);
       toast.error("Gagal mengatur tanggal pengiriman");
     } finally {
       setIsCreateShippingDateLoading(false);
-      // setIsShippingDateModalOpen(false);
+      setIsShippingDateModalOpen(false);
     }
   };
 
@@ -198,7 +205,7 @@ export default function RiwayatDonasi() {
       <div className="flex gap-1 overflow-y-scroll no-scrollbar">
         {statusList.map((status) => (
           <ButtonCustom
-            newKey={status.value}
+            key={status.value}
             type="button"
             variant={selectedStatus === status.value ? "brown" : "outlineBrown"}
             label={status.label}
@@ -208,13 +215,6 @@ export default function RiwayatDonasi() {
         ))}
       </div>
 
-      <ButtonCustom
-        label="Atur tanggal pengiriman"
-        variant="orange"
-        type="button"
-        onClick={() => setIsShippingDateModalOpen(true)}
-      />
-
       {/* Riwayat Donasi */}
       <div className="space-y-3">
         {donations.map((donation, index) => {
@@ -222,7 +222,8 @@ export default function RiwayatDonasi() {
             statusList.find(
               (status) => status.value === donation.approvals.latestStatus
             )?.label || donation.approvals.latestStatus;
-
+          const statusRedDonation = status.includes(STATUS_RED);
+          const statusGreenDonation = status.includes(STATUS_GREEN);
           return (
             <>
               <div
@@ -234,12 +235,6 @@ export default function RiwayatDonasi() {
                 }}
               >
                 <div className="min-w-[180px] aspect-square bg-[#C2C2C2] rounded-b-lg relative">
-                  {/* <Image
-                  src={imgSrc}
-                  alt="Donation item image large"
-                  fill
-                  className="object-cover rounded-lg"
-                /> */}
                   <AttachmentImage
                     fileName={donation.attachments?.files?.[0].name}
                     index={index}
@@ -247,6 +242,7 @@ export default function RiwayatDonasi() {
                     onSelect={(url) => {
                       setImgSrc(url);
                     }}
+                    className="rounded-t-none"
                   />
                 </div>
 
@@ -257,9 +253,11 @@ export default function RiwayatDonasi() {
                         <span className="font-bold">
                           {donation.collectionCenter.name}
                         </span>
-                        <span>{donation.post}</span>
+                        <span>{donation?.post?.name}</span>
                       </div>
-                      <span className="bg-[#543a14] text-white px-6 py-2 font-bold rounded-b-lg">
+                      <span
+                        className={`${statusGreenDonation ? `bg-[#1F7D53]` : statusRedDonation ? `bg-[#E52020]` : `bg-[#543A14]`}  text-white px-6 py-2 font-bold rounded-b-lg`}
+                      >
                         {status}
                       </span>
                     </div>
@@ -330,7 +328,9 @@ export default function RiwayatDonasi() {
               <h1 className="font-bold text-xl">
                 Detail Riwayat Barang Donasi
               </h1>
-              <span className="bg-[#543a14] text-white px-6 py-2 font-bold rounded-lg">
+              <span
+                className={`${statusGreenDetailDonation ? `bg-[#1F7D53]` : statusRedDetailDonation ? `bg-[#E52020]` : `bg-[#543A14]`} text-white px-6 py-2 font-bold rounded-lg`}
+              >
                 {statusList.find(
                   (status) =>
                     status.value === detailDonation?.approvals.latestStatus
@@ -340,6 +340,7 @@ export default function RiwayatDonasi() {
             <div className="flex space-x-8">
               {/* Left Section */}
               <div className="w-80 space-y-6">
+                {/* Large Image */}
                 <div className="bg-[#C2C2C2] aspect-square rounded-lg relative">
                   <Image
                     src={imgSrc}
@@ -348,7 +349,6 @@ export default function RiwayatDonasi() {
                     className="object-cover rounded-lg"
                   />
                 </div>
-
                 <div className="flex gap-2 overflow-scroll no-scrollbar">
                   {detailDonation?.attachments?.files?.map((file, index) => {
                     return (
@@ -366,6 +366,8 @@ export default function RiwayatDonasi() {
                     );
                   })}
                 </div>
+
+                {/* Button Left Section */}
                 <div className="space-y-2">
                   <ButtonCustom
                     variant="outlineOrange"
@@ -373,17 +375,20 @@ export default function RiwayatDonasi() {
                     label="Hubungi Tempat Penampung"
                     className="w-full"
                   />
-                  <ButtonCustom
-                    variant="orange"
-                    type="button"
-                    label={`Atur ${isShelterShippingDate ? `Ulang` : ``} Tanggal Pengiriman`}
-                    className="w-full"
-                    onClick={() => setIsShippingDateModalOpen(true)}
-                  />
+                  {detailDonation?.approvals?.latestStatus !==
+                    "DIGITAL_CHECKING" && (
+                    <ButtonCustom
+                      variant="orange"
+                      type="button"
+                      label={`Atur ${isShelterShippingDate ? `Ulang` : ``} Tanggal Pengiriman`}
+                      className="w-full"
+                      onClick={() => setIsShippingDateModalOpen(true)}
+                    />
+                  )}
                 </div>
               </div>
               {/* Right Section */}
-              <div className="space-y-4">
+              <div className="space-y-4 max-w-[450px]">
                 <ListTextWithTitle
                   title="Tanggal Donasi:"
                   values={[detailDonation?.createdAt]}
@@ -407,7 +412,7 @@ export default function RiwayatDonasi() {
                   title="Detail Tempat Penampung:"
                   values={[
                     detailDonation?.collectionCenter.name,
-                    detailDonation?.post,
+                    detailDonation?.post.name,
                     `(${detailDonation?.targetAddress.reference}) ${detailDonation?.targetAddress.detail}`,
                     <TextBetween
                       label="Event"
@@ -425,12 +430,14 @@ export default function RiwayatDonasi() {
                     <TextBetween
                       label="Tanggal Pengajuan"
                       value={
-                        isDonorShippingDate.length > 0 ? (
-                          isDonorShippingDate.map((date, index) => (
-                            <span key={index}>
-                              {format(new Date(date), "dd/MM/yyyy HH:mm")} WIB
-                            </span>
-                          ))
+                        detailDonation?.userAvailability?.length > 0 ? (
+                          detailDonation?.userAvailability?.map(
+                            (date, index) => (
+                              <span key={index}>
+                                {format(new Date(date), "dd/MM/yyyy HH:mm")} WIB
+                              </span>
+                            )
+                          )
                         ) : (
                           <span className="font-bold text-[#F0BB78]">
                             Menunggu opsi donatur
@@ -568,6 +575,7 @@ export default function RiwayatDonasi() {
                   </div>
                 </div>
               ))}
+
               <div className="flex justify-end space-x-3 mt-4">
                 <ButtonCustom
                   label={
@@ -583,7 +591,6 @@ export default function RiwayatDonasi() {
                   }
                   variant="brown"
                   type="submit"
-                  onClick={onSubmit}
                   className="w-full"
                 />
                 <ButtonCustom
