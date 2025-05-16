@@ -96,29 +96,6 @@ export default function Home() {
       label: matchedDonationType?.label || item,
     };
   });
-  const selectedDataEvent =
-    dataEvents?.find?.((item) => item.value === selectedEventId) || null;
-  const barangDonasi = watch("barangDonasi") || [];
-  const jenisArray = barangDonasi.map((item) => item.jenis);
-  const isAnyJenisMatch = jenisArray.every((jenis) =>
-    selectedDataEvent?.types?.includes(jenis)
-  );
-  console.log("jenisArray", jenisArray);
-  console.log("isAnyJenisMatch", isAnyJenisMatch);
-
-  const invalidJenisIndexes = barangDonasi.reduce((acc, item, index) => {
-    const selectedEvent = dataEvents.find(
-      (event) => event.value === item.event
-    );
-    const jenis = item.jenis;
-
-    if (selectedEvent && !selectedEvent.types.includes(jenis)) {
-      acc.push(index);
-    }
-
-    return acc;
-  }, []);
-  console.log("invalidJenisIndexes", invalidJenisIndexes);
 
   const isEmptyObject = (obj) => {
     return Object.keys(obj).length === 0;
@@ -205,8 +182,9 @@ export default function Home() {
 
       const data = await res.json();
       setAddressDistance(parseFloat(data.distance));
-    } catch (err) {
-      console.error("Failed to calculate distance:", err.message);
+    } catch (error) {
+      toast.error(`Gagal menghitung jarak. Silakan coba lagi.`);
+      console.error("Error calculating distance:", error);
     } finally {
       setIsCalculating(false);
     }
@@ -230,6 +208,7 @@ export default function Home() {
       toast.error(
         "Ada jenis barang donasi yang tidak sesuai dengan tipe yang diperbolehkan pada event yang dipilih."
       );
+      setIsCreateDonationLoading(false);
       return;
     }
 
@@ -271,13 +250,15 @@ export default function Home() {
 
     try {
       await createDonation(formData);
-      toast.success("Berhasil mengirim data");
+      toast.success(
+        "Donasi kamu berhasil dibuat. Terima kasih atas kebaikanmu!"
+      );
       window.location.href("/akun/riwayat-donasi");
     } catch (error) {
+      toast.error(`Maaf, donasi gagal dibuat. Silakan coba lagi.`);
       console.error("Error creating donation:", error);
-      toast.error("Gagal mengirim data");
     } finally {
-      setIsCreateDonationLoading(true);
+      setIsCreateDonationLoading(false);
     }
   };
 
@@ -295,6 +276,7 @@ export default function Home() {
         setCollectionCenters(formatted);
       } catch (error) {
         toast.error("Gagal memuat data tempat penampung");
+        console.error("Error fetching collection centers:", error);
       }
     };
 
@@ -313,24 +295,45 @@ export default function Home() {
           longitude: data.address.longitude,
         });
 
-        const posts = await getPosts(selectedTempatPenampung);
-        const formattedPosts = posts.map((item) => ({
-          value: item.id,
-          label: item.name,
-          latitude: item.address.latitude,
-          longitude: item.address.longitude,
-        }));
-        setPosts(formattedPosts);
+        // Fetch posts sesuai tempat penampung yang dipilih
+        try {
+          const posts = await getPosts(selectedTempatPenampung);
+          if (posts.length > 0) {
+            const formattedPosts = posts.map((item) => ({
+              value: item.id,
+              label: item.name,
+              latitude: item.address.latitude,
+              longitude: item.address.longitude,
+            }));
+            setPosts(formattedPosts);
+          }
+        } catch (error) {
+          console.error("Error fetching posts for collection center:", error);
+          toast.error(
+            "Gagal memuat data cabang atau drop point. Silakan coba lagi."
+          );
+        }
 
-        const events = await getEvents(selectedTempatPenampung);
-        const formattedEvents = events.map((item) => ({
-          value: item.id,
-          label: item.name,
-          ...item,
-        }));
-        setDataEvents(formattedEvents);
+        // Fetch events sesuai tempat penampung yang dipilih
+        try {
+          const events = await getEvents(selectedTempatPenampung);
+          if (events.length > 0) {
+            const formattedEvents = events.map((item) => ({
+              value: item.id,
+              label: item.name,
+              types: item.donationTypes,
+            }));
+            setDataEvents(formattedEvents);
+          }
+        } catch (error) {
+          console.error("Error fetching events for collection center:", error);
+          toast.error("Gagal memuat data event. Silakan coba lagi.");
+        }
       } catch (error) {
-        console.error("Error fetching data for tempatPenampung:", error);
+        toast.error(
+          `Gagal memuat detail data tempat penampung. Silakan coba lagi.`
+        );
+        console.error("Error fetching collection center details:", error);
       }
     };
 
@@ -360,6 +363,7 @@ export default function Home() {
           nomorTelepon: data.phoneNumber.slice(3),
         }));
       } catch (error) {
+        toast.error("Gagal memuat profil. Silakan coba lagi.");
         console.error("Error fetching profile data:", error);
       }
     };
@@ -395,13 +399,14 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Form General Info */}
         <form
           onSubmit={handleSubmit(onSubmit)}
           onKeyDown={handleKeyDown}
           className="flex flex-col items-center w-[1200px] gap-5"
         >
+          {/* Form General Info */}
           <div className="flex gap-5 w-full">
+            {/* Form Informasi Donatur */}
             <div className="flex flex-col gap-3 w-full">
               <h3 className="text-xl font-bold">Informasi Donatur</h3>
               <div className="grid grid-cols-2 gap-5">
@@ -450,6 +455,7 @@ export default function Home() {
               />
             </div>
             <div className="space-y-3 w-full max-w-[590px]">
+              {/* Form Tujuan Donasi */}
               <h3 className="text-xl font-bold">Tujuan Donasi</h3>
               <FormInput
                 inputType="dropdownInput"
@@ -465,17 +471,24 @@ export default function Home() {
                 }}
                 errors={errors?.tempatPenampung?.message}
               />
-              {posts.length > 0 && (
-                <FormInput
-                  key={selectedTempatPenampung}
-                  inputType="dropdownInput"
-                  label="Cabang / Drop Point (opsional)"
-                  name="cabang"
-                  control={control}
-                  options={posts}
-                  placeholder="Pilih cabang atau drop point"
-                />
-              )}
+              <FormInput
+                key={selectedTempatPenampung}
+                inputType="dropdownInput"
+                label="Cabang / Drop Point (opsional)"
+                name="cabang"
+                control={control}
+                options={posts}
+                placeholder={
+                  selectedTempatPenampung
+                    ? posts
+                      ? "Pilih cabang / drop point tujuan donasi"
+                      : "Cabang / drop point tidak tersedia"
+                    : "Pilih tempat penampung terlebih dahulu"
+                }
+                disabled={posts.length <= 0}
+              />
+
+              {/* Button Hitung Jarak */}
               <ButtonCustom
                 variant={calculatingBtnDisabled ? "disabled" : "orange"}
                 label={`Hitung Jarak Alamat Ke ${selectedCabang ? "Cabang" : "Tempat Penampung"}`}
@@ -484,6 +497,7 @@ export default function Home() {
                 onClick={calculateAddressDistance}
                 disabled={calculatingBtnDisabled}
               />
+
               <FormInput
                 inputType="dropdownInput"
                 label="Metode Pengiriman"
@@ -541,7 +555,7 @@ export default function Home() {
                 (event) => event.value === item.event
               );
               const isJenisInvalid =
-                selectedEvent && !selectedEvent.types.includes(item.jenis);
+                selectedEvent && !selectedEvent?.types?.includes(item.jenis);
 
               return (
                 <>
@@ -553,7 +567,7 @@ export default function Home() {
                       yang dipilih, hanya menerima{" "}
                       <span className="font-bold">
                         (
-                        {selectedEvent.types
+                        {selectedEvent?.types
                           .map(
                             (type) =>
                               donationTypes.find(
@@ -806,7 +820,7 @@ export default function Home() {
               <PulseLoader
                 color="white"
                 loading={isCreateDonationLoading}
-                size={10}
+                size={8}
               />
             ) : (
               "Kirim Donasi"
