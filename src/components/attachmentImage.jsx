@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 
 import { getAttachment } from "src/services/api/donation";
 
-const AttachmentImage = ({ fileName, onSelect, onLoad, index }) => {
+const AttachmentImage = ({ fileName, onSelect, onLoad, index, className }) => {
   const [imageUrl, setImageUrl] = useState(null);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ const AttachmentImage = ({ fileName, onSelect, onLoad, index }) => {
       src={imageUrl}
       alt="Donation item image"
       fill
-      className="object-cover rounded-lg rounded-t-none"
+      className={`object-cover rounded-lg ${className}`}
       onClick={() => onSelect(imageUrl)}
     />
   );
