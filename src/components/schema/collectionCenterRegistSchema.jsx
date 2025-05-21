@@ -43,9 +43,6 @@ const collectionCenterRegistSchema = yup.object().shape({
     .max(250, "Deskripsi barang donasi maksimal terdiri dari 250 karakter."),
   foto: yup
     .mixed()
-    .test("required", "Foto barang donasi wajib diunggah.", (value) => {
-      return value instanceof File;
-    })
     .test("fileSize", "Ukuran file terlalu besar. Maksimal 5MB.", (value) => {
       if (!value) return true;
       return value.size <= 5 * 1024 * 1024;
