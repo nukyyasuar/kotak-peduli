@@ -46,7 +46,7 @@ export default function Akun() {
   const [isLoadingSendOtp, setIsLoadingSendOtp] = useState(false);
   const [isLoadingVerifyOtp, setIsLoadingVerifyOtp] = useState(false);
 
-  const { register, handleSubmit, control, watch, setValue, reset } = useForm({
+  const { register, handleSubmit, watch, setValue, reset } = useForm({
     defaultValues: {
       namaDepan: "",
       namaBelakang: "",
