@@ -70,8 +70,36 @@ const getAttachment = async (fileName) => {
 const updateDonorShippingDate = async (id, payload) => {
   try {
     const response = await fetchWithAuth(
-      `${process.env.NEXT_PUBLIC_DOMAIN}/donation-items/${id}`,
+      `${process.env.NEXT_PUBLIC_DOMAIN}/donation-items/${id}/availability`,
       createRequestOptions("PATCH", payload)
+    );
+    const result = await handleApiResponse(response);
+
+    return result;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+const createCollectionCenterShippingDate = async (id, payload) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/donation-items/${id}/pickup`,
+      createRequestOptions("PATCH", payload)
+    );
+    const result = await handleApiResponse(response);
+
+    return result;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+const processDonation = async (donationId, payload) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/donation-items/${donationId}/process`,
+      createRequestOptions("POST", payload)
     );
     const result = await handleApiResponse(response);
 
@@ -87,4 +115,6 @@ export {
   getOneDonation,
   getAttachment,
   updateDonorShippingDate,
+  createCollectionCenterShippingDate,
+  processDonation,
 };
