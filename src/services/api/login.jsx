@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { GoogleAuthProvider, signInWithPopup, getAuth } from "firebase/auth";
 import { initializeApp } from "firebase/app";
 
-import { firebaseConfig } from "src/app/auth/firebaseConfig";
+import { firebaseConfig } from "src/services/auth/firebaseConfig";
 import { createRequestOptions, handleApiResponse } from "../helpers";
 
 const loginWithEmail = async (email, password) => {
