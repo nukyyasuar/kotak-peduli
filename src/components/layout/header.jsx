@@ -13,6 +13,7 @@ import { toast } from "react-toastify";
 const baseMenuList = [
   { href: "/cerita-kami", text: "Cerita Kami" },
   { href: "/tempat-penampung", text: "Tempat Penampung" },
+  { href: "/dashboard", text: "Dashboard", type: "admin_console" },
   { href: "/admin/barang-donasi", text: "Barang Donasi", type: "admin" },
   { href: "/admin/event", text: "Event", type: "admin" },
   { href: "/admin/cabang", text: "Cabang", type: "admin" },
@@ -71,6 +72,7 @@ export default function Header() {
   const pathname = usePathname();
 
   const authToken = localStorage?.getItem("authToken");
+  const userRole = dataProfile?.roleId === 2 ? "admin_console" : null;
 
   const handleLogout = async () => {
     try {
@@ -92,9 +94,22 @@ export default function Header() {
     }
   };
 
+  const fetchProfile = async () => {
+    try {
+      const data = await getProfile();
+      setDataProfile(data);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("authToken");
-    const userRole = localStorage.getItem("role");
+    localStorage.setItem("role", userRole);
 
     if (token) {
       setIsLoggedIn(true);
@@ -105,19 +120,7 @@ export default function Header() {
       setIsLoggedIn(false);
       setRole(null);
     }
-  }, []);
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const data = await getProfile();
-        setDataProfile(data);
-      } catch (error) {
-        console.error("Error fetching profile data:", error);
-      }
-    };
-    fetchProfile();
-  }, []);
+  }, [dataProfile]);
 
   return (
     <nav className="bg-white h-20 fixed top-0 z-10 w-full">
@@ -150,18 +153,25 @@ export default function Header() {
                       );
                     }
                   })
-                : baseMenuList.map((item, index) => {
-                    if (item.type !== "admin") {
-                      return (
-                        <NavBtn
-                          key={index}
-                          index={index}
-                          href={item.href}
-                          text={item.text}
-                        />
-                      );
-                    }
-                  })}
+                : baseMenuList
+                    .filter((item) => {
+                      if (userRole !== "admin_console") {
+                        return item.type !== "admin_console";
+                      }
+                      return true;
+                    })
+                    .map((item, index) => {
+                      if (item.type !== "admin") {
+                        return (
+                          <NavBtn
+                            key={index}
+                            index={index}
+                            href={item.href}
+                            text={item.text}
+                          />
+                        );
+                      }
+                    })}
             </div>
           </div>
 
