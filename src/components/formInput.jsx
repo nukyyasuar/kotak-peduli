@@ -36,6 +36,8 @@ const customStyles = {
   valueContainer: (base) => ({
     ...base,
     padding: 0,
+    flexWrap: "nowrap",
+    overflowX: "auto",
   }),
   option: (base, state) => ({
     ...base,
@@ -49,7 +51,7 @@ const customStyles = {
 };
 
 const baseClass =
-  "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base ";
+  "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base w-full";
 const disabledClass = "bg-[#EDEDED] cursor-not-allowed";
 
 const FormInput = ({
@@ -137,7 +139,15 @@ const FormInput = ({
               isMulti={type === "checkbox"}
               isSearchable={true}
               isDisabled={disabled}
-              value={formattedOptions.find((opt) => opt.value === field.value)}
+              value={
+                type === "checkbox"
+                  ? formattedOptions.filter((opt) =>
+                      field.value?.includes(opt.value)
+                    )
+                  : type === "dynamic"
+                    ? field.value
+                    : formattedOptions.find((opt) => opt.value === field.value)
+              }
               onChange={
                 type === "checkbox"
                   ? (selected) => {
@@ -154,7 +164,9 @@ const FormInput = ({
               placeholder={placeholder}
               styles={customStyles}
               onMenuOpen={onMenuOpen}
-              onMenuClose={() => setIsOpen(false)}
+              onMenuClose={() => {
+                if (isOpen) setIsOpen(false);
+              }}
               components={{
                 DropdownIndicator: () => (
                   <Icon
