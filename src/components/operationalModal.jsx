@@ -18,7 +18,12 @@ const minutes = Array.from({ length: 60 }, (_, i) => ({
   value: i.toString().padStart(2, "0"),
 }));
 
-export default function OperationalModal({ isOpen, handleClose, setValue }) {
+export default function OperationalModal({
+  isOpen,
+  handleClose,
+  setValue,
+  defaultDataOperational,
+}) {
   const {
     control,
     getValues,
@@ -26,6 +31,7 @@ export default function OperationalModal({ isOpen, handleClose, setValue }) {
     handleSubmit,
     clearErrors,
     watch,
+    reset,
   } = useForm({
     resolver: yupResolver(operationalTimeSchema),
     mode: "onBlur",
@@ -59,7 +65,19 @@ export default function OperationalModal({ isOpen, handleClose, setValue }) {
     handleClose();
   };
 
-  console.log("errors modal operasional", errors);
+  useEffect(() => {
+    if (defaultDataOperational) {
+      reset({
+        waktuOperasional: defaultDataOperational.map((item) => ({
+          day: item.day,
+          openHour: item.openTime.split(":")[0],
+          openMinute: item.openTime.split(":")[1],
+          closeHour: item.closeTime.split(":")[0],
+          closeMinute: item.closeTime.split(":")[1],
+        })),
+      });
+    }
+  }, [defaultDataOperational]);
 
   if (!isOpen) return null;
   return (
