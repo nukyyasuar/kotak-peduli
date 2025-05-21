@@ -5,47 +5,69 @@ import { Icon } from "@iconify/react";
 import { useForm, useFieldArray } from "react-hook-form";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { id } from "date-fns/locale";
-import { format } from "date-fns";
-import Image from "next/image";
+import { id, is } from "date-fns/locale";
 import { ClipLoader } from "react-spinners";
+import { toast } from "react-toastify";
+import { yupResolver } from "@hookform/resolvers/yup";
 
+import ModalDetailDonation from "src/components/donationItems/ModalDetailDonation";
 import { FormInput } from "src/components/formInput";
 import { ButtonCustom } from "src/components/button";
 import handleOutsideModal from "src/components/handleOutsideModal";
-import { TextBetween, ListTextWithTitle } from "src/components/text";
+import { TextBetween } from "src/components/text";
 import AttachmentImage from "src/components/attachmentImage";
 import {
+  days,
   statusList,
   donationTypes,
   shippingTypes,
+  tomorrow,
+  nextTwoWeeks,
+  hours,
+  minutes,
+  STATUS_GREEN,
+  STATUS_RED,
 } from "src/components/options";
 
 import {
   getDonations,
   getOneDonation,
+  processDonation,
   updateDonorShippingDate,
 } from "src/services/api/donation";
-import { toast } from "react-toastify";
+import FormattedWIBDate from "src/components/dateFormatter";
+import shippingDateSchema from "src/components/schema/shippingDateSchema";
 
 export default function RiwayatDonasi() {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isShippingDateModalOpen, setIsShippingDateModalOpen] = useState(false);
+  const [isTransitModalOpen, setIsTransitModalOpen] = useState(false);
   const detailModalRef = useRef(null);
-  const shippingDateModalRef = useRef(null);
   const [isDonorShippingDate, setIsDonorShippingDate] = useState([]);
-  const [isShelterShippingDate, setIsShelterShippingDate] = useState(false);
   const [imgSrc, setImgSrc] = useState("");
-  const [imageSrcList, setImageSrcList] = useState([]);
   const [donations, setDonations] = useState([]);
-  const [detailDonation, setDetailDonation] = useState();
   const [selectedIdDonation, setSelectedIdDonation] = useState();
-  const [imageUrls, setImageUrls] = useState([]);
   const [isCreateShippingDateLoading, setIsCreateShippingDateLoading] =
     useState(false);
+  const [isFetchDonationsLoading, setIsFetchDonationsLoading] = useState(false);
+  const [isFetchDetailDonationLoading, setIsFetchDetailDonationLoading] =
+    useState(false);
+  const [isUpdateStatusDonationLoading, setIsUpdateStatusDonationLoading] =
+    useState(false);
+  const [detailDonation, setDetailDonation] = useState();
+  const [requiredAlasanMessage, setRequiredAlasanMessage] = useState("");
 
-  const { control, setValue, watch, reset, handleSubmit, register } = useForm({
+  const {
+    control,
+    setValue,
+    watch,
+    reset,
+    handleSubmit,
+    register,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(shippingDateSchema),
     defaultValues: {
       alasan: "",
       waktuPengiriman: [{ date: "", hour: "", minute: "" }],
@@ -56,46 +78,20 @@ export default function RiwayatDonasi() {
     name: "waktuPengiriman",
   });
 
-  const statusDetailDonation = detailDonation?.approvals?.latestStatus;
-  const STATUS_GREEN = ["PENDING", "DISTRIBUTED"];
-  const STATUS_RED = ["REJECTED", "REDIRECTED"];
-  const statusGreenDetailDonation = STATUS_GREEN.includes(statusDetailDonation);
-  const statusRedDetailDonation = STATUS_RED.includes(statusDetailDonation);
-
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const hours = Array.from({ length: 24 }, (_, i) => ({
-    label: i.toString().padStart(2, "0"),
-    value: i.toString().padStart(2, "0"),
-  }));
-  const minutes = Array.from({ length: 60 }, (_, i) => ({
-    label: i.toString().padStart(2, "0"),
-    value: i.toString().padStart(2, "0"),
-  }));
+  const shelterShippingDate = detailDonation?.pickupDate;
 
   handleOutsideModal({
     ref: isShippingDateModalOpen ? "" : detailModalRef,
-    isOpen: isShippingDateModalOpen
-      ? "isShippingDateModalOpen"
-      : isDetailModalOpen,
+    isOpen: isShippingDateModalOpen ? "" : isDetailModalOpen,
     onClose: () => {
       isShippingDateModalOpen ? "" : setIsDetailModalOpen(false);
     },
   });
 
   const handleImageLoaded = (url, index) => {
-    setImageUrls((prev) => ({ ...prev, [index]: url }));
-
-    setImageSrcList((prev) => {
-      const updated = [...prev];
-      updated[index] = url;
-
-      if (index === 0 && !imgSrc) {
-        setImgSrc(url);
-      }
-
-      return updated;
-    });
+    if (index === 0 && !imgSrc) {
+      setImgSrc(url);
+    }
   };
 
   const handleCloseShippingDateModal = () => {
@@ -111,6 +107,7 @@ export default function RiwayatDonasi() {
       reset();
     }
     setIsShippingDateModalOpen(false);
+    setRequiredAlasanMessage("");
   };
 
   const onSubmit = async (data) => {
@@ -119,7 +116,6 @@ export default function RiwayatDonasi() {
     const waktuPengirimanFormatted = data?.waktuPengiriman?.map((item) => {
       const newDate = new Date(item.date);
       newDate.setHours(Number(item.hour));
-      console.log("Hour:", item.hour);
       newDate.setMinutes(Number(item.minute));
       newDate.setSeconds(0);
       newDate.setMilliseconds(0);
@@ -128,15 +124,31 @@ export default function RiwayatDonasi() {
 
     const payload = {
       details: waktuPengirimanFormatted,
+      ...(watch("alasan") !== "" && {
+        alasan: watch("alasan"),
+      }),
     };
     console.log("Payload:", payload);
+    if (requiredAlasanMessage) {
+      setIsCreateShippingDateLoading(false);
+      return;
+    }
 
     try {
       await updateDonorShippingDate(selectedIdDonation, payload);
-      toast.success(
-        "Tanggal pengiriman berhasil diatur. Tempat penampung akan mengkonfirmasi pilihan Anda."
-      );
-      setIsDonorShippingDate(waktuPengirimanFormatted);
+
+      // Proses Update Status
+      try {
+        await processDonation(selectedIdDonation);
+        setIsDonorShippingDate(waktuPengirimanFormatted);
+        toast.success(
+          "Tanggal pengiriman berhasil diatur. Tempat penampung akan mengkonfirmasi pilihan Anda."
+        );
+        fetchDonations();
+      } catch (error) {
+        console.error("Error processing donation:", error);
+        toast.error("Gagal memproses donasi");
+      }
     } catch (error) {
       console.error("Error updating shipping date:", error);
       toast.error("Gagal mengatur tanggal pengiriman");
@@ -146,46 +158,71 @@ export default function RiwayatDonasi() {
     }
   };
 
+  const handleUpdateStatus = async () => {
+    setIsUpdateStatusDonationLoading(true);
+
+    try {
+      await processDonation(selectedIdDonation);
+      toast.success('Status donasi berhasil diproses ke "Dalam Perjalanan".');
+      fetchDonations();
+    } catch (error) {
+      console.error("Error processing donation:", error);
+      toast.error("Gagal memproses status donasi");
+    } finally {
+      setIsUpdateStatusDonationLoading(false);
+      setIsTransitModalOpen(false);
+    }
+  };
+
+  const fetchDonations = async () => {
+    setIsFetchDonationsLoading(true);
+
+    try {
+      const datas = await getDonations();
+
+      const detailedDonations = await Promise.all(
+        datas.map(async (donation) => {
+          try {
+            const detail = await getOneDonation(donation.id);
+            return detail;
+          } catch (error) {
+            console.error(
+              "Error fetching detail for donation:",
+              donation.id,
+              error
+            );
+            return donation;
+          }
+        })
+      );
+
+      setDonations(detailedDonations);
+    } catch (error) {
+      console.error("Error fetching donations:", error);
+      toast.error("Gagal memuat riwayat donasi");
+    } finally {
+      setIsFetchDonationsLoading(false);
+    }
+  };
   useEffect(() => {
-    const fetchDonations = async () => {
-      try {
-        const datas = await getDonations();
-
-        const detailedDonations = await Promise.all(
-          datas.map(async (donation) => {
-            try {
-              const detail = await getOneDonation(donation.id);
-              return detail;
-            } catch (error) {
-              console.error(
-                "Error fetching detail for donation:",
-                donation.id,
-                error
-              );
-              return donation;
-            }
-          })
-        );
-
-        setDonations(detailedDonations);
-      } catch (error) {
-        console.error("Error fetching donations:", error);
-      }
-    };
-
     fetchDonations();
   }, []);
 
   useEffect(() => {
     const fetchDetailDonation = async () => {
+      setIsFetchDetailDonationLoading(true);
+
       try {
         const detail = await getOneDonation(selectedIdDonation);
         setDetailDonation(detail);
         setImgSrc(detail.attachments[0]?.fileName);
       } catch (error) {
         console.error("Error fetching detail donation:", error);
+      } finally {
+        setIsFetchDetailDonationLoading(false);
       }
     };
+
     if (selectedIdDonation) {
       fetchDetailDonation();
     }
@@ -201,7 +238,7 @@ export default function RiwayatDonasi() {
         </p>
       </div>
 
-      {/* Tabs */}
+      {/* Status Filter Button */}
       <div className="flex gap-1 overflow-y-scroll no-scrollbar">
         {statusList.map((status) => (
           <ButtonCustom
@@ -215,393 +252,401 @@ export default function RiwayatDonasi() {
         ))}
       </div>
 
-      {/* Riwayat Donasi */}
-      <div className="space-y-3">
-        {donations.map((donation, index) => {
-          const status =
-            statusList.find(
-              (status) => status.value === donation.approvals.latestStatus
-            )?.label || donation.approvals.latestStatus;
-          const statusRedDonation = status.includes(STATUS_RED);
-          const statusGreenDonation = status.includes(STATUS_GREEN);
-          return (
-            <>
-              <div
-                className="rounded-lg p-3 pt-0 flex gap-8 hover:shadow-lg border"
-                key={index}
-                onClick={() => {
-                  setIsDetailModalOpen(true);
-                  setSelectedIdDonation(donation.id);
-                }}
-              >
-                <div className="min-w-[180px] aspect-square bg-[#C2C2C2] rounded-b-lg relative">
-                  <AttachmentImage
-                    fileName={donation.attachments?.files?.[0].name}
-                    index={index}
-                    onLoad={handleImageLoaded}
-                    onSelect={(url) => {
-                      setImgSrc(url);
-                    }}
-                    className="rounded-t-none"
-                  />
-                </div>
+      {/* Loading Fetch Donations */}
+      {isFetchDonationsLoading ? (
+        <div className="flex justify-center items-center h-[300px]">
+          <ClipLoader color="#543A14" size={30} />
+        </div>
+      ) : (
+        // Riwayat Donasi
+        <div className="space-y-3">
+          {donations
+            .filter((donation) =>
+              selectedStatus
+                ? donation.approvals?.latestStatus === selectedStatus
+                : true
+            )
+            .map((donation, index) => {
+              const status = statusList.find(
+                (status) => status.value === donation.approvals.latestStatus
+              )?.label;
 
-                <div className="w-full">
-                  <div className="flex flex-col justify-between text-black text-sm h-full">
-                    <div className="flex justify-between items-start">
-                      <div className="flex flex-col gap-1 pt-3">
-                        <span className="font-bold">
-                          {donation.collectionCenter.name}
-                        </span>
-                        <span>{donation?.post?.name}</span>
-                      </div>
-                      <span
-                        className={`${statusGreenDonation ? `bg-[#1F7D53]` : statusRedDonation ? `bg-[#E52020]` : `bg-[#543A14]`}  text-white px-6 py-2 font-bold rounded-b-lg`}
-                      >
-                        {status}
-                      </span>
+              const latestStatus = donation?.approvals?.latestStatus;
+              const statusRedDonation = STATUS_RED.includes(latestStatus);
+              const statusGreenDonation = STATUS_GREEN.includes(latestStatus);
+              const isHighlightedLatestStatus =
+                latestStatus === "CONFIRMED" ||
+                latestStatus === "PENDING" ||
+                latestStatus === "CONFIRMING";
+              const statusTextHighlighted = {
+                DIGITAL_CHECKING: "Proses pemeriksaan digital",
+                PENDING: "Donatur belum mengirim opsi",
+                CONFIRMING: "Tempat penampung belum memilih",
+              };
+
+              return (
+                <div key={index}>
+                  <div
+                    className="rounded-lg p-3 pt-0 flex gap-8 hover:shadow-lg border"
+                    key={index}
+                    onClick={() => {
+                      setIsDetailModalOpen(true);
+                      setSelectedIdDonation(donation.id);
+                    }}
+                  >
+                    <div className="min-w-[180px] aspect-square bg-[#C2C2C2] rounded-b-lg relative">
+                      <AttachmentImage
+                        fileName={donation.attachments?.files?.[0].name}
+                        index={index}
+                        onLoad={handleImageLoaded}
+                        onSelect={(url) => {
+                          setImgSrc(url);
+                        }}
+                        className="rounded-t-none"
+                      />
                     </div>
-                    <div className="flex justify-between">
-                      <div className="space-y-1">
-                        <div className="flex gap-2">
-                          <span>Event:</span>
-                          <span>{donation?.event?.name || "-"}</span>
-                        </div>
-                        <span>
-                          {donationTypes.find(
-                            (type) => type.value === donation.donationType
-                          )?.label || donation.donationType}{" "}
-                          ({donation.quantity}pcs, {donation.weight}kg)
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex gap-2">
-                          <span>Metode Pengiriman:</span>
-                          <span>
-                            {shippingTypes.find(
-                              (type) => type.value === donation.pickupType
-                            )?.label || donation.pickupType}
+
+                    <div className="w-full">
+                      <div className="flex flex-col justify-between text-black text-sm h-full">
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col gap-1 pt-3">
+                            <span className="font-bold">
+                              {donation.collectionCenter.name}
+                            </span>
+                            <span>{donation?.post?.name}</span>
+                          </div>
+                          <span
+                            className={`${statusGreenDonation ? `bg-[#1F7D53]` : statusRedDonation ? `bg-[#E52020]` : `bg-[#543A14]`}  text-white px-6 py-2 font-bold rounded-b-lg`}
+                          >
+                            {status}
                           </span>
                         </div>
-                        <div className="flex gap-2">
-                          <span>Tanggal Pengiriman:</span>
-                          <span className="font-bold text-[#F0BB78]">
-                            {donation?.approvals?.latestStatus === "PENDING"
-                              ? isDonorShippingDate.length > 0
-                                ? isDonorShippingDate.map((date, index) => (
-                                    <span key={index}>
-                                      {format(
-                                        new Date(date),
-                                        "dd/MM/yyyy HH:mm"
-                                      )}{" "}
-                                      WIB
-                                    </span>
-                                  ))
-                                : "Menunggu opsi donatur"
-                              : "Menunggu pemeriksaan digital"}
-                          </span>
+                        <div className="flex justify-between">
+                          <div className="space-y-1">
+                            <div className="flex gap-2">
+                              <span>Event:</span>
+                              <span>{donation?.event?.name || "-"}</span>
+                            </div>
+                            <span>
+                              {donationTypes.find(
+                                (type) => type.value === donation.donationType
+                              )?.label || donation.donationType}{" "}
+                              ({donation.quantity}pcs, {donation.weight}kg)
+                            </span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex gap-2">
+                              <span>Metode Pengiriman:</span>
+                              <span>
+                                {shippingTypes.find(
+                                  (type) => type.value === donation.pickupType
+                                )?.label || donation.pickupType}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span>Tanggal Pengiriman:</span>
+                              <span
+                                className={`font-bold text-${isHighlightedLatestStatus ? "[#F0BB78]" : "black"} w-60`}
+                              >
+                                {statusTextHighlighted[latestStatus] || (
+                                  <FormattedWIBDate
+                                    date={donation.pickupDate}
+                                    type="time"
+                                  />
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex gap-3">
+                          <ButtonCustom
+                            variant="outlineOrange"
+                            type="button"
+                            label="Hubungi Tempat Penampung"
+                            className="w-fit"
+                          />
+                          {(latestStatus === "PENDING" ||
+                            latestStatus === "CONFIRMED") && (
+                            <ButtonCustom
+                              variant="orange"
+                              type="button"
+                              label={
+                                latestStatus === "PENDING"
+                                  ? "Atur opsi tanggal pengiriman"
+                                  : latestStatus === "CONFIRMED"
+                                    ? "Atur ulang opsi tanggal pengiriman"
+                                    : ""
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedIdDonation(donation.id);
+                                setIsShippingDateModalOpen(true);
+                              }}
+                            />
+                          )}
+                          {latestStatus === "TRANSPORTING" && (
+                            <ButtonCustom
+                              variant="orange"
+                              type="button"
+                              label="Antar Donasi Sekarang"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedIdDonation(donation.id);
+                                setIsTransitModalOpen(true);
+                              }}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
-                    <ButtonCustom
-                      variant="outlineOrange"
-                      type="button"
-                      label="Hubungi Tempat Penampung"
-                      className="w-fit"
-                    />
                   </div>
                 </div>
-              </div>
-            </>
-          );
-        })}
-      </div>
-
-      {/* Modal Detail */}
-      {isDetailModalOpen && detailDonation && (
-        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
-          <div
-            ref={detailModalRef}
-            className="bg-white rounded-lg p-8 space-y-6 text-black"
-          >
-            <div className="flex justify-between items-center">
-              <h1 className="font-bold text-xl">
-                Detail Riwayat Barang Donasi
-              </h1>
-              <span
-                className={`${statusGreenDetailDonation ? `bg-[#1F7D53]` : statusRedDetailDonation ? `bg-[#E52020]` : `bg-[#543A14]`} text-white px-6 py-2 font-bold rounded-lg`}
-              >
-                {statusList.find(
-                  (status) =>
-                    status.value === detailDonation?.approvals.latestStatus
-                )?.label || detailDonation?.approvals.latestStatus}
-              </span>
-            </div>
-            <div className="flex space-x-8">
-              {/* Left Section */}
-              <div className="w-80 space-y-6">
-                {/* Large Image */}
-                <div className="bg-[#C2C2C2] aspect-square rounded-lg relative">
-                  <Image
-                    src={imgSrc}
-                    alt="Donation item image large"
-                    fill
-                    className="object-cover rounded-lg"
-                  />
-                </div>
-                <div className="flex gap-2 overflow-scroll no-scrollbar">
-                  {detailDonation?.attachments?.files?.map((file, index) => {
-                    return (
-                      <div
-                        key={index}
-                        className="bg-[#C2C2C2] rounded-lg min-w-16 aspect-square relative"
-                      >
-                        <AttachmentImage
-                          index={index}
-                          fileName={file.name}
-                          onSelect={(src) => setImgSrc(src)}
-                          onLoad={handleImageLoaded}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Button Left Section */}
-                <div className="space-y-2">
-                  <ButtonCustom
-                    variant="outlineOrange"
-                    type="button"
-                    label="Hubungi Tempat Penampung"
-                    className="w-full"
-                  />
-                  {detailDonation?.approvals?.latestStatus !==
-                    "DIGITAL_CHECKING" && (
-                    <ButtonCustom
-                      variant="orange"
-                      type="button"
-                      label={`Atur ${isShelterShippingDate ? `Ulang` : ``} Tanggal Pengiriman`}
-                      className="w-full"
-                      onClick={() => setIsShippingDateModalOpen(true)}
-                    />
-                  )}
-                </div>
-              </div>
-              {/* Right Section */}
-              <div className="space-y-4 max-w-[450px]">
-                <ListTextWithTitle
-                  title="Tanggal Donasi:"
-                  values={[detailDonation?.createdAt]}
-                />
-                <ListTextWithTitle
-                  title="Informasi Donatur:"
-                  values={[
-                    `${detailDonation?.user.firstName} ${detailDonation?.user.lastName}`,
-                    detailDonation?.user.phoneNumber,
-                    `${detailDonation?.address.reference ? `(${detailDonation?.address.reference}) ` : ""}${detailDonation?.address.detail}`,
-                  ]}
-                  className="max-w-[450px]"
-                />
-                <ListTextWithTitle
-                  title="Barang Donasi:"
-                  values={[
-                    `${donationTypes.find((type) => type.value === detailDonation?.donationType)?.label || detailDonation?.donationType} (${detailDonation?.quantity}pcs, ${detailDonation?.weight}kg)`,
-                  ]}
-                />
-                <ListTextWithTitle
-                  title="Detail Tempat Penampung:"
-                  values={[
-                    detailDonation?.collectionCenter.name,
-                    detailDonation?.post.name,
-                    `(${detailDonation?.targetAddress.reference}) ${detailDonation?.targetAddress.detail}`,
-                    <TextBetween
-                      label="Event"
-                      value={detailDonation?.event?.name}
-                    />,
-                  ]}
-                  className="max-w-[450px]"
-                />
-                <ListTextWithTitle
-                  title="Informasi Pengiriman:"
-                  values={[
-                    shippingTypes.find(
-                      (type) => type.value === detailDonation?.pickupType
-                    )?.label || detailDonation?.pickupType,
-                    <TextBetween
-                      label="Tanggal Pengajuan"
-                      value={
-                        detailDonation?.userAvailability?.length > 0 ? (
-                          detailDonation?.userAvailability?.map(
-                            (date, index) => (
-                              <span key={index}>
-                                {format(new Date(date), "dd/MM/yyyy HH:mm")} WIB
-                              </span>
-                            )
-                          )
-                        ) : (
-                          <span className="font-bold text-[#F0BB78]">
-                            Menunggu opsi donatur
-                          </span>
-                        )
-                      }
-                      className="border-b border-[#C2C2C2] pb-1 text-end"
-                    />,
-                    <TextBetween
-                      label={
-                        <>
-                          Tanggal Yang Dikonfirmasi <br /> Tempat Penampung
-                        </>
-                      }
-                      value={[
-                        isShelterShippingDate ? (
-                          <span className="font-bold">
-                            {isShelterShippingDate}
-                          </span>
-                        ) : (
-                          <span className="font-bold text-[#F0BB78] text-end w-2/3">
-                            Menunggu konfirmasi tempat penampung
-                          </span>
-                        ),
-                      ]}
-                    />,
-                  ]}
-                />
-              </div>
-            </div>
-          </div>
+              );
+            })}
         </div>
       )}
+
+      {/* Modal Detail Data Donasi */}
+      <ModalDetailDonation
+        isOpen={isDetailModalOpen}
+        detailModalRef={detailModalRef}
+        detailDonation={detailDonation}
+        isFetchDetailDonationLoading={isFetchDetailDonationLoading}
+        imgSrc={imgSrc}
+        setImgSrc={setImgSrc}
+        STATUS_GREEN={STATUS_GREEN}
+        STATUS_RED={STATUS_RED}
+        handleImageLoaded={handleImageLoaded}
+        setIsShippingDateModalOpen={setIsShippingDateModalOpen}
+        selectedIdDonation={selectedIdDonation}
+      />
 
       {/* Modal Tanggal Pengiriman */}
       {isShippingDateModalOpen && (
         <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
-          <div
-            ref={shippingDateModalRef}
-            className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px]"
-          >
+          <div className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px]">
             <h1 className="font-bold text-xl">
-              Atur {isShelterShippingDate && "Ulang"} Tanggal Pengiriman
+              Atur {shelterShippingDate && "Ulang"} Tanggal Pengiriman
             </h1>
-            <div className="flex flex-col pb-4 border-b">
-              <span>Tempat Penampung Alam Sutera</span>
-              <span>Drop Point Tangerang Kota</span>
-              <TextBetween
-                label="Waktu Operasional"
-                value={["Senin - Jumat (08:00 - 17:00)"]}
+            {isFetchDetailDonationLoading ? (
+              <div className="flex justify-center items-center h-70 w-150">
+                <ClipLoader color="#543A14" size={30} />
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col pb-4 border-b">
+                  <span>{detailDonation?.collectionCenter?.name}</span>
+                  {detailDonation?.post && (
+                    <span>{detailDonation?.post?.name}</span>
+                  )}
+                  <TextBetween
+                    label="Waktu Operasional"
+                    value={detailDonation?.collectionCenter?.activeHours
+                      ?.sort(
+                        (a, b) =>
+                          days.findIndex((d) => d.value === a.day) -
+                          days.findIndex((d) => d.value === b.day)
+                      )
+                      ?.map((item) => {
+                        const dayLabel =
+                          days.find((d) => d.value === item.day)?.label ||
+                          item.day;
+                        return `${dayLabel}, ${item.openTime} - ${item.closeTime}`;
+                      })}
+                  />
+                  {shelterShippingDate && (
+                    <TextBetween
+                      label="Tanggal Pilihan Tempat Penampung"
+                      value={[
+                        <span className="font-bold">
+                          <FormattedWIBDate
+                            date={shelterShippingDate}
+                            type="time"
+                          />
+                        </span>,
+                      ]}
+                    />
+                  )}
+                </div>
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+                  {shelterShippingDate && (
+                    <div>
+                      <FormInput
+                        inputType="text"
+                        label="Alasan Penggantian"
+                        placeholder="Contoh: Ada keperluan mendadak"
+                        register={register("alasan")}
+                      />
+                      {requiredAlasanMessage && (
+                        <p className="text-red-600 mt-1 text-sm">
+                          {requiredAlasanMessage}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex flex-col gap-3">
+                    <span className="font-bold">
+                      Pilih Tanggal & Waktu (Maks. 5 Opsi)
+                    </span>
+                    <p className="text-sm">
+                      Tempat penampung akan memilih salah satu yang sesuai
+                      dengan jadwal mereka, lalu mengonfirmasikannya kepada
+                      Anda.
+                    </p>
+                  </div>
+
+                  {fields.map((field, index) => (
+                    <div key={field.id}>
+                      <div className="space-y-1">
+                        <div className="flex justify-between w-full">
+                          <DatePicker
+                            placeholderText="Pilih tanggal"
+                            selected={watch(`waktuPengiriman.${index}.date`)}
+                            onChange={(date) => {
+                              setValue(`waktuPengiriman.${index}.date`, date);
+                            }}
+                            minDate={tomorrow}
+                            maxDate={nextTwoWeeks}
+                            dateFormat="EEEE, dd/MM/yyyy"
+                            locale={id}
+                            popperPlacement="right"
+                            className="border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 focus:outline-none focus:border-black placeholder:text-[#C2C2C2] bg-white w-44"
+                          />
+                          <div className="flex items-center gap-1">
+                            <FormInput
+                              inputType="dropdownInput"
+                              options={hours}
+                              control={control}
+                              name={`waktuPengiriman.${index}.hour`}
+                              placeholder={"17"}
+                              inputStyles="w-25"
+                            />
+                            <span>:</span>
+                            <FormInput
+                              inputType="dropdownInput"
+                              options={minutes}
+                              control={control}
+                              name={`waktuPengiriman.${index}.minute`}
+                              placeholder={"00"}
+                              inputStyles="w-25"
+                            />
+                          </div>
+                          {fields.length < 5 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                append({
+                                  date: "",
+                                  hour: "",
+                                  minute: "",
+                                })
+                              }
+                              className="bg-[#F0BB78] text-white rounded-lg text-sm text-nowrap h-12 px-5"
+                            >
+                              + Add
+                            </button>
+                          )}
+                          {fields.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => remove(index)}
+                              className="bg-[#E52020] text-white rounded-lg text-sm text-nowrap h-12 px-5"
+                            >
+                              <Icon icon="mdi:trash" width={20} color="white" />
+                            </button>
+                          )}
+                        </div>
+                        {errors.waktuPengiriman?.[index] && (
+                          <p className="text-red-500 text-sm">
+                            {errors.waktuPengiriman[index].message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {errors.waktuPengiriman?.root?.message && (
+                    <p className="text-red-500 text-sm">
+                      {errors.waktuPengiriman.root.message}
+                    </p>
+                  )}
+
+                  <div className="flex justify-end space-x-3 mt-4">
+                    <ButtonCustom
+                      label={
+                        isCreateShippingDateLoading ? (
+                          <ClipLoader
+                            color="#fff"
+                            size={20}
+                            className="text-white"
+                          />
+                        ) : (
+                          "Kirim"
+                        )
+                      }
+                      variant="brown"
+                      type="submit"
+                      className="w-full"
+                      onClick={() => {
+                        if (
+                          watch("alasan") === "" &&
+                          detailDonation?.pickupDate
+                        ) {
+                          setRequiredAlasanMessage(
+                            "Alasan penggantian wajib diisi"
+                          );
+                        } else {
+                          setRequiredAlasanMessage("");
+                        }
+                      }}
+                    />
+                    <ButtonCustom
+                      label="Batal"
+                      onClick={handleCloseShippingDateModal}
+                      variant="white"
+                      type="button"
+                      className="w-full"
+                    />
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Dalam Perjalanan */}
+      {isTransitModalOpen && (
+        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px]">
+            <h1 className="font-bold text-xl">
+              Konfirmasi Antar Donasi Sekarang
+            </h1>
+            <p>
+              Dengan menekan tombol ini, status donasi akan berubah menjadi{" "}
+              <span className="font-bold">"Dalam Perjalanan"</span>. Pastikan
+              Anda benar-benar sedang atau sudah ingin berangkat menuju tempat
+              penampung mengantarkan barang donasi.
+            </p>
+
+            <div className="flex justify-end space-x-3 mt-4">
+              <ButtonCustom
+                label="Konfirmasi"
+                variant="brown"
+                type="button"
+                className="w-full"
+                onClick={() => {
+                  handleUpdateStatus();
+                }}
               />
-              <TextBetween
-                label="Tanggal Pilihan Tempat Penampung"
-                value={[
-                  <span className="font-bold">{isShelterShippingDate}</span>,
-                ]}
+              <ButtonCustom
+                label="Batal"
+                onClick={handleCloseShippingDateModal}
+                variant="white"
+                type="button"
+                className="w-full"
               />
             </div>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-              {isShelterShippingDate && (
-                <FormInput
-                  inputType="text"
-                  label="Alasan Penggantian"
-                  placeholder="Contoh: Ada keperluan mendadak"
-                  register={register("alasan")}
-                />
-              )}
-
-              <div className="flex flex-col gap-3">
-                <span className="font-bold">
-                  Pilih Tanggal & Waktu (Maks. 5 Opsi)
-                </span>
-                <p className="text-sm">
-                  Tempat penampung akan memilih salah satu yang sesuai dengan
-                  jadwal mereka, lalu mengonfirmasikannya kepada Anda.
-                </p>
-              </div>
-
-              {fields.map((field, index) => (
-                <div key={field.id}>
-                  <div className="flex justify-between">
-                    <DatePicker
-                      placeholderText="Pilih tanggal"
-                      selected={watch(`waktuPengiriman.${index}.date`)}
-                      onChange={(date) => {
-                        setValue(`waktuPengiriman.${index}.date`, date);
-                      }}
-                      minDate={tomorrow}
-                      dateFormat="EEEE, dd/MM/yyyy"
-                      locale={id}
-                      popperPlacement="right"
-                      className="border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 focus:outline-none focus:border-black placeholder:text-[#C2C2C2] bg-white w-44"
-                    />
-                    <div className="flex items-center gap-1">
-                      <FormInput
-                        inputType="dropdownInput"
-                        options={hours}
-                        control={control}
-                        name={`waktuPengiriman.${index}.hour`}
-                        placeholder={"17"}
-                        inputStyles="w-25"
-                      />
-                      <span>:</span>
-                      <FormInput
-                        inputType="dropdownInput"
-                        options={minutes}
-                        control={control}
-                        name={`waktuPengiriman.${index}.minute`}
-                        placeholder={"00"}
-                        inputStyles="w-25"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        append({
-                          date: "",
-                          hour: "",
-                          minute: "",
-                        })
-                      }
-                      className="bg-[#F0BB78] text-white rounded-lg text-sm text-nowrap h-12 px-5"
-                    >
-                      + Add
-                    </button>
-                    {fields.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => remove(index)}
-                        className="bg-[#E52020] text-white rounded-lg text-sm text-nowrap h-12 px-5"
-                      >
-                        <Icon icon="mdi:trash" width={20} color="white" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-
-              <div className="flex justify-end space-x-3 mt-4">
-                <ButtonCustom
-                  label={
-                    isCreateShippingDateLoading ? (
-                      <ClipLoader
-                        color="#fff"
-                        size={20}
-                        className="text-white"
-                      />
-                    ) : (
-                      "Kirim"
-                    )
-                  }
-                  variant="brown"
-                  type="submit"
-                  className="w-full"
-                />
-                <ButtonCustom
-                  label="Batal"
-                  onClick={handleCloseShippingDateModal}
-                  variant="white"
-                  type="button"
-                  className="w-full"
-                />
-              </div>
-            </form>
           </div>
         </div>
       )}
