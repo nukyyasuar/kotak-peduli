@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
+import { usePathname } from "next/navigation";
 
 import { logout } from "src/services/api/logout";
 import { getProfile } from "src/services/api/profile";
@@ -12,10 +13,11 @@ import { toast } from "react-toastify";
 const baseMenuList = [
   { href: "/cerita-kami", text: "Cerita Kami" },
   { href: "/tempat-penampung", text: "Tempat Penampung" },
-  { href: "/", text: "Barang Donasi", type: "admin" },
-  { href: "/", text: "Event", type: "admin" },
-  { href: "/", text: "Cabang", type: "admin" },
-  { href: "/", text: "Administrator", type: "admin" },
+  { href: "/admin/barang-donasi", text: "Barang Donasi", type: "admin" },
+  { href: "/admin/event", text: "Event", type: "admin" },
+  { href: "/admin/cabang", text: "Cabang", type: "admin" },
+  { href: "/admin/pengurus", text: "Pengurus", type: "admin" },
+  { href: "/admin/akun", text: "Akun", type: "admin" },
 ];
 
 const buttonMenuList = [
@@ -24,15 +26,23 @@ const buttonMenuList = [
 ];
 
 function NavBtn({ href, text, variant = "nav" }) {
-  const baseClasses = "px-7 rounded-lg flex items-center";
+  const pathname = usePathname();
+
+  const baseClasses = "rounded-lg flex items-center";
 
   const variants = {
-    nav: "py-2 text-[#4A2C2A] hover:bg-[#FFF0DC]",
-    btn: "border-2 border-[#F0BB78] text-[#131010] font-bold hover:bg-[#F0BB78] hover:text-white",
+    nav: "py-1 rounded-none hover:border-b-3 hover:border-[#543a14] hover:font-bold hover:text-[#543a14]",
+    btn: "border-2 border-[#F0BB78] text-[#131010] font-bold hover:bg-[#F0BB78] hover:text-white px-7",
+    active: "border-b-3 border-[#543a14] rounded-none font-bold text-[#543a14]",
   };
 
+  const isActive = pathname === href;
+
   return (
-    <Link href={href} className={`${baseClasses} ${variants[variant]}`}>
+    <Link
+      href={href}
+      className={`${baseClasses} ${variants[variant]} ${isActive ? variants.active : "text-black"}`}
+    >
       {text}
     </Link>
   );
@@ -58,6 +68,9 @@ export default function Header() {
   const [role, setRole] = useState("null");
   const [showLogout, setShowLogout] = useState(false);
   const [dataProfile, setDataProfile] = useState(null);
+  const pathname = usePathname();
+
+  const authToken = localStorage?.getItem("authToken");
 
   const handleLogout = async () => {
     try {
@@ -67,7 +80,8 @@ export default function Header() {
         toast.success("Logout successful");
         localStorage.removeItem("authToken");
         localStorage.removeItem("refreshToken");
-        // window.location.href = "/";
+        localStorage.removeItem("collectionCenterId");
+        window.location.href = "/";
         setIsLoggedIn(false);
         setRole(null);
       } else {
@@ -109,7 +123,7 @@ export default function Header() {
     <nav className="bg-white h-20 fixed top-0 z-10 w-full">
       <div className="flex items-center justify-center h-full">
         <div className="flex justify-between w-[1200px]">
-          <div className="flex items-center gap-7">
+          <div className="flex items-center gap-10">
             {/* Logo */}
             <div className="flex items-center cursor-pointer">
               <Link href="/">
@@ -122,8 +136,8 @@ export default function Header() {
               </Link>
             </div>
             {/* Navigasi */}
-            <div className="flex gap-2">
-              {role === "admin"
+            <div className="flex gap-8">
+              {pathname.includes("/admin")
                 ? baseMenuList.map((item, index) => {
                     if (item.type === "admin") {
                       return (
@@ -155,9 +169,8 @@ export default function Header() {
           <div className="flex gap-3">
             {role === "admin" ? null : (
               <Link
-                href="/donasi"
-                // href={localStorage.getItem("authToken") ? "/donasi" : "/login"}
-                className="text-[#FFF0DC] font-bold h-10 px-7 bg-[#543a14] flex items-center rounded-lg hover:bg-[#6B4D20] z-10"
+                href={authToken ? "/donasi" : "/login"}
+                className="text-[#FFF0DC] font-bold h-10 px-7  border bg-[#543a14] flex items-center rounded-lg hover:bg-[#6B4D20] z-10"
               >
                 Donasi Sekarang
               </Link>
