@@ -7,6 +7,7 @@ import Image from "next/image";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { toast } from "react-toastify";
 import { ClipLoader } from "react-spinners";
+import Link from "next/link";
 
 import { FormInput } from "src/components/formInput";
 import AddressModal from "src/components/addressModal";
@@ -24,11 +25,9 @@ import {
 import { getProfile } from "src/services/api/profile";
 
 import {
-  onAuthStateChange,
   sendPhoneVerificationCode,
-  setupRecaptcha,
   verifyPhoneCode,
-} from "src/app/auth/auth";
+} from "src/services/auth/auth";
 
 export default function DaftarTempatPenampung() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -81,7 +80,6 @@ export default function DaftarTempatPenampung() {
     },
   });
 
-  const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
   const watchPhoneNumber = watch("nomorTelepon");
 
   handleOutsideModal({
@@ -94,9 +92,6 @@ export default function DaftarTempatPenampung() {
     },
   });
 
-  console.log("otpsent", isOtpSent);
-  console.log(watch("nomorTelepon"));
-
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -107,6 +102,7 @@ export default function DaftarTempatPenampung() {
   };
 
   const onSubmit = (data) => {
+    // Validasi blocking ketika ganti nomor telepon harus dapet idToken
     const formData = new FormData();
     console.log(data);
 
@@ -326,8 +322,6 @@ export default function DaftarTempatPenampung() {
     }
   };
 
-  console.log("isSubmitted", watch("nomorTelepon"));
-
   return isLoadingCreateCollectionCenter || isLoadingCollectionCenter ? (
     <div className="flex items-center justify-center h-screen">
       <ClipLoader
@@ -361,7 +355,20 @@ export default function DaftarTempatPenampung() {
       {isSubmitted || isPending || isApproved || isDecline ? (
         isApproved ? (
           <ButtonCustom
-            label="Dashboard Tempat Penampung"
+            label={
+              <Link
+                href="/admin/barang-donasi"
+                onClick={() =>
+                  localStorage.setItem(
+                    "collectionCenterId",
+                    dataProfile?.collectionCenterCollaborator
+                      ?.collectionCenterId
+                  )
+                }
+              >
+                Dashboard Tempat Penampung
+              </Link>
+            }
             variant="orange"
             className="w-full"
           />
