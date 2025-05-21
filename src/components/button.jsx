@@ -7,11 +7,14 @@ const variantStyles = {
   white: "bg-white text-[#543A14] border border-[#543A14]hover:text-white",
   brown: "bg-[#543a14] text-white hover:bg-[#6B4D20] hover:text-white",
   orange: "bg-[#F0BB78] text-white hover:bg-[#E09359]",
-  outlineOrange:
-    "border border-[#F0BB78] text-black hover:bg-[#F0BB78] hover:text-white",
-  outlineBrown:
-    "border border-[#543A14] text-black hover:bg-[#543a14] hover:text-white",
-  disabled: "bg-[#EDEDED] cursor-not-allowed",
+  outlineOrange: "border border-[#F0BB78] text-black hover:bg-[#EDEDED]",
+  outlineBrown: "border border-[#543A14] text-black hover:bg-[#EDEDED]",
+  disabled: "bg-[#EDEDED] text-[#C2C2C2] cursor-not-allowed",
+  green: "bg-[#1F7D53] text-white hover:bg-[#1B6846]",
+  red: "bg-[#E52020] text-white hover:bg-[#CC1C1C]",
+  green: "bg-[#1F7D53] text-white hover:bg-[#1B6846]",
+  outlineGreen: "border border-[#1F7D53] hover:bg-[#1F7D53] hover:text-white",
+  outlineRed: "border border-[#E52020] hover:bg-[#E52020] hover:text-white",
 };
 
 const ButtonCustom = ({
@@ -27,9 +30,8 @@ const ButtonCustom = ({
 }) => {
   return (
     <button
-      key={label}
       type={type}
-      className={`${baseClass} ${variantStyles[variant]} ${className} ${disabled ? `cursor-not-allowed` : `cursor-pointer`}`}
+      className={`${baseClass} ${variantStyles[`${disabled ? "disabled" : variant}`]} ${className} ${disabled ? `cursor-not-allowed` : `cursor-pointer`}`}
       onClick={onClick}
       disabled={disabled}
       {...rest}
