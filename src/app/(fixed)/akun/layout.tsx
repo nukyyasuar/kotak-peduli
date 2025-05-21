@@ -39,11 +39,6 @@ const sidebarMenu = [
     menu: "Tempat Penampung",
     icon: "teenyicons:building-solid",
   },
-  {
-    href: "/akun/admin-platform",
-    menu: "Admin Platform",
-    icon: "ri:admin-fill",
-  },
 ];
 
 export default function AkunLayout({
@@ -51,26 +46,8 @@ export default function AkunLayout({
 }: {
   children: React.ReactNode;
 }) {
-  interface Profile {
-    roleId: number | null;
-    [key: string]: any;
-  }
-
-  const [dataProfile, setDataProfile] = useState<Profile | null>(null);
-
   const pathname = usePathname();
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const data = await getProfile();
-        setDataProfile(data);
-      } catch (error) {
-        console.error("Error fetching profile data:", error);
-      }
-    };
-    fetchProfile();
-  }, []);
+  const userRole = localStorage.getItem("role");
 
   return (
     <section className="max-w-[1200px] py-12 mx-auto">
@@ -82,26 +59,19 @@ export default function AkunLayout({
             <h1 className="font-bold">Donatur</h1>
           </div>
           <div className="space-y-1 text-nowrap">
-            {sidebarMenu
-              .filter((item) => {
-                if (dataProfile?.roleId === null) {
-                  return item.menu !== "Admin Platform";
-                }
-                return true;
-              })
-              .map(({ href, menu, icon }) => {
-                const isActive = pathname === href;
+            {sidebarMenu.map(({ href, menu, icon }) => {
+              const isActive = pathname === href;
 
-                return (
-                  <SidebarCustom
-                    key={href}
-                    href={href}
-                    menu={menu}
-                    icon={icon}
-                    isActive={isActive}
-                  />
-                );
-              })}
+              return (
+                <SidebarCustom
+                  key={href}
+                  href={href}
+                  menu={menu}
+                  icon={icon}
+                  isActive={isActive}
+                />
+              );
+            })}
           </div>
         </div>
 
