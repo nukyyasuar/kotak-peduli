@@ -3,18 +3,25 @@ import { toast } from "react-toastify";
 const createRequestOptions = (method, body) => {
   const isFormData = body instanceof FormData;
 
-  return {
+  const headers = isFormData
+    ? { "ngrok-skip-browser-warning": "69420" }
+    : {
+        "Content-Type": "application/json",
+        "ngrok-skip-browser-warning": "69420",
+      };
+
+  const options = {
     method,
-    headers: isFormData
-      ? { "ngrok-skip-browser-warning": "69420" }
-      : {
-          "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "69420",
-        },
-    body: isFormData ? body : JSON.stringify(body),
+    headers,
     redirect: "follow",
     credentials: "include",
   };
+
+  if (body) {
+    options.body = isFormData ? body : JSON.stringify(body);
+  }
+
+  return options;
 };
 
 const handleApiResponse = async (response) => {
@@ -110,9 +117,4 @@ const fetchWithAuth = async (url, options) => {
   return response;
 };
 
-export {
-  createRequestOptions,
-  handleApiResponse,
-  fetchWithAuth,
-  axiosInstance,
-};
+export { createRequestOptions, handleApiResponse, fetchWithAuth };
