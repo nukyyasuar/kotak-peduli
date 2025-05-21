@@ -1,16 +1,21 @@
 const statusList = [
   { label: "Semua", value: "" },
   { label: "Pemeriksaan Digital", value: "DIGITAL_CHECKING" },
-  { label: "Pengiriman", value: "TRANSPORTING" },
   { label: "Pemeriksaan Digital (Disetujui)", value: "PENDING" },
+  { label: "Proses Konfirmasi Tanggal", value: "CONFIRMING" },
+  { label: "Pengiriman Terjadwal", value: "CONFIRMED" },
   { label: "Pemeriksaan Digital (Ditolak)", value: "REJECTED" },
-  { label: "Penjemputan", value: "penjemputan" },
+  { label: "Proses Pengiriman", value: "TRANSPORTING" },
+  { label: "Proses Penjemputan", value: "PICKING" },
   { label: "Dalam Perjalanan", value: "IN_TRANSIT" },
   { label: "Pemeriksaan Fisik", value: "PHYSICAL_CHECKING" },
   { label: "Disimpan", value: "STORED" },
   { label: "Dialihkan", value: "REDIRECTED" },
   { label: "Disalurkan", value: "DISTRIBUTED" },
 ];
+
+const STATUS_GREEN = ["PENDING", "DISTRIBUTED"];
+const STATUS_RED = ["REJECTED", "REDIRECTED"];
 
 const donationTypes = [
   { label: "Pakaian", value: "CLOTHES" },
@@ -22,6 +27,24 @@ const donationTypes = [
 const shippingTypes = [
   { label: "Dikirim Sendiri", value: "DELIVERED" },
   { label: "Dijemput", value: "PICKED_UP" },
+];
+
+const eventStatusList = [
+  { label: "Aktif", value: true },
+  { label: "Tidak Aktif", value: false },
+];
+
+const postTypesList = [
+  { label: "Cabang", value: "BRANCH" },
+  { label: "Drop Point", value: "DROP_POINT" },
+];
+
+const memberRolesList = [
+  { label: "Admin Utama", value: "Collection Center Admin" },
+  { label: "Admin Donasi", value: "Collection Center Donation Admin" },
+  { label: "Admin Event", value: "Collection Center Event Admin" },
+  { label: "Admin Cabang / Drop Point", value: "Collection Center Post Admin" },
+  { label: "Admin Pengurus", value: "Collection Center Role Admin" },
 ];
 
 const electronicOptions = [
@@ -82,6 +105,23 @@ const goodsTypes = [
   },
 ];
 
+const tomorrow = new Date();
+tomorrow.setDate(tomorrow.getDate() + 1);
+
+const nextTwoWeeks = new Date();
+nextTwoWeeks.setDate(tomorrow.getDate() + 14);
+
+const hours = Array.from({ length: 13 }, (_, i) => {
+  const hour = i + 6;
+  const value = hour.toString().padStart(2, "0");
+  return { label: value, value };
+});
+
+const minutes = Array.from({ length: 60 }, (_, i) => ({
+  label: i.toString().padStart(2, "0"),
+  value: i.toString().padStart(2, "0"),
+}));
+
 export {
   statusList,
   donationTypes,
@@ -89,4 +129,13 @@ export {
   electronicOptions,
   days,
   goodsTypes,
+  tomorrow,
+  nextTwoWeeks,
+  hours,
+  minutes,
+  eventStatusList,
+  postTypesList,
+  STATUS_GREEN,
+  STATUS_RED,
+  memberRolesList,
 };
