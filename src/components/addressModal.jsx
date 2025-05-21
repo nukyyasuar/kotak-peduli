@@ -11,7 +11,12 @@ import addressDetailSchema from "./schema/addresDetailSchema";
 
 const DEFAULT_LOCATION = { lat: -6.2088, lng: 106.8456 };
 
-export default function AddressModal({ isOpen, handleClose, setValue }) {
+export default function AddressModal({
+  isOpen,
+  handleClose,
+  setValue,
+  dataProfile,
+}) {
   const [mapError, setMapError] = useState(null);
   const [geolocationError, setGeolocationError] = useState(null);
   const [isLocating, setIsLocating] = useState(false);
@@ -30,6 +35,7 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
     setValue: setValueDetail,
     formState: { errors },
     handleSubmit,
+    reset,
   } = useForm({
     resolver: yupResolver(addressDetailSchema),
     defaultValues: {
@@ -328,10 +334,25 @@ export default function AddressModal({ isOpen, handleClose, setValue }) {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (dataProfile?.address) {
+      const { detail, reference, latitude, longitude } = dataProfile.address;
+      reset({
+        alamat: {
+          jalan: detail || "",
+          patokan: reference || "",
+          latitude: latitude || "",
+          longitude: longitude || "",
+          summary: `(${reference}) ${detail}` || "",
+        },
+      });
+    }
+  }, [dataProfile]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
+    <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20 m-0">
       <div className="bg-white rounded-lg flex flex-col p-8 text-black gap-6 w-lg">
         <h3 className="text-xl font-bold">Detail Alamat</h3>
         <div className="space-y-4 max-h-[50dvh] overflow-scroll no-scrollbar">
