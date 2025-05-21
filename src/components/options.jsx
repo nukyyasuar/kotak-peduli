@@ -14,7 +14,7 @@ const statusList = [
   { label: "Disalurkan", value: "DISTRIBUTED" },
 ];
 
-const STATUS_GREEN = ["PENDING", "DISTRIBUTED"];
+const STATUS_GREEN = ["PENDING", "DISTRIBUTED", "APPROVED"];
 const STATUS_RED = ["REJECTED", "REDIRECTED"];
 
 const donationTypes = [
@@ -37,6 +37,11 @@ const eventStatusList = [
 const postTypesList = [
   { label: "Cabang", value: "BRANCH" },
   { label: "Drop Point", value: "DROP_POINT" },
+];
+
+const collectionCenterApprovedStatusList = [
+  { label: "Disetujui", value: "APPROVED" },
+  { label: "Ditolak", value: "REJECTED" },
 ];
 
 const memberRolesList = [
@@ -138,4 +143,5 @@ export {
   STATUS_GREEN,
   STATUS_RED,
   memberRolesList,
+  collectionCenterApprovedStatusList,
 };
