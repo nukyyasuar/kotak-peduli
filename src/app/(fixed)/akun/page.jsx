@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
-import { Form, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import Image from "next/image";
+import { ClipLoader } from "react-spinners";
 
 import { FormInput } from "src/components/formInput";
 import AddressModal from "src/components/addressModal";
@@ -19,11 +20,9 @@ import {
 import { verifyEmail } from "src/services/api/verifyEmail";
 
 import {
-  onAuthStateChange,
   sendPhoneVerificationCode,
-  setupRecaptcha,
   verifyPhoneCode,
-} from "src/app/auth/auth";
+} from "src/services/auth/auth";
 import { toast } from "react-toastify";
 
 export default function Akun() {
@@ -37,6 +36,7 @@ export default function Akun() {
   const [isEmailVerifModalOpen, setIsEmailVerifModalOpen] = useState(false);
   const [isEmailVerifSent, setIsEmailVerifSent] = useState(false);
   const [dataProfile, setDataProfile] = useState({});
+  const [isLoadingProfileData, setIsLoadingProfileData] = useState(true);
 
   const editPhoneNumberModalRef = useRef();
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -53,7 +53,6 @@ export default function Akun() {
       nomorTelepon: "",
       email: "",
       alamat: {},
-      addressSummary: "",
       foto: "",
     },
   });
@@ -106,18 +105,6 @@ export default function Akun() {
     ) {
       address.longitude = data.alamat.longitude;
     }
-    // if (data.alamat?.jalan !== original.address?.detail) {
-    //   address.detail = data.alamat.jalan;
-    // }
-    // if (data.alamat?.patokan !== original.address?.reference) {
-    //   address.reference = data.alamat.patokan;
-    // }
-    // if (data.alamat?.latitude !== original.address?.latitude) {
-    //   address.latitude = data.alamat.latitude;
-    // }
-    // if (data.alamat?.longitude !== original.address?.longitude) {
-    //   address.longitude = data.alamat.longitude;
-    // }
 
     if (Object.keys(address).length > 0) {
       updated.address = address;
@@ -197,11 +184,14 @@ export default function Akun() {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      setIsLoadingProfileData(true);
       try {
         const data = await getProfile();
         setDataProfile(data);
       } catch (error) {
         console.error("Error fetching profile data:", error);
+      } finally {
+        setIsLoadingProfileData(false);
       }
     };
     fetchProfile();
@@ -349,7 +339,17 @@ export default function Akun() {
     }
   };
 
-  return (
+  return isLoadingProfileData ? (
+    <div className="flex items-center justify-center h-screen">
+      <ClipLoader
+        color="#F5A623"
+        loading={isLoadingProfileData}
+        size={50}
+        aria-label="Loading Spinner"
+        data-testid="loader"
+      />
+    </div>
+  ) : (
     <div>
       <div className="mb-6 text-[#543A14]">
         <h2 className="text-xl font-bold">Profil</h2>
@@ -558,6 +558,7 @@ export default function Akun() {
             {/* Modal Alamat Lengkap */}
             <AddressModal
               isOpen={isModalOpen}
+              dataProfile={dataProfile}
               handleClose={() => setIsModalOpen(false)}
               setValue={setValue}
             />
@@ -575,13 +576,20 @@ export default function Akun() {
                 variant="outlineBrown"
                 label="Batalkan Perubahan"
                 onClick={() => {
+                  const reference = dataProfile?.address?.reference;
+                  const detail = dataProfile?.address?.detail;
+                  const formattedAddress =
+                    reference && detail
+                      ? `(${reference}) ${detail}`
+                      : detail || "";
+
                   reset({
                     namaDepan: dataProfile.firstName || "",
                     namaBelakang: dataProfile.lastName || "",
                     nomorTelepon: dataProfile.phoneNumber.slice(3) || "",
                     email: dataProfile.email || "",
                     alamat: {
-                      summary: dataProfile?.address?.detail || "",
+                      summary: formattedAddress || "",
                       jalan: dataProfile?.address?.detail || "",
                       patokan: dataProfile?.address?.reference || "",
                       latitude: dataProfile?.address?.latitude || "",
