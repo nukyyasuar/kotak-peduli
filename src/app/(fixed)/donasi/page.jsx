@@ -38,6 +38,7 @@ export default function Home() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [isCreateDonationLoading, setIsCreateDonationLoading] = useState(false);
+  const [isFetchPostsLoading, setIsFetchPostsLoading] = useState(false);
 
   const {
     register,
@@ -194,7 +195,7 @@ export default function Home() {
     setIsCreateDonationLoading(true);
 
     const hasInvalidJenis = data.barangDonasi.some((item) => {
-      const selectedEvent = dataEvents.find(
+      const selectedEvent = dataEvents?.find(
         (event) => event.value.toString() === item.event
       );
 
@@ -291,6 +292,8 @@ export default function Home() {
 
     const fetchData = async () => {
       try {
+        setIsFetchPostsLoading(true);
+
         const data = await getOneCollectionCenter(selectedTempatPenampung);
         setDataCollectionCenter({
           ...data,
@@ -315,17 +318,21 @@ export default function Home() {
           toast.error(
             "Gagal memuat data cabang atau drop point. Silakan coba lagi."
           );
+        } finally {
+          setIsFetchPostsLoading(false);
         }
 
         // Fetch events sesuai tempat penampung yang dipilih
         try {
           const events = await getEvents(selectedTempatPenampung);
-          if (events.length > 0) {
-            const formattedEvents = events.map((item) => ({
-              value: item.id,
-              label: item.name,
-              ...item,
-            }));
+          if (events?.length > 0) {
+            const formattedEvents = events
+              .filter((item) => item.isActive === true)
+              .map((item) => ({
+                value: item.id,
+                label: item.name,
+                ...item,
+              }));
             setDataEvents(formattedEvents);
           }
         } catch (error) {
@@ -364,6 +371,14 @@ export default function Home() {
           ...prevValues,
           namaLengkap: data.firstName + " " + data.lastName,
           nomorTelepon: data.phoneNumber.slice(3),
+          alamat: {
+            jalan: data?.address?.detail || "",
+            patokan: data?.address?.reference || "",
+            latitude: data?.address?.latitude || "",
+            longitude: data?.address?.longitude || "",
+            summary:
+              `(${data?.address?.reference}) ${data?.address?.detail}` || "",
+          },
         }));
       } catch (error) {
         toast.error("Gagal memuat profil. Silakan coba lagi.");
@@ -372,6 +387,8 @@ export default function Home() {
     };
     fetchProfile();
   }, []);
+
+  console.log("watch alamat:", watch("alamat"));
 
   useEffect(() => {
     if (watch("alamat.summary")) {
@@ -453,6 +470,7 @@ export default function Home() {
               {/* Modal Alamat Lengkap */}
               <AddressModal
                 isOpen={isModalOpen}
+                dataProfile={dataProfile}
                 handleClose={() => setIsModalOpen(false)}
                 setValue={setValue}
               />
@@ -483,9 +501,11 @@ export default function Home() {
                 options={posts}
                 placeholder={
                   selectedTempatPenampung
-                    ? posts
-                      ? "Pilih cabang / drop point tujuan donasi"
-                      : "Cabang / drop point tidak tersedia"
+                    ? isFetchPostsLoading
+                      ? "Sedang mengambil data cabang..."
+                      : posts
+                        ? "Pilih cabang / drop point tujuan donasi"
+                        : "Cabang / drop point tidak tersedia"
                     : "Pilih tempat penampung terlebih dahulu"
                 }
                 disabled={posts.length <= 0}
@@ -554,7 +574,7 @@ export default function Home() {
 
             {/* Form Detail Barang */}
             {watch("barangDonasi").map((item, index) => {
-              const selectedEvent = dataEvents.find(
+              const selectedEvent = dataEvents?.find(
                 (event) => event.value === item.event
               );
               const isJenisInvalid =
