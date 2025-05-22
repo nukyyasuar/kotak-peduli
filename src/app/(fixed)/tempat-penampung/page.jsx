@@ -208,7 +208,7 @@ export default function TempatPenampung() {
                 data-testid="loader"
               />
             ) : (
-              <div className="flex flex-wrap gap-5 items-stretch justify-between">
+              <div className="flex flex-wrap gap-5 items-stretch ">
                 {dataCollectionCenters?.map((item, index) => {
                   return (
                     <div
@@ -272,6 +272,7 @@ export default function TempatPenampung() {
               </div>
             )}
 
+            {/* Modal Detail */}
             {isDetailModal &&
               selectedCollectionCenterId &&
               dataOneCollectionCenter && (
@@ -283,9 +284,10 @@ export default function TempatPenampung() {
                     <h1 className="font-bold text-xl">
                       Detail Tempat Penampung
                     </h1>
-                    {/* Goods Shelter Information */}
+
+                    {/* Detail Informasi */}
                     <div className="text-base border-b border-black pb-5 flex gap-5">
-                      {/* Left */}
+                      {/* Left Section */}
                       <div className="rounded-lg relative w-70 h-48 bg-[#EDEDED] overflow-hidden">
                         {dataOneCollectionCenter?.attachment?.file?.path ? (
                           <Image
@@ -296,11 +298,13 @@ export default function TempatPenampung() {
                           />
                         ) : null}
                       </div>
-                      {/* Right */}
+
+                      {/* Right Section */}
                       <div className="max-w-lg">
                         <h2 className="font-bold">
                           {dataOneCollectionCenter.name}
                         </h2>
+                        <p>{dataOneCollectionCenter.description}</p>
                         <p>{`${dataOneCollectionCenter.address.reference ? `(${dataOneCollectionCenter?.address?.reference})` : ""} ${dataOneCollectionCenter.address.detail}`}</p>
                         <p>{dataOneCollectionCenter.phoneNumber}</p>
                         <p>
