@@ -543,7 +543,6 @@ export default function DaftarTempatPenampung() {
                 {/* Modal Alamat Lengkap */}
                 <AddressModal
                   isOpen={isModalOpen}
-                  resetMain={reset}
                   handleClose={() => setIsModalOpen(false)}
                   setValue={setValue}
                 />
