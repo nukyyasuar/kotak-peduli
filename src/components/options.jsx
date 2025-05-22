@@ -42,6 +42,7 @@ const postTypesList = [
 const collectionCenterApprovedStatusList = [
   { label: "Disetujui", value: "APPROVED" },
   { label: "Ditolak", value: "REJECTED" },
+  { label: "Pengajuan", value: "PENDING" },
 ];
 
 const memberRolesList = [
