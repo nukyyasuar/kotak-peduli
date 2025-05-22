@@ -83,7 +83,8 @@ const ModalDetailDonation = ({
             {/* Header */}
             <div className="flex justify-between items-center">
               <h1 className="font-bold text-xl">
-                Detail Riwayat Barang Donasi
+                Detail Riwayat Barang Donasi{" "}
+                <span>{`(${detailDonation?.id})`}</span>
               </h1>
               <span
                 className={`${statusColor} text-white px-6 py-2 font-bold rounded-lg`}
@@ -183,6 +184,13 @@ const ModalDetailDonation = ({
                       type="button"
                       label="Hubungi Tempat Penampung"
                       className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        const urlWhatsapp = `https://wa.me/${detailDonation.collectionCenter?.phoneNumber}?text=Halo, saya ingin menanyakan tentang donasi saya dengan ID barang donasi: ${detailDonation.id}.`;
+
+                        window.open(urlWhatsapp, "_blank");
+                      }}
                     />
                   )}
                   {(() => {
@@ -265,6 +273,7 @@ const ModalDetailDonation = ({
                       type="time"
                     />,
                   ]}
+                  className="w-full"
                 />
                 <ListTextWithTitle
                   title="Informasi Donatur:"
