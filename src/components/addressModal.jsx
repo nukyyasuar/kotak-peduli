@@ -268,11 +268,26 @@ export default function AddressModal({
   };
 
   const handleCloseVariant = () => {
-    setValue("alamat.summary", watch("alamat.summary"));
-    setValue("alamat.latitude", watch("alamat.latitude"));
-    setValue("alamat.longitude", watch("alamat.longitude"));
-    setValue("alamat.jalan", watch("alamat.jalan"));
-    setValue("alamat.patokan", watch("alamat.patokan"));
+    if (dataProfile?.address) {
+      const { detail, reference, latitude, longitude } = dataProfile.address;
+
+      reset({
+        alamat: {
+          jalan: detail || "",
+          patokan: reference || "",
+          latitude: latitude || "",
+          longitude: longitude || "",
+          summary: `(${reference}) ${detail}` || "",
+        },
+      });
+    } else {
+      setValue("alamat.summary", watch("alamat.summary"));
+      setValue("alamat.latitude", watch("alamat.latitude"));
+      setValue("alamat.longitude", watch("alamat.longitude"));
+      setValue("alamat.jalan", watch("alamat.jalan"));
+      setValue("alamat.patokan", watch("alamat.patokan"));
+    }
+
     handleClose();
   };
 
@@ -350,7 +365,6 @@ export default function AddressModal({
   }, [dataProfile]);
 
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20 m-0">
       <div className="bg-white rounded-lg flex flex-col p-8 text-black gap-6 w-lg">
