@@ -238,172 +238,187 @@ export default function RiwayatDonasi() {
         </p>
       </div>
 
-      {/* Status Filter Button */}
-      <div className="flex gap-1 overflow-y-scroll no-scrollbar">
-        {statusList.map((status) => (
-          <ButtonCustom
-            key={status.value}
-            type="button"
-            variant={selectedStatus === status.value ? "brown" : "outlineBrown"}
-            label={status.label}
-            onClick={() => setSelectedStatus(status.value)}
-            className="text-nowrap"
-          />
-        ))}
-      </div>
-
       {/* Loading Fetch Donations */}
       {isFetchDonationsLoading ? (
         <div className="flex justify-center items-center h-[300px]">
           <ClipLoader color="#543A14" size={30} />
         </div>
+      ) : donations.length === 0 ? (
+        <div>
+          <span className="text-black font-bold">{`(Belum melakukan donasi)`}</span>
+        </div>
       ) : (
-        // Riwayat Donasi
-        <div className="space-y-3">
-          {donations
-            .filter((donation) =>
-              selectedStatus
-                ? donation.approvals?.latestStatus === selectedStatus
-                : true
-            )
-            .map((donation, index) => {
-              const status = statusList.find(
-                (status) => status.value === donation.approvals.latestStatus
-              )?.label;
+        <>
+          {/* Status Filter Button */}
+          <div className="flex gap-1 overflow-y-scroll no-scrollbar">
+            {statusList.map((status) => (
+              <ButtonCustom
+                key={status.value}
+                type="button"
+                variant={
+                  selectedStatus === status.value ? "brown" : "outlineBrown"
+                }
+                label={status.label}
+                onClick={() => setSelectedStatus(status.value)}
+                className="text-nowrap"
+              />
+            ))}
+          </div>
 
-              const latestStatus = donation?.approvals?.latestStatus;
-              const statusRedDonation = STATUS_RED.includes(latestStatus);
-              const statusGreenDonation = STATUS_GREEN.includes(latestStatus);
-              const isHighlightedLatestStatus =
-                latestStatus === "CONFIRMED" ||
-                latestStatus === "PENDING" ||
-                latestStatus === "CONFIRMING";
-              const statusTextHighlighted = {
-                DIGITAL_CHECKING: "Proses pemeriksaan digital",
-                PENDING: "Donatur belum mengirim opsi",
-                CONFIRMING: "Tempat penampung belum memilih",
-              };
+          {/* Riwayat Donasi */}
+          <div className="space-y-3">
+            {donations
+              .filter((donation) =>
+                selectedStatus
+                  ? donation.approvals?.latestStatus === selectedStatus
+                  : true
+              )
+              .map((donation, index) => {
+                const status = statusList.find(
+                  (status) => status.value === donation.approvals.latestStatus
+                )?.label;
 
-              return (
-                <div key={index}>
-                  <div
-                    className="rounded-lg p-3 pt-0 flex gap-8 hover:shadow-lg border"
-                    key={index}
-                    onClick={() => {
-                      setIsDetailModalOpen(true);
-                      setSelectedIdDonation(donation.id);
-                    }}
-                  >
-                    <div className="min-w-[180px] aspect-square bg-[#C2C2C2] rounded-b-lg relative">
-                      <AttachmentImage
-                        fileName={donation.attachments?.files?.[0].name}
-                        index={index}
-                        onLoad={handleImageLoaded}
-                        onSelect={(url) => {
-                          setImgSrc(url);
-                        }}
-                        className="rounded-t-none"
-                      />
-                    </div>
+                const latestStatus = donation?.approvals?.latestStatus;
+                const statusRedDonation = STATUS_RED.includes(latestStatus);
+                const statusGreenDonation = STATUS_GREEN.includes(latestStatus);
+                const isHighlightedLatestStatus =
+                  latestStatus === "CONFIRMED" ||
+                  latestStatus === "PENDING" ||
+                  latestStatus === "CONFIRMING";
+                const statusTextHighlighted = {
+                  DIGITAL_CHECKING: "Proses pemeriksaan digital",
+                  PENDING: "Donatur belum mengirim opsi",
+                  CONFIRMING: "Tempat penampung belum memilih",
+                };
+                const phoneNumber = donation.collectionCenter?.phoneNumber;
 
-                    <div className="w-full">
-                      <div className="flex flex-col justify-between text-black text-sm h-full">
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col gap-1 pt-3">
-                            <span className="font-bold">
-                              {donation.collectionCenter.name}
-                            </span>
-                            <span>{donation?.post?.name}</span>
-                          </div>
-                          <span
-                            className={`${statusGreenDonation ? `bg-[#1F7D53]` : statusRedDonation ? `bg-[#E52020]` : `bg-[#543A14]`}  text-white px-6 py-2 font-bold rounded-b-lg`}
-                          >
-                            {status}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <div className="space-y-1">
-                            <div className="flex gap-2">
-                              <span>Event:</span>
-                              <span>{donation?.event?.name || "-"}</span>
+                return (
+                  <div key={index}>
+                    <div
+                      className="rounded-lg p-3 pt-0 flex gap-8 hover:shadow-lg border"
+                      key={index}
+                      onClick={() => {
+                        setIsDetailModalOpen(true);
+                        setSelectedIdDonation(donation.id);
+                      }}
+                    >
+                      <div className="min-w-[180px] aspect-square bg-[#C2C2C2] rounded-b-lg relative">
+                        <AttachmentImage
+                          fileName={donation.attachments?.files?.[0].name}
+                          index={index}
+                          onLoad={handleImageLoaded}
+                          onSelect={(url) => {
+                            setImgSrc(url);
+                          }}
+                          className="rounded-t-none"
+                        />
+                      </div>
+
+                      <div className="w-full">
+                        <div className="flex flex-col justify-between text-black text-sm h-full">
+                          <div className="flex justify-between items-start">
+                            <div className="flex flex-col gap-1 pt-3">
+                              <span className="font-bold">
+                                {donation.collectionCenter.name}
+                              </span>
+                              <span>{donation?.post?.name}</span>
                             </div>
-                            <span>
-                              {donationTypes.find(
-                                (type) => type.value === donation.donationType
-                              )?.label || donation.donationType}{" "}
-                              ({donation.quantity}pcs, {donation.weight}kg)
+                            <span
+                              className={`${statusGreenDonation ? `bg-[#1F7D53]` : statusRedDonation ? `bg-[#E52020]` : `bg-[#543A14]`}  text-white px-6 py-2 font-bold rounded-b-lg`}
+                            >
+                              {status}
                             </span>
                           </div>
-                          <div className="space-y-1">
-                            <div className="flex gap-2">
-                              <span>Metode Pengiriman:</span>
+                          <div className="flex justify-between">
+                            <div className="space-y-1">
+                              <div className="flex gap-2">
+                                <span>Event:</span>
+                                <span>{donation?.event?.name || "-"}</span>
+                              </div>
                               <span>
-                                {shippingTypes.find(
-                                  (type) => type.value === donation.pickupType
-                                )?.label || donation.pickupType}
+                                {donationTypes.find(
+                                  (type) => type.value === donation.donationType
+                                )?.label || donation.donationType}{" "}
+                                ({donation.quantity}pcs, {donation.weight}kg)
                               </span>
                             </div>
-                            <div className="flex gap-2">
-                              <span>Tanggal Pengiriman:</span>
-                              <span
-                                className={`font-bold text-${isHighlightedLatestStatus ? "[#F0BB78]" : "black"} w-60`}
-                              >
-                                {statusTextHighlighted[latestStatus] || (
-                                  <FormattedWIBDate
-                                    date={donation.pickupDate}
-                                    type="time"
-                                  />
-                                )}
-                              </span>
+                            <div className="space-y-1">
+                              <div className="flex gap-2">
+                                <span>Metode Pengiriman:</span>
+                                <span>
+                                  {shippingTypes.find(
+                                    (type) => type.value === donation.pickupType
+                                  )?.label || donation.pickupType}
+                                </span>
+                              </div>
+                              <div className="flex gap-2">
+                                <span>Tanggal Pengiriman:</span>
+                                <span
+                                  className={`font-bold text-${isHighlightedLatestStatus ? "[#F0BB78]" : "black"} w-60`}
+                                >
+                                  {statusTextHighlighted[latestStatus] || (
+                                    <FormattedWIBDate
+                                      date={donation.pickupDate}
+                                      type="time"
+                                    />
+                                  )}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex gap-3">
-                          <ButtonCustom
-                            variant="outlineOrange"
-                            type="button"
-                            label="Hubungi Tempat Penampung"
-                            className="w-fit"
-                          />
-                          {(latestStatus === "PENDING" ||
-                            latestStatus === "CONFIRMED") && (
+                          <div className="flex gap-3">
                             <ButtonCustom
-                              variant="orange"
+                              variant="outlineOrange"
                               type="button"
-                              label={
-                                latestStatus === "PENDING"
-                                  ? "Atur opsi tanggal pengiriman"
-                                  : latestStatus === "CONFIRMED"
-                                    ? "Atur ulang opsi tanggal pengiriman"
-                                    : ""
-                              }
+                              label="Hubungi Tempat Penampung"
+                              className="w-fit"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedIdDonation(donation.id);
-                                setIsShippingDateModalOpen(true);
+
+                                const urlWhatsapp = `https://wa.me/${phoneNumber}?text=Halo, saya ingin menanyakan tentang donasi saya dengan ID barang donasi: ${donation.id}.`;
+                                window.open(urlWhatsapp, "_blank");
                               }}
                             />
-                          )}
-                          {latestStatus === "TRANSPORTING" && (
-                            <ButtonCustom
-                              variant="orange"
-                              type="button"
-                              label="Antar Donasi Sekarang"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedIdDonation(donation.id);
-                                setIsTransitModalOpen(true);
-                              }}
-                            />
-                          )}
+                            {(latestStatus === "PENDING" ||
+                              latestStatus === "CONFIRMED") && (
+                              <ButtonCustom
+                                variant="orange"
+                                type="button"
+                                label={
+                                  latestStatus === "PENDING"
+                                    ? "Atur opsi tanggal pengiriman"
+                                    : latestStatus === "CONFIRMED"
+                                      ? "Atur ulang opsi tanggal pengiriman"
+                                      : ""
+                                }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedIdDonation(donation.id);
+                                  setIsShippingDateModalOpen(true);
+                                }}
+                              />
+                            )}
+                            {latestStatus === "TRANSPORTING" && (
+                              <ButtonCustom
+                                variant="orange"
+                                type="button"
+                                label="Antar Donasi Sekarang"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedIdDonation(donation.id);
+                                  setIsTransitModalOpen(true);
+                                }}
+                              />
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-        </div>
+                );
+              })}
+          </div>
+        </>
       )}
 
       {/* Modal Detail Data Donasi */}
