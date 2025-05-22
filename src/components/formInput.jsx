@@ -110,6 +110,7 @@ const FormInput = ({
           value={mappedValue}
           onChange={(selected) => onChange(selected?.value)}
           options={formattedOptions}
+          noOptionsMessage={() => "Belum ada opsi"}
           placeholder={placeholder}
           onMenuOpen={() => setIsOpen(true)}
           onMenuClose={() => setIsOpen(false)}
