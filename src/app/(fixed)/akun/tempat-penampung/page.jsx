@@ -38,6 +38,8 @@ export default function DaftarTempatPenampung() {
   const [isApproved, setIsApproved] = useState(false);
   const [isDecline, setIsDecline] = useState(false);
   const [dataProfile, setDataProfile] = useState(null);
+  const [dataDetailCollectionCenter, setDataDetailCollectionCenter] =
+    useState(null);
   const [isLoadingCreateCollectionCenter, setIsLoadingCreateCollectionCenter] =
     useState(false);
   const [isLoadingCollectionCenter, setIsLoadingCollectionCenter] =
@@ -65,7 +67,7 @@ export default function DaftarTempatPenampung() {
     reset,
   } = useForm({
     resolver: yupResolver(collectionCenterRegistSchema),
-    mode: "onBlur",
+    // mode: "onBlur",
     defaultValues: {
       namaTempatPenampung: "",
       email: "",
@@ -81,6 +83,8 @@ export default function DaftarTempatPenampung() {
   });
 
   const watchPhoneNumber = watch("nomorTelepon");
+  const collectionCenterId =
+    dataProfile?.collectionCenterCollaborator?.collectionCenterId;
 
   handleOutsideModal({
     ref: editPhoneNumberModalRef,
@@ -101,7 +105,7 @@ export default function DaftarTempatPenampung() {
     }
   };
 
-  const onSubmit = (data) => {
+  const onSubmit = async (data) => {
     // Validasi blocking ketika ganti nomor telepon harus dapet idToken
     const formData = new FormData();
     console.log(data);
@@ -143,23 +147,18 @@ export default function DaftarTempatPenampung() {
 
     try {
       setIsLoadingCreateCollectionCenter(true);
-      createCollectionCenter(formData)
-        .then((response) => {
-          console.log("Response:", response);
-          toast.success(
-            "Pendaftaran berhasil. Pendaftaran akan diverifikasi terlebih dahulu oleh admin."
-          );
-          setIsSubmitted(true);
-          setIsPending(true);
-          setTimeout(() => {
-            location.reload();
-          }, 2000);
-        })
-        .catch((error) => {
-          console.error("Error:", error);
-          toast.error("Pendaftaran gagal");
-          setIsSubmitted(false);
-        });
+      await createCollectionCenter(formData);
+      toast.success(
+        "Pendaftaran berhasil. Pendaftaran akan diverifikasi terlebih dahulu oleh admin."
+      );
+      setIsSubmitted(true);
+      setIsPending(true);
+
+      fetchDetailCollectionCenter(collectionCenterId);
+
+      setTimeout(() => {
+        location.reload();
+      }, 1000);
     } catch (error) {
       console.error("Error:", error);
       toast.error("Pendaftaran gagal");
@@ -169,36 +168,46 @@ export default function DaftarTempatPenampung() {
     }
   };
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      setIsLoadingCollectionCenter(true);
-      try {
-        const data = await getProfile();
-        setDataProfile(data);
-        if (data?.collectionCenterCollaborator?.collectionCenterId) {
-          const detailCollectionCenterData = await getOneCollectionCenter(
-            data.collectionCenterCollaborator.collectionCenterId
-          );
-          const approvalStatus =
-            detailCollectionCenterData?.approvals[0].latestStatus;
+  const fetchProfile = async () => {
+    setIsLoadingCollectionCenter(true);
 
-          if (approvalStatus === "PENDING") {
-            setIsPending(true);
-          } else if (approvalStatus === "APPROVED") {
-            setIsApproved(true);
-          }
-          if (approvalStatus === "REJECTED") {
-            setIsDecline(true);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching profile data:", error);
-      } finally {
-        setIsLoadingCollectionCenter(false);
-      }
-    };
+    try {
+      const data = await getProfile();
+      setDataProfile(data);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    } finally {
+      setIsLoadingCollectionCenter(false);
+    }
+  };
+
+  const fetchDetailCollectionCenter = async (collectionCenterId) => {
+    if (!collectionCenterId) return;
+
+    const detailData = await getOneCollectionCenter(collectionCenterId);
+    setDataDetailCollectionCenter(detailData);
+
+    const approvalStatus = detailData?.approval.latestStatus;
+
+    if (approvalStatus === "PENDING") {
+      setIsPending(true);
+    } else if (approvalStatus === "APPROVED") {
+      setIsApproved(true);
+    }
+    if (approvalStatus === "REJECTED") {
+      setIsDecline(true);
+    }
+  };
+
+  useEffect(() => {
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (collectionCenterId) {
+      fetchDetailCollectionCenter(collectionCenterId);
+    }
+  }, [collectionCenterId]);
 
   useEffect(() => {
     if (watch("alamat.summary")) {
@@ -225,12 +234,6 @@ export default function DaftarTempatPenampung() {
       setPhoneNumberHolder(formattedPhoneNumber);
     }
   }, [dataProfile, reset]);
-
-  useEffect(() => {
-    if (watchPhoneNumber !== dataProfile?.phoneNumber.slice(3)) {
-      console.log("cek");
-    }
-  }, [watchPhoneNumber, dataProfile]);
 
   // OTP Verification
   const handleOtpChange = (element, index, event) => {
@@ -288,13 +291,15 @@ export default function DaftarTempatPenampung() {
 
   const handleVerifyOtp = async () => {
     setIsLoadingVerifyOtp(true);
+
     try {
       const user = await verifyPhoneCode(confirmationResult, otp.join(""));
+
       if (user) {
         const idToken = await user.getIdToken();
+        // hit /collection-centers/:id/phone dengan body idToken dan phoneNumber
         setIdTokenValue(idToken);
         setPhoneNumberHolder(watchPhoneNumber);
-        console.log("watchPhoneNumber", watchPhoneNumber);
         toast.success("Verifikasi nomor telepon berhasil");
       } else {
         toast.error("Gagal memverifikasi nomor telepon");
@@ -321,6 +326,8 @@ export default function DaftarTempatPenampung() {
       setIsLoadingVerifyOtp(false);
     }
   };
+  console.log("data detail", dataDetailCollectionCenter);
+  console.log("data profile", dataProfile);
 
   return isLoadingCreateCollectionCenter || isLoadingCollectionCenter ? (
     <div className="flex items-center justify-center h-screen">
@@ -348,8 +355,19 @@ export default function DaftarTempatPenampung() {
           {!isSubmitted &&
             isApproved &&
             "Pendaftaran Anda telah disetujui. Tekan tombol dibawah untuk mengakses halaman Dashboard Tempat Penampung."}
-          {!isSubmitted && isDecline && "Alasan input dari superadmin"}
+          {!isSubmitted &&
+            isDecline &&
+            `Pendaftaran Anda ditolak. Silakan periksa catatan penolakan di bawah ini dan ajukan pendaftaran kembali.`}
         </p>
+        {isDecline && (
+          <p className="text-[#E52020]">
+            {
+              dataDetailCollectionCenter?.approval?.approvalDetails?.find(
+                (item) => item.status === "REJECTED"
+              )?.notes
+            }
+          </p>
+        )}
       </div>
 
       {isSubmitted || isPending || isApproved || isDecline ? (
@@ -371,6 +389,19 @@ export default function DaftarTempatPenampung() {
             }
             variant="orange"
             className="w-full"
+          />
+        ) : isDecline ? (
+          <ButtonCustom
+            label="Buat Ulang Pendaftaran"
+            variant="orange"
+            className="w-full"
+            onClick={() => {
+              setIsSubmitted(false);
+              setIsPending(false);
+              setIsDecline(false);
+              setIsApproved(false);
+              reset();
+            }}
           />
         ) : null
       ) : (
@@ -396,22 +427,22 @@ export default function DaftarTempatPenampung() {
                   required
                   errors={errors?.email?.message}
                 />
+                <FormInput
+                  label="Nomor Telepon (Whatsapp)"
+                  inputType="text"
+                  placeholder="Contoh: 81212312312"
+                  value={phoneNumberHolder || ""}
+                  errors={errors?.nomorTelepon?.message}
+                  inputStyles={"border-none"}
+                  required
+                  disabled
+                />
                 <div className="flex items-end">
-                  <FormInput
-                    label="Nomor Telepon (Whatsapp)"
-                    inputType="text"
-                    placeholder="Contoh: 81212312312"
-                    value={phoneNumberHolder || ""}
-                    errors={errors?.nomorTelepon?.message}
-                    inputStyles={"border-none"}
-                    required
-                    disabled
-                  />
                   <ButtonCustom
                     variant="orange"
                     type="button"
                     label={`Ubah Nomor Telepon`}
-                    className="ml-3 text-nowrap h-12"
+                    className="text-nowrap h-12"
                     onClick={() => setIsEditPhoneNumber(true)}
                   />
                   {isEditPhoneNumber && (
@@ -508,9 +539,11 @@ export default function DaftarTempatPenampung() {
                   required
                   errors={errors?.alamat?.message}
                 />
+
                 {/* Modal Alamat Lengkap */}
                 <AddressModal
                   isOpen={isModalOpen}
+                  resetMain={reset}
                   handleClose={() => setIsModalOpen(false)}
                   setValue={setValue}
                 />
