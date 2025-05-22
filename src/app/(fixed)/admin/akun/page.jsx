@@ -18,7 +18,6 @@ import handleOutsideModal from "src/components/handleOutsideModal";
 import collectionCenterRegistSchema from "src/components/schema/collectionCenterRegistSchema";
 
 import {
-  createCollectionCenter,
   getOneCollectionCenter,
   updateCollectionCenter,
 } from "src/services/api/collectionCenter";
@@ -83,6 +82,9 @@ export default function DaftarTempatPenampung() {
     name: "waktuOperasional",
   });
 
+  console.log("watch foto", watch("foto"));
+  console.log("errors", errors);
+
   const collectionCenterId = localStorage.getItem("collectionCenterId");
   const watchPhoneNumber = watch("nomorTelepon");
   const avatarPath = dataDetailCollectionCenter?.attachment?.file?.path;
@@ -107,6 +109,12 @@ export default function DaftarTempatPenampung() {
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
     }
+  };
+
+  const urlToFile = async (url, filename, mimeType) => {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return new File([blob], filename, { type: mimeType });
   };
 
   const isOperationalHoursChanged = (current, original) => {
@@ -206,6 +214,7 @@ export default function DaftarTempatPenampung() {
       if (Object.keys(updated).length > 0) {
         await updateCollectionCenter(collectionCenterId, updated);
         toast.success("Profil berhasil diperbarui");
+        fetchDetailCollectionCenter();
       }
 
       // if (data.foto && data.foto instanceof File) {
@@ -219,10 +228,6 @@ export default function DaftarTempatPenampung() {
       //     toast.error("Gagal memperbarui foto profil");
       //   }
       // }
-
-      setTimeout(() => {
-        location.reload();
-      }, 1000);
     } catch (error) {
       toast.error(
         "Terjadi kesalahan saat memperbarui profil. Silakan coba lagi."
@@ -329,12 +334,19 @@ export default function DaftarTempatPenampung() {
   }, []);
 
   useEffect(() => {
-    if (dataDetailCollectionCenter) {
+    const resetAndConvert = async () => {
+      if (!dataDetailCollectionCenter) return;
       const address = dataDetailCollectionCenter.address;
       const reference = address.reference;
       const detail = address.detail;
       const formattedAddress =
         reference && detail ? `(${reference}) ${detail}` : detail || "";
+
+      let file = null;
+      const fileUrl = dataDetailCollectionCenter.attachment?.file;
+      if (fileUrl) {
+        file = await urlToFile(fileUrl, fileUrl.name, fileUrl.mime);
+      }
 
       reset({
         namaTempatPenampung: dataDetailCollectionCenter.name,
@@ -360,11 +372,14 @@ export default function DaftarTempatPenampung() {
         ),
         jenisBarang: dataDetailCollectionCenter.types,
         deskripsi: dataDetailCollectionCenter.description,
+        foto: file,
       });
       setPhoneNumberHolder(
         dataDetailCollectionCenter.phoneNumber.replace("+62", "")
       );
-    }
+    };
+
+    resetAndConvert();
   }, [dataDetailCollectionCenter, reset]);
 
   useEffect(() => {
