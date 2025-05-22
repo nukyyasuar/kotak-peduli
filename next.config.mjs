@@ -7,6 +7,10 @@ const nextConfig = {
         hostname: "clear-mammal-simply.ngrok-free.app",
         // pathname: '/account123/**',
       },
+      {
+        protocol: "https",
+        hostname: "organic-katydid-truly.ngrok-free.app",
+      },
     ],
   },
 };
