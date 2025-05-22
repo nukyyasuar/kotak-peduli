@@ -74,9 +74,9 @@ export default function AdminConsoleDashboard() {
     "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base ";
 
   const detailLatestStatus =
-    dataDetailCollectionCenter?.approvals?.[0]?.latestStatus || "";
-  const statusApprovedGreen = STATUS_GREEN.includes(detailLatestStatus);
-  const statusRejectedRed = STATUS_RED.includes(detailLatestStatus);
+    dataDetailCollectionCenter?.approval?.latestStatus || "";
+  const statusApprovedGreen = detailLatestStatus === "APPROVED";
+  const statusRejectedRed = detailLatestStatus === "REJECTED";
   const statusColor = statusApprovedGreen
     ? "bg-[#1F7D53]"
     : statusRejectedRed
@@ -96,13 +96,15 @@ export default function AdminConsoleDashboard() {
       return <span>{`${dayLabel} ${item.openTime} - ${item.closeTime}`}</span>;
     }
   );
-  const detailDonationTypes = dataDetailCollectionCenter?.types?.map((item) => {
-    const donationTypeLabel = donationTypes.find(
-      (type) => type.value === item
-    )?.label;
+  const detailDonationTypes = dataDetailCollectionCenter?.types
+    ?.map((item) => {
+      const donationTypeLabel = donationTypes.find(
+        (type) => type.value === item
+      )?.label;
 
-    return <span>{donationTypeLabel}, </span>;
-  });
+      return donationTypeLabel;
+    })
+    .join(", ");
 
   // Modal Handling Outside
   handleOutsideModal({
@@ -185,7 +187,14 @@ export default function AdminConsoleDashboard() {
         `Berhasil ${type === "approve" ? "menyetujui" : "menolak"} tempat penampung`
       );
       setIsApproveModalOpen(false);
+      setIsRejectModalOpen(false);
       setIsDetailCollectionCenterModalOpen(false);
+      fetchCollectionCenters(
+        currentPage,
+        debouncedSearch,
+        selectedStatusFilters
+      );
+      setSelectedCollectionCenterId(null);
     } catch (error) {
       console.error("Error update status collection center:", error);
       toast.error(
@@ -287,6 +296,7 @@ export default function AdminConsoleDashboard() {
             <table className="w-full bg-white rounded-lg">
               <thead>
                 <tr className="text-left border-b border-b-[#EDEDED]">
+                  <th className="pb-2">ID</th>
                   <th className="pb-2">Nama</th>
                   <th className="pb-2">Email</th>
                   <th className="pb-2">No. Telepon</th>
@@ -313,6 +323,7 @@ export default function AdminConsoleDashboard() {
 
                   return (
                     <tr key={index} className="border-b border-b-[#EDEDED]">
+                      <td className="py-3 w-10">{item.id}</td>
                       <td className="py-3">{item.name}</td>
                       <td className="py-3">{item.email}</td>
                       <td className="py-3">{item.phoneNumber}</td>
@@ -413,7 +424,10 @@ export default function AdminConsoleDashboard() {
               <>
                 {/* Header */}
                 <div className="flex justify-between items-center">
-                  <h1 className="font-bold text-xl">Detail Tempat Penampung</h1>
+                  <h1 className="font-bold text-xl">
+                    Detail Tempat Penampung{" "}
+                    <span>{`(${dataDetailCollectionCenter.id})`}</span>
+                  </h1>
                   <span
                     className={`${statusColor} text-white px-6 py-2 font-bold rounded-lg`}
                   >
@@ -442,28 +456,28 @@ export default function AdminConsoleDashboard() {
                     </div>
 
                     {/* Buttons */}
-                    {/* {detailLatestStatus === "PENDING" && ( */}
-                    <div className="space-y-4">
-                      <ButtonCustom
-                        variant="green"
-                        type="button"
-                        label="Setujui (Pengajuan)"
-                        onClick={() => {
-                          setIsApproveModalOpen(true);
-                        }}
-                        className="w-full"
-                      />
-                      <ButtonCustom
-                        variant="red"
-                        type="button"
-                        label="Tolak (Pengajuan)"
-                        onClick={() => {
-                          setIsRejectModalOpen(true);
-                        }}
-                        className="w-full"
-                      />
-                    </div>
-                    {/* )} */}
+                    {detailLatestStatus === "PENDING" && (
+                      <div className="space-y-4">
+                        <ButtonCustom
+                          variant="green"
+                          type="button"
+                          label="Setujui (Pengajuan)"
+                          onClick={() => {
+                            setIsApproveModalOpen(true);
+                          }}
+                          className="w-full"
+                        />
+                        <ButtonCustom
+                          variant="red"
+                          type="button"
+                          label="Tolak (Pengajuan)"
+                          onClick={() => {
+                            setIsRejectModalOpen(true);
+                          }}
+                          className="w-full"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Section */}
@@ -476,7 +490,7 @@ export default function AdminConsoleDashboard() {
                       />
                     )} */}
                     <ListTextWithTitle
-                      title="Informasi Tempat Penampung"
+                      title="Informasi Tempat Penampung:"
                       values={[
                         dataDetailCollectionCenter?.name,
                         dataDetailCollectionCenter?.email,
@@ -484,19 +498,21 @@ export default function AdminConsoleDashboard() {
                         `(${detailAddress?.reference}) ${detailAddress?.detail}`,
                       ]}
                     />
-                    <div className="flex justify-between">
+                    <div className="flex">
                       <ListTextWithTitle
-                        title="Penjemputan"
+                        title="Penjemputan:"
                         values={[detailPickupType]}
+                        className="w-full"
                       />
                       <ListTextWithTitle
-                        title="Batas Jarak Penjemputan"
+                        title="Batas Jarak Penjemputan:"
                         values={[dataDetailCollectionCenter?.distanceLimitKm]}
+                        className="w-full"
                       />
                     </div>
-                    <div className="flex justify-between">
+                    <div className="flex">
                       <ListTextWithTitle
-                        title="Waktu Operasional"
+                        title="Waktu Operasional:"
                         values={[
                           <div className="flex flex-col">
                             {detailOperationalHours}
@@ -505,13 +521,13 @@ export default function AdminConsoleDashboard() {
                         className="w-full"
                       />
                       <ListTextWithTitle
-                        title="Barang yang Diterima"
+                        title="Barang yang Diterima:"
                         values={[detailDonationTypes]}
                         className="w-full"
                       />
                     </div>
                     <ListTextWithTitle
-                      title="Deskripsi"
+                      title="Deskripsi:"
                       values={[dataDetailCollectionCenter?.description]}
                     />
                   </div>
