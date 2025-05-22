@@ -34,8 +34,14 @@ const collectionCenterRegistSchema = yup.object().shape({
     .number()
     .typeError("Batas jarak penjemputan hanya boleh berisi angka.")
     .min(1, "Batas jarak penjemputan minimal 1 km."),
-  waktuOperasional: yup.array().min(1, "Waktu operasional wajib diisi."),
-  jenisBarang: yup.array().min(1, "Barang donasi wajib diisi."),
+  waktuOperasional: yup
+    .array()
+    .required("Waktu operasional wajib diisi.")
+    .min(1, "Waktu operasional wajib diisi."),
+  jenisBarang: yup
+    .array()
+    .required("Pilih minimal satu jenis barang yang dapat didonasikan.")
+    .min(1, "Pilih minimal satu jenis barang yang dapat didonasikan."),
   deskripsi: yup
     .string()
     .required("Deskripsi barang donasi wajib diisi.")
@@ -43,6 +49,7 @@ const collectionCenterRegistSchema = yup.object().shape({
     .max(250, "Deskripsi barang donasi maksimal terdiri dari 250 karakter."),
   foto: yup
     .mixed()
+    .required("Foto tempat penampung wajib diunggah.")
     .test("fileSize", "Ukuran file terlalu besar. Maksimal 5MB.", (value) => {
       if (!value) return true;
       return value.size <= 5 * 1024 * 1024;
