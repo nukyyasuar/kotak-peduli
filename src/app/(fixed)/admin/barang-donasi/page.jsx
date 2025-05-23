@@ -28,20 +28,48 @@ import {
   processDonation,
 } from "src/services/api/donation";
 
+const baseClassNameInput =
+  "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base ";
+
+const digitalCheckingUpdateStatus = [
+  {
+    label: "Pemeriksaan Digital (Disetujui)",
+    name: "PENDING",
+    value: true,
+    color: "#1F7D53",
+  },
+  {
+    label: "Pemeriksaan Digital (Ditolak)",
+    name: "REJECTED",
+    value: false,
+    color: "#E52020",
+  },
+];
+
+const physicalCheckingUpdateStatus = [
+  {
+    label: "Pemeriksaan Fisik (Disetujui)",
+    name: "STORED",
+    value: true,
+    color: "#1F7D53",
+  },
+  {
+    label: "Pemeriksaan Fisik (Ditolak)",
+    name: "REDIRECTED",
+    value: false,
+    color: "#E52020",
+  },
+];
+
 export default function CollectionCenterDonationItems() {
-  // Search Filter
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalData, setTotalData] = useState(0);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const delay = setTimeout(() => {
-      setDebouncedSearch(searchKeyword);
-    }, 500);
-
-    return () => clearTimeout(delay);
-  }, [searchKeyword]);
-
-  // Filter Checkbox
+  const [detailDonation, setDetailDonation] = useState(null);
+  const [dataDonations, setDataDonations] = useState([]);
+  const [sort, setSort] = useState("createdAt:desc");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filterSearchKeyword, setFilterSearchKeyword] = useState("");
   const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
@@ -58,12 +86,119 @@ export default function CollectionCenterDonationItems() {
   const [tempSelectedPickupFilters, setTempSelectedPickupFilters] = useState(
     []
   );
+  const [openMenuIndex, setOpenMenuIndex] = useState(null);
+  const [selectedDonationId, setSelectedDonationId] = useState(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [imgSrc, setImgSrc] = useState("");
+  const [isShippingDateModalOpen, setIsShippingDateModalOpen] = useState(false);
+  const [isSubmitShippingDateLoading, setIsSubmitShippingDateLoading] =
+    useState(false);
+  const [isUpdateStatusModalOpen, setIsUpdateStatusModalOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isFetchDetailDonationLoading, setIsFetchDetailDonationLoading] =
+    useState(false);
+  const [isLoadingFetchDonations, setIsLoadingFetchDonations] = useState(false);
+
+  const isFirstFetchDonations = useRef(true);
+  const updateStatusModalRef = useRef(null);
+  const detailModalRef = useRef(null);
+
+  const {
+    watch,
+    reset,
+    handleSubmit,
+    register,
+    formState: { errors },
+    setValue,
+  } = useForm({
+    defaultValues: {
+      waktuPengirimanTempatPenampung: "",
+      statusPemeriksaan: "",
+      note: "",
+      fotoDisalurkan: "",
+    },
+  });
 
   const collectionCenterId = localStorage.getItem("collectionCenterId");
   const selectedStatusFilterCount = selectedStatusFilters?.length;
   const selectedDonationTypesFilterCount = selectedDonationTypesFilters?.length;
   const totalSelectedFiltersCount =
     selectedStatusFilterCount + selectedDonationTypesFilterCount;
+  const detailDonationLatestStatus = detailDonation?.approvals?.latestStatus;
+  const statusCheckingList =
+    detailDonationLatestStatus === "DIGITAL_CHECKING"
+      ? digitalCheckingUpdateStatus
+      : detailDonationLatestStatus === "PHYSICAL_CHECKING"
+        ? physicalCheckingUpdateStatus
+        : [];
+
+  const fetchDonations = async (
+    page,
+    search,
+    sort,
+    statusFilters,
+    donationTypesFilters,
+    pickupFilters
+  ) => {
+    try {
+      setIsLoadingFetchDonations(true);
+      const result = await getCollectionCenterDonations(
+        collectionCenterId,
+        page,
+        search,
+        sort,
+        statusFilters,
+        donationTypesFilters,
+        pickupFilters
+      );
+
+      setDataDonations(result.data);
+      setTotalPages(result.meta.totalPage);
+      setTotalData(result.meta.total);
+
+      if (isFirstFetchDonations.current) {
+        toast.success("Data barang donasi berhasil dimuat");
+        isFirstFetchDonations.current = false;
+      }
+    } catch (error) {
+      console.error("Error fetching donations:", error);
+      toast.error("Gagal memuat data barang donasi");
+    } finally {
+      setIsLoadingFetchDonations(false);
+    }
+  };
+
+  const toggleMenu = (index) => {
+    setOpenMenuIndex(openMenuIndex === index ? null : index);
+    setSelectedDonationId(dataDonations[index]?.id);
+  };
+
+  // Modal Handling Outside
+  handleOutsideModal({
+    ref: isUpdateStatusModalOpen
+      ? ""
+      : isShippingDateModalOpen
+        ? ""
+        : detailModalRef,
+    isOpen: isUpdateStatusModalOpen
+      ? ""
+      : isShippingDateModalOpen
+        ? ""
+        : isDetailModalOpen,
+    onClose: () => {
+      if (isUpdateStatusModalOpen || isShippingDateModalOpen) {
+        // nothing
+      } else {
+        setIsDetailModalOpen(false);
+      }
+    },
+  });
+
+  const handleImageLoaded = (url, index) => {
+    if (index === 0 && !imgSrc) {
+      setImgSrc(url);
+    }
+  };
 
   const handleTempStatusFilterChange = (value) => {
     setTempSelectedStatusFilters((prev) =>
@@ -109,47 +244,24 @@ export default function CollectionCenterDonationItems() {
     fetchDonations(1, "", [], [], []);
   };
 
-  // Menu Dropdown
-  const [openMenuIndex, setOpenMenuIndex] = useState(null);
-  const [selectedDonationId, setSelectedDonationId] = useState(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-
-  const toggleMenu = (index) => {
-    setOpenMenuIndex(openMenuIndex === index ? null : index);
-    setSelectedDonationId(dataDonations[index]?.id);
+  const handleCancelShippingDate = () => {
+    reset({ waktuPengirimanTempatPenampung: "" });
+    setIsShippingDateModalOpen(false);
   };
 
-  // Modal Detail
-  const detailModalRef = useRef(null);
+  const handleCancelUpdateStatus = () => {
+    reset({ statusPemeriksaan: "", note: "" });
+    setIsUpdateStatusModalOpen(false);
+  };
 
-  const [imgSrc, setImgSrc] = useState("");
-  const [isShippingDateModalOpen, setIsShippingDateModalOpen] = useState(false);
-
-  const handleImageLoaded = (url, index) => {
-    if (index === 0 && !imgSrc) {
-      setImgSrc(url);
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setValue("fotoDisalurkan", file, { shouldValidate: true });
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
     }
   };
-
-  // Modal Tanggal Pengiriman
-  const [isSubmitShippingDateLoading, setIsSubmitShippingDateLoading] =
-    useState(false);
-
-  const {
-    watch,
-    reset,
-    handleSubmit,
-    register,
-    formState: { errors },
-    setValue,
-  } = useForm({
-    defaultValues: {
-      waktuPengirimanTempatPenampung: "",
-      statusPemeriksaan: "",
-      note: "",
-      fotoDisalurkan: "",
-    },
-  });
 
   const onSubmitCollectionCenterShippingDate = async (data) => {
     console.log("data", data);
@@ -170,6 +282,7 @@ export default function CollectionCenterDonationItems() {
         // fetchDonations(
         //   currentPage,
         //   debouncedSearch,
+        //   sort,
         //   selectedStatusFilters,
         //   selectedDonationTypesFilters,
         //   selectedPickupFilters
@@ -183,63 +296,6 @@ export default function CollectionCenterDonationItems() {
       toast.error("Gagal mengkonfirmasi tanggal pengiriman");
     } finally {
       setIsSubmitShippingDateLoading(false);
-    }
-  };
-
-  const handleCancelShippingDate = () => {
-    reset({ waktuPengirimanTempatPenampung: "" });
-    setIsShippingDateModalOpen(false);
-  };
-
-  // Modal Ubah Status
-  const updateStatusModalRef = useRef(null);
-  const [isUpdateStatusModalOpen, setIsUpdateStatusModalOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState(null);
-
-  const baseClassNameInput =
-    "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base ";
-
-  const digitalCheckingUpdateStatus = [
-    {
-      label: "Pemeriksaan Digital (Disetujui)",
-      name: "PENDING",
-      value: true,
-      color: "#1F7D53",
-    },
-    {
-      label: "Pemeriksaan Digital (Ditolak)",
-      name: "REJECTED",
-      value: false,
-      color: "#E52020",
-    },
-  ];
-
-  const physicalCheckingUpdateStatus = [
-    {
-      label: "Pemeriksaan Fisik (Disetujui)",
-      name: "STORED",
-      value: true,
-      color: "#1F7D53",
-    },
-    {
-      label: "Pemeriksaan Fisik (Ditolak)",
-      name: "REDIRECTED",
-      value: false,
-      color: "#E52020",
-    },
-  ];
-
-  const handleCancelUpdateStatus = () => {
-    reset({ statusPemeriksaan: "", note: "" });
-    setIsUpdateStatusModalOpen(false);
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setValue("fotoDisalurkan", file, { shouldValidate: true });
-      const objectUrl = URL.createObjectURL(file);
-      setPreviewUrl(objectUrl);
     }
   };
 
@@ -277,6 +333,7 @@ export default function CollectionCenterDonationItems() {
       fetchDonations(
         currentPage,
         debouncedSearch,
+        sort,
         selectedStatusFilters,
         selectedDonationTypesFilters,
         selectedPickupFilters
@@ -284,76 +341,6 @@ export default function CollectionCenterDonationItems() {
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Gagal memperbarui status barang");
-    }
-  };
-
-  // Modal Handling Outside
-  handleOutsideModal({
-    ref: isUpdateStatusModalOpen
-      ? ""
-      : isShippingDateModalOpen
-        ? ""
-        : detailModalRef,
-    isOpen: isUpdateStatusModalOpen
-      ? ""
-      : isShippingDateModalOpen
-        ? ""
-        : isDetailModalOpen,
-    onClose: () => {
-      if (isUpdateStatusModalOpen || isShippingDateModalOpen) {
-        // nothing
-      } else {
-        setIsDetailModalOpen(false);
-      }
-    },
-  });
-
-  // Fetch Data
-  const isFirstFetchDonations = useRef(true);
-  const [detailDonation, setDetailDonation] = useState(null);
-  const [dataDonations, setDataDonations] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalData, setTotalData] = useState(0);
-
-  const [isFetchDetailDonationLoading, setIsFetchDetailDonationLoading] =
-    useState(false);
-
-  const detailDonationLatestStatus = detailDonation?.approvals?.latestStatus;
-
-  const statusCheckingList =
-    detailDonationLatestStatus === "DIGITAL_CHECKING"
-      ? digitalCheckingUpdateStatus
-      : detailDonationLatestStatus === "PHYSICAL_CHECKING"
-        ? physicalCheckingUpdateStatus
-        : [];
-
-  const fetchDonations = async (
-    page,
-    search,
-    statusFilters,
-    donationTypesFilters,
-    pickupFilters
-  ) => {
-    try {
-      const result = await getCollectionCenterDonations(
-        collectionCenterId,
-        page,
-        search,
-        statusFilters,
-        donationTypesFilters,
-        pickupFilters
-      );
-      setDataDonations(result.data);
-      setTotalPages(result.meta.totalPage);
-      setTotalData(result.meta.total);
-      if (isFirstFetchDonations.current) {
-        toast.success("Data barang donasi berhasil dimuat");
-        isFirstFetchDonations.current = false;
-      }
-    } catch (error) {
-      console.error("Error fetching donations:", error);
-      toast.error("Gagal memuat data barang donasi");
     }
   };
 
@@ -382,6 +369,7 @@ export default function CollectionCenterDonationItems() {
     fetchDonations(
       currentPage,
       debouncedSearch,
+      sort,
       selectedStatusFilters,
       selectedDonationTypesFilters,
       selectedPickupFilters
@@ -389,11 +377,19 @@ export default function CollectionCenterDonationItems() {
   }, [
     currentPage,
     debouncedSearch,
+    sort,
     selectedStatusFilters,
     selectedDonationTypesFilters,
     selectedPickupFilters,
   ]);
-  //
+
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setDebouncedSearch(searchKeyword);
+    }, 500);
+
+    return () => clearTimeout(delay);
+  }, [searchKeyword]);
 
   return (
     <div className="min-h-[82dvh] bg-[#F5E9D4] py-12">
@@ -516,17 +512,63 @@ export default function CollectionCenterDonationItems() {
         <div
           className={`bg-white p-6 rounded-lg ${totalData <= 0 && "text-center"}`}
         >
-          {totalData <= 0 ? (
+          {isLoadingFetchDonations ? (
+            <div className="flex justify-center">
+              <ClipLoader
+                color="#543A14"
+                size={30}
+                loading={isLoadingFetchDonations}
+              />
+            </div>
+          ) : totalData < 0 ? (
             "Data tidak ditemukan"
           ) : (
             <table className="w-full bg-white rounded-lg">
               <thead>
                 <tr className="text-left border-b border-b-[#EDEDED]">
-                  <th className="pb-2">Tanggal Donasi</th>
+                  <th
+                    className="pb-2 flex gap-1 items-center cursor-pointer"
+                    onClick={() =>
+                      setSort((prev) =>
+                        prev === "createdAt:desc"
+                          ? "createdAt:asc"
+                          : "createdAt:desc"
+                      )
+                    }
+                  >
+                    Tanggal Donasi
+                    <Icon
+                      icon="material-symbols:sort"
+                      width={20}
+                      height={20}
+                      color="black"
+                      className={sort === "createdAt:asc" ? "scale-y-[-1]" : ""}
+                    />
+                  </th>
                   <th className="pb-2">Nama Donatur</th>
                   <th className="pb-2">Jenis Barang</th>
                   <th className="pb-2">Tipe Pengiriman</th>
-                  <th className="pb-2">Tanggal Pengiriman</th>
+                  <th
+                    className="pb-2 flex gap-1 items-center cursor-pointer"
+                    onClick={() =>
+                      setSort((prev) =>
+                        prev === "pickupDate:desc"
+                          ? "pickupDate:asc"
+                          : "pickupDate:desc"
+                      )
+                    }
+                  >
+                    Tanggal Pengiriman
+                    <Icon
+                      icon="material-symbols:sort"
+                      width={20}
+                      height={20}
+                      color="black"
+                      className={
+                        sort === "pickupDate:desc" ? "scale-y-[-1]" : ""
+                      }
+                    />
+                  </th>
                   <th className="pb-2">Status</th>
                   <th className="pb-2">Menu</th>
                 </tr>
