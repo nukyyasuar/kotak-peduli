@@ -33,7 +33,9 @@ const collectionCenterRegistSchema = yup.object().shape({
   batasJarak: yup
     .number()
     .typeError("Batas jarak penjemputan hanya boleh berisi angka.")
-    .min(1, "Batas jarak penjemputan minimal 1 km."),
+    .min(1, "Batas jarak penjemputan minimal 1 km.")
+    .nullable()
+    .transform((value, originalValue) => (originalValue === "" ? null : value)),
   waktuOperasional: yup
     .array()
     .required("Waktu operasional wajib diisi.")
