@@ -13,8 +13,6 @@ const getMembersWithParams = async (
       limit: "10",
     });
 
-    console.log("memberRoleFilters", memberRoleFilters);
-
     const appendMultipleFilters = (params, key, values) => {
       values.forEach((val) => params.append(key, val));
     };

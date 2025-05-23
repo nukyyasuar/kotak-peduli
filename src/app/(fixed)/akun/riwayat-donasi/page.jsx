@@ -5,7 +5,7 @@ import { Icon } from "@iconify/react";
 import { useForm, useFieldArray } from "react-hook-form";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { id, is } from "date-fns/locale";
+import { id } from "date-fns/locale";
 import { ClipLoader } from "react-spinners";
 import { toast } from "react-toastify";
 import { yupResolver } from "@hookform/resolvers/yup";

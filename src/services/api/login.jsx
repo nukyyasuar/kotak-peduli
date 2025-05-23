@@ -14,7 +14,6 @@ const loginWithEmail = async (email, password) => {
       createRequestOptions("POST", { email, password })
     );
     const result = await handleApiResponse(response);
-    console.log(result);
 
     const accessToken = result.data?.tokens?.accessToken;
     const refreshToken = result.data?.tokens?.refreshToken;
@@ -44,7 +43,6 @@ export const loginWithGoogle = async () => {
       createRequestOptions("GET", { code })
     );
     const result = await handleApiResponse(response);
-    console.log(result);
 
     // googleProvider.setCustomParameters({
     //   prompt: "select_account",

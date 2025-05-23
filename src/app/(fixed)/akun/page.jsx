@@ -125,8 +125,6 @@ export default function Akun() {
     onClose: () => setIsEditPhoneNumber(false),
   });
 
-  console.log(isEditPhoneNumber);
-
   const onSubmit = async (data) => {
     if (!isEditPhoneNumber) {
       const payload = buildUpdatedPayload(data, dataProfile);
@@ -175,12 +173,6 @@ export default function Akun() {
       }
     }
   };
-
-  useEffect(() => {
-    if (fileInputRef.current) {
-      console.log("File input telah terikat!");
-    }
-  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -302,7 +294,7 @@ export default function Akun() {
             toast.error(error.message || "Gagal memverifikasi nomor telepon");
           }
         } catch (error) {
-          console.log("Error updating phone number:", error.message);
+          console.error("Error updating phone number:", error.message);
           if (error.message === "Unique constraint failed") {
             toast.error("Nomor telepon sudah terdaftar");
           } else {

@@ -227,7 +227,6 @@ export default function CollectionCenterPosts() {
     if (isEditMemberModalOpen && selectedMemberId) {
       dataMembers.forEach((member) => {
         if (member.id === selectedMemberId) {
-          console.log("member", member);
           setSelectedDataMember(member);
           reset({
             email: member.user.email,
@@ -241,8 +240,6 @@ export default function CollectionCenterPosts() {
       });
     }
   }, [isEditMemberModalOpen, selectedMemberId]);
-
-  console.log("watch", watch());
 
   useEffect(() => {
     if (isDeleteMemberModalOpen && selectedMemberId) {

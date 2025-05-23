@@ -269,8 +269,8 @@ export default function Home() {
   useEffect(() => {
     const fetchCollectionCenters = async () => {
       try {
-        const data = await getCollectionCenters();
-        const approvedData = data.filter(
+        const result = await getCollectionCenters();
+        const approvedData = result.data?.filter(
           (item) => item.approval.latestStatus === "APPROVED"
         );
         const formatted = approvedData.map((item) => ({
@@ -387,8 +387,6 @@ export default function Home() {
     };
     fetchProfile();
   }, []);
-
-  console.log("watch alamat:", watch("alamat"));
 
   useEffect(() => {
     if (watch("alamat.summary")) {

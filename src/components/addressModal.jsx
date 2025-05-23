@@ -262,7 +262,7 @@ export default function AddressModal({
       );
       setValue("alamat", getValueDetail("alamat"));
     } else {
-      console.log("No location selected");
+      console.error("No location selected");
     }
     handleClose();
   };
