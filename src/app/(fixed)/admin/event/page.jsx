@@ -27,38 +27,23 @@ import {
 } from "src/services/api/event";
 
 export default function CollectionCenterEvents() {
-  // Search Filter
+  const isFirstFetchEvents = useRef(true);
+  const [dataEvents, setDataEvents] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalData, setTotalData] = useState(0);
   const [searchKeyword, setSearchKeyword] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const delay = setTimeout(() => {
-      setDebouncedSearch(searchKeyword);
-    }, 500);
-
-    return () => clearTimeout(delay);
-  }, [searchKeyword]);
-
-  // Filter Checkbox
+  const [sort, setSort] = useState("endDate:desc");
   const [selectedStatusFilters, setSelectedStatusFilters] = useState([]);
-
-  const collectionCenterId = localStorage.getItem("collectionCenterId");
-
-  // Menu Dropdown
-  const [openMenuIndex, setOpenMenuIndex] = useState(null);
-
-  const toggleMenu = (index) => {
-    setOpenMenuIndex(openMenuIndex === index ? null : index);
-  };
-
-  // Modal Tambah, Edit, Selesai Event
-  const addEventModalRef = useRef(null);
-  const finishEventModalRef = useRef(null);
-
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
   const [isFinishEventModalOpen, setIsFinishEventModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [openMenuIndex, setOpenMenuIndex] = useState(null);
+
+  const addEventModalRef = useRef(null);
+  const finishEventModalRef = useRef(null);
 
   const {
     register,
@@ -78,8 +63,49 @@ export default function CollectionCenterEvents() {
       endDate: "",
       types: [],
       isActive: true,
+      startDate: new Date(),
     },
   });
+
+  const collectionCenterId = localStorage.getItem("collectionCenterId");
+
+  // Modal Handling Outside
+  handleOutsideModal({
+    ref: finishEventModalRef,
+    isOpen: isFinishEventModalOpen,
+    onClose: () => {
+      setIsFinishEventModalOpen(false);
+      reset();
+    },
+  });
+
+  const fetchEvents = async (page, search, sort, statusFilters) => {
+    try {
+      const result = await getEventsWithParams(
+        collectionCenterId,
+        page,
+        search,
+        sort,
+        statusFilters
+      );
+
+      setDataEvents(result.data);
+      setTotalPages(result.meta.totalPages);
+      setTotalData(result.meta.total);
+
+      if (isFirstFetchEvents.current) {
+        toast.success("Data events berhasil dimuat");
+        isFirstFetchEvents.current = false;
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      toast.error("Gagal memuat data events");
+    }
+  };
+
+  const toggleMenu = (index) => {
+    setOpenMenuIndex(openMenuIndex === index ? null : index);
+  };
 
   const onSubmitAddEvent = async (data) => {
     const payload = {
@@ -96,10 +122,12 @@ export default function CollectionCenterEvents() {
           selectedEventId,
           payload
         );
+
         toast.success("Data event berhasil diubah");
         setIsEditEventModalOpen(false);
         reset();
-        fetchEvents(currentPage, debouncedSearch, selectedStatusFilters);
+
+        fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
       } catch (error) {
         console.error("Error updating event:", error);
         toast.error("Gagal mengubah data event");
@@ -107,9 +135,11 @@ export default function CollectionCenterEvents() {
     } else if (isAddEventModalOpen) {
       try {
         await createEventCollectionCenter(collectionCenterId, payload);
+
         toast.success("Data event berhasil ditambahkan");
         setIsAddEventModalOpen(false);
         reset();
+
         fetchEvents(currentPage, debouncedSearch, selectedStatusFilters);
       } catch (error) {
         console.error("Error creating event:", error);
@@ -117,6 +147,14 @@ export default function CollectionCenterEvents() {
       }
     }
   };
+
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      setDebouncedSearch(searchKeyword);
+    }, 500);
+
+    return () => clearTimeout(delay);
+  }, [searchKeyword]);
 
   useEffect(() => {
     if ((isEditEventModalOpen || isFinishEventModalOpen) && selectedEventId) {
@@ -140,51 +178,13 @@ export default function CollectionCenterEvents() {
     }
   }, [isFinishEventModalOpen]);
 
-  // Fetch Data
-  const isFirstFetchEvents = useRef(true);
-  const [dataEvents, setDataEvents] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalData, setTotalData] = useState(0);
-
-  const fetchEvents = async (page, search, statusFilters) => {
-    try {
-      const result = await getEventsWithParams(
-        collectionCenterId,
-        page,
-        search,
-        statusFilters
-      );
-      setDataEvents(result.data);
-      setTotalPages(result.meta.totalPages);
-      setTotalData(result.meta.total);
-      if (isFirstFetchEvents.current) {
-        toast.success("Data events berhasil dimuat");
-        isFirstFetchEvents.current = false;
-      }
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      toast.error("Gagal memuat data events");
-    }
-  };
-
   useEffect(() => {
-    fetchEvents(currentPage, debouncedSearch, selectedStatusFilters);
-  }, [currentPage, debouncedSearch, selectedStatusFilters]);
+    fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
+  }, [currentPage, debouncedSearch, sort, selectedStatusFilters]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedStatusFilters]);
-
-  // Modal Handling Outside
-  handleOutsideModal({
-    ref: finishEventModalRef,
-    isOpen: isFinishEventModalOpen,
-    onClose: () => {
-      setIsFinishEventModalOpen(false);
-      reset();
-    },
-  });
+  }, [debouncedSearch, sort, selectedStatusFilters]);
 
   return (
     <div className="min-h-[82dvh] bg-[#F5E9D4] py-12">
@@ -261,7 +261,23 @@ export default function CollectionCenterEvents() {
                 <tr className="text-left border-b border-b-[#EDEDED]">
                   <th className="pb-2">Nama</th>
                   <th className="pb-2">Alamat</th>
-                  <th className="pb-2">Akhir Penerimaan</th>
+                  <th
+                    className="pb-2 flex gap-1 items-center cursor-pointer"
+                    onClick={() =>
+                      setSort((prev) =>
+                        prev === "endDate:desc" ? "endDate:asc" : "endDate:desc"
+                      )
+                    }
+                  >
+                    Akhir Penerimaan
+                    <Icon
+                      icon="material-symbols:sort"
+                      width={20}
+                      height={20}
+                      color="black"
+                      className={sort === "endDate:asc" ? "scale-y-[-1]" : ""}
+                    />
+                  </th>
                   <th className="pb-2">Jenis Barang</th>
                   <th className="pb-2">Status</th>
                   <th className="pb-2">Menu</th>
