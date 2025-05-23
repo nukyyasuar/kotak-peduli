@@ -20,6 +20,8 @@ import collectionCenterRegistSchema from "src/components/schema/collectionCenter
 import {
   getOneCollectionCenter,
   updateCollectionCenter,
+  verifyPhoneNumberCollectionCenter,
+  updateAvatarCollectionCenter,
 } from "src/services/api/collectionCenter";
 
 import {
@@ -82,9 +84,6 @@ export default function DaftarTempatPenampung() {
     name: "waktuOperasional",
   });
 
-  console.log("watch foto", watch("foto"));
-  console.log("errors", errors);
-
   const collectionCenterId = localStorage.getItem("collectionCenterId");
   const watchPhoneNumber = watch("nomorTelepon");
   const avatarPath = dataDetailCollectionCenter?.attachment?.file?.path;
@@ -134,8 +133,15 @@ export default function DaftarTempatPenampung() {
     });
   };
 
-  const buildUpdatedPayload = (data, original) => {
+  const buildUpdatedPayload = async (data, original) => {
     const normalize = (value) => (value ?? "").toString().trim();
+    const fileUrl = original?.attachment;
+    const originalFile = await urlToFile(
+      fileUrl,
+      fileUrl.file.name,
+      fileUrl.file.mime
+    );
+
     const dataPickupTypes =
       data.penjemputan === "PICKED_UP"
         ? ["PICKED_UP", "DELIVERED"]
@@ -153,7 +159,7 @@ export default function DaftarTempatPenampung() {
       updated.phoneNumber = "+62" + data.nomorTelepon;
     }
     if (dataPickupTypes.toString() !== originalPickupTypes?.toString()) {
-      updated.pickupTypes = data.penjemputan;
+      updated.pickupTypes = [data.penjemputan];
     }
     if (data.batasJarak !== original?.distanceLimitKm) {
       updated.distanceLimitKm = data.batasJarak;
@@ -161,13 +167,24 @@ export default function DaftarTempatPenampung() {
     if (
       isOperationalHoursChanged(data.waktuOperasional, original?.activeHours)
     ) {
-      updated.activeHours = data.waktuOperasional;
+      updated.activeHours = data.waktuOperasional.map((item) => {
+        const openTime = `${item.openHour}:${item.openMinute}`;
+        const closeTime = `${item.closeHour}:${item.closeMinute}`;
+        return {
+          day: item.day,
+          openTime,
+          closeTime,
+        };
+      });
     }
     if (data.jenisBarang?.toString() !== original?.types?.toString()) {
       updated.types = data.jenisBarang;
     }
     if (data.deskripsi !== original?.description) {
       updated.description = data.deskripsi;
+    }
+    if (data.foto.name !== originalFile.name) {
+      updated.file = data.foto;
     }
 
     const address = {};
@@ -198,118 +215,67 @@ export default function DaftarTempatPenampung() {
     if (Object.keys(address).length > 0) {
       updated.address = address;
     }
+    console.log("updated", updated);
 
     return updated;
   };
 
   const onSubmitUpdate = async (data) => {
-    // Validasi blocking ketika ganti nomor telepon harus dapet idToken
-    const formData = new FormData();
-    console.log(data);
-
-    const updated = buildUpdatedPayload(data, dataDetailCollectionCenter);
-    console.log("updated", updated);
+    const updated = await buildUpdatedPayload(data, dataDetailCollectionCenter);
+    console.log("updated:", updated);
 
     try {
       if (Object.keys(updated).length > 0) {
-        await updateCollectionCenter(collectionCenterId, updated);
-        toast.success("Profil berhasil diperbarui");
-        fetchDetailCollectionCenter();
+        if (idTokenValue) {
+          try {
+            await verifyPhoneNumberCollectionCenter(collectionCenterId, {
+              idToken: idTokenValue,
+              phoneNumber: "+62" + watchPhoneNumber,
+            });
+            console.log("verify ok");
+          } catch (error) {
+            console.error("Error verifying phone number:", error);
+            toast.error(
+              "Gagal memproses penggantian nomor telepon. Silakan coba lagi."
+            );
+            return;
+          }
+        }
+
+        if (updated.file) {
+          const formDataFile = new FormData();
+          formDataFile.append("file", data.foto);
+
+          try {
+            await updateAvatarCollectionCenter(
+              collectionCenterId,
+              formDataFile
+            );
+            toast.success("Foto profil berhasil diperbarui");
+          } catch (error) {
+            toast.error("Gagal memperbarui foto profil");
+          }
+
+          delete updated.file;
+        }
+
+        try {
+          await updateCollectionCenter(collectionCenterId, updated);
+          toast.success("Profil berhasil diperbarui");
+          fetchDetailCollectionCenter();
+          setTimeout(() => {
+            location.reload();
+          }, 1000);
+        } catch (error) {
+          console.error("Error updating collection center:", error);
+          toast.error("Gagal memperbarui profil. Silakan coba lagi.");
+        }
       }
-
-      // if (data.foto && data.foto instanceof File) {
-      //   const formData = new FormData();
-      //   formData.append("file", data.foto);
-
-      //   try {
-      //     await updateAvatar(formData);
-      //     toast.success("Foto profil berhasil diperbarui");
-      //   } catch (error) {
-      //     toast.error("Gagal memperbarui foto profil");
-      //   }
-      // }
     } catch (error) {
       toast.error(
         "Terjadi kesalahan saat memperbarui profil. Silakan coba lagi."
       );
     }
-
-    // if (updated.name) formData.append("name", updated.name);
-    // if (updated.phoneNumber)
-    //   formData.append("phoneNumber", updated.phoneNumber);
-    // if (updated.email) formData.append("email", updated.email);
-    // if (updated.description)
-    //   formData.append("description", updated.description);
-    // if (updated.distanceLimitKm)
-    //   formData.append("distanceLimitKm", updated.distanceLimitKm);
-    // if (updated.pickupTypes) {
-    //   updated?.pickupTypes?.forEach((item) => {
-    //     formData.append("pickupTypes[]", item);
-    //   });
-    // }
-    // if (updated.types) {
-    //   updated.types.forEach((item) => {
-    //     formData.append("types[]", item);
-    //   });
-    // }
-    // if (updated.address) {
-    //   const { detail, reference, latitude, longitude } = updated.address;
-    //   if (detail) formData.append("address[detail]", detail);
-    //   if (reference) formData.append("address[reference]", reference);
-    //   if (latitude) formData.append("address[latitude]", latitude);
-    //   if (longitude) formData.append("address[longitude]", longitude);
-    // }
-    // if (updated.activeHours) {
-    //   updated.activeHours.forEach((item, index) => {
-    //     formData.append(`activeHours[${index}][day]`, item.day);
-    //     formData.append(
-    //       `activeHours[${index}][openTime]`,
-    //       `${item.openHour}:${item.openMinute}`
-    //     );
-    //     formData.append(
-    //       `activeHours[${index}][closeTime]`,
-    //       `${item.closeHour}:${item.closeMinute}`
-    //     );
-    //   });
-    // }
-
-    // if (updated.phoneNumber && idTokenValue) {
-    //   formData.append("idToken", idTokenValue);
-    // }
-
-    // if (data.foto instanceof File) {
-    //   formData.append("file", data.foto);
-    // }
-
-    // console.log("Submitted formdata:", formData);
-
-    // if ((updated.phoneNumber && idTokenValue) || !updated.phoneNumber) {
-    //   try {
-    //     setIsLoadingUpdateCollectionCenter(true);
-    //     createCollectionCenter(formData)
-    //       .then((response) => {
-    //         toast.success(
-    //           "Pendaftaran berhasil. Pendaftaran akan diverifikasi terlebih dahulu oleh admin."
-    //         );
-    //         setIsSubmitted(true);
-    //         setIsPending(true);
-    //         setTimeout(() => {
-    //           location.reload();
-    //         }, 2000);
-    //       })
-    //       .catch((error) => {
-    //         console.error("Error:", error);
-    //         toast.error("Pendaftaran gagal");
-    //         setIsSubmitted(false);
-    //       });
-    //   } catch (error) {
-    //     console.error("Error:", error);
-    //     toast.error("Pendaftaran gagal");
-    //     setIsSubmitted(false);
-    //   } finally {
-    //     setIsLoadingCreateCollectionCenter(false);
-    //   }
-    // }
   };
 
   const fetchDetailCollectionCenter = async () => {
@@ -395,8 +361,15 @@ export default function DaftarTempatPenampung() {
   }, [watch("waktuOperasional")]);
 
   useEffect(() => {
-    const changes = buildUpdatedPayload(watch(), dataDetailCollectionCenter);
-    setIsEdit(Object.keys(changes).length > 0);
+    const checkChanges = async () => {
+      const changes = await buildUpdatedPayload(
+        watch(),
+        dataDetailCollectionCenter
+      );
+      setIsEdit(Object.keys(changes).length > 0);
+    };
+
+    checkChanges();
   }, [watch(), dataDetailCollectionCenter]);
 
   // OTP Verification
@@ -459,6 +432,7 @@ export default function DaftarTempatPenampung() {
       const user = await verifyPhoneCode(confirmationResult, otp.join(""));
       if (user) {
         const idToken = await user.getIdToken();
+        console.log("idToken:", idToken);
         setIdTokenValue(idToken);
         setPhoneNumberHolder(watchPhoneNumber);
         toast.success("Verifikasi nomor telepon berhasil");
@@ -497,7 +471,7 @@ export default function DaftarTempatPenampung() {
       <div className="flex justify-between gap-8">
         {/* Foto Tempat Penampung */}
         <div className="flex flex-col items-center">
-          <div className="w-70 aspect-square bg-gray-100 mb-3 flex items-center justify-center relative group">
+          <div className="w-70 aspect-square bg-gray-100 mb-3 flex items-center justify-center relative group rounded-lg">
             {avatarPath && !isAvatarEdit ? (
               <Image
                 src={avatarPath}
