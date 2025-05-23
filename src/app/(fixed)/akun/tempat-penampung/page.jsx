@@ -67,7 +67,6 @@ export default function DaftarTempatPenampung() {
     reset,
   } = useForm({
     resolver: yupResolver(collectionCenterRegistSchema),
-    // mode: "onBlur",
     defaultValues: {
       namaTempatPenampung: "",
       email: "",
@@ -106,9 +105,7 @@ export default function DaftarTempatPenampung() {
   };
 
   const onSubmit = async (data) => {
-    // Validasi blocking ketika ganti nomor telepon harus dapet idToken
     const formData = new FormData();
-    console.log(data);
 
     const { alamat } = data;
     formData.append("name", data.namaTempatPenampung);
@@ -116,7 +113,9 @@ export default function DaftarTempatPenampung() {
     formData.append("email", data.email);
     formData.append("description", data.deskripsi);
     formData.append("file", data.foto);
-    formData.append("distanceLimitKm", data.batasJarak);
+    if (data.batasJarak) {
+      formData.append("distanceLimitKm", data.batasJarak);
+    }
     formData.append("pickupTypes[]", data.penjemputan);
     data.jenisBarang.forEach((item) => {
       formData.append("types[]", item);
@@ -138,7 +137,6 @@ export default function DaftarTempatPenampung() {
         `${item.closeHour}:${item.closeMinute}`
       );
     });
-
     if (idTokenValue) {
       formData.append("idToken", idTokenValue);
     }
@@ -154,11 +152,9 @@ export default function DaftarTempatPenampung() {
       setIsSubmitted(true);
       setIsPending(true);
 
-      fetchDetailCollectionCenter(collectionCenterId);
-
-      setTimeout(() => {
-        location.reload();
-      }, 1000);
+      // setTimeout(() => {
+      //   location.reload();
+      // }, 1000);
     } catch (error) {
       console.error("Error:", error);
       toast.error("Pendaftaran gagal");
@@ -185,6 +181,7 @@ export default function DaftarTempatPenampung() {
     if (!collectionCenterId) return;
 
     const detailData = await getOneCollectionCenter(collectionCenterId);
+    console.log("detailData", detailData);
     setDataDetailCollectionCenter(detailData);
 
     const approvalStatus = detailData?.approval.latestStatus;
@@ -267,16 +264,17 @@ export default function DaftarTempatPenampung() {
 
   const handleSendOtp = async () => {
     setIsLoadingSendOtp(true);
-    const phoneNumber = watch("nomorTelepon");
 
-    if (!phoneNumber || phoneNumber.length < 9) {
+    if (!watchPhoneNumber || watchPhoneNumber.length < 9) {
       toast.error("Masukkan nomor telepon yang valid.");
       setIsLoadingSendOtp(false);
       return;
     }
 
     try {
-      const confirmation = await sendPhoneVerificationCode("+62" + phoneNumber);
+      const confirmation = await sendPhoneVerificationCode(
+        "+62" + watchPhoneNumber
+      );
       setConfirmationResult(confirmation);
       setIsOtpSent(true);
       toast.success("OTP berhasil dikirim ke nomor Anda");
@@ -297,11 +295,12 @@ export default function DaftarTempatPenampung() {
 
       if (user) {
         const idToken = await user.getIdToken();
-        // hit /collection-centers/:id/phone dengan body idToken dan phoneNumber
+
         setIdTokenValue(idToken);
         setPhoneNumberHolder(watchPhoneNumber);
         toast.success("Verifikasi nomor telepon berhasil");
       } else {
+        console.error("Error during phone number verification:", error);
         toast.error("Gagal memverifikasi nomor telepon");
       }
     } catch (error) {
@@ -326,8 +325,6 @@ export default function DaftarTempatPenampung() {
       setIsLoadingVerifyOtp(false);
     }
   };
-  console.log("data detail", dataDetailCollectionCenter);
-  console.log("data profile", dataProfile);
 
   return isLoadingCreateCollectionCenter || isLoadingCollectionCenter ? (
     <div className="flex items-center justify-center h-screen">
@@ -344,20 +341,23 @@ export default function DaftarTempatPenampung() {
       <div className="mb-6 text-[#543A14] space-y-2">
         <h2 className="text-xl font-bold">
           Daftar Sebagai Tempat Penampung{" "}
-          {isSubmitted || (isPending && "(Proses Persetujuan)")}
+          {(isSubmitted || isPending) && "(Proses Persetujuan)"}
           {!isSubmitted && isApproved && "(Disetujui)"}
           {!isSubmitted && isDecline && "(Ditolak)"}
         </h2>
         <p className="text-base">
-          {isSubmitted ||
-            (isPending &&
-              "Pendaftaran Anda sedang diverifikasi terlebih dahulu oleh admin platform. Setelah disetujui, Anda akan mendapatkan akses ke halaman Dashboard Tempat Penampung.")}
+          {(isSubmitted || isPending) &&
+            "Pendaftaran Anda sedang diverifikasi terlebih dahulu oleh admin platform. Setelah disetujui, Anda akan mendapatkan akses ke halaman Dashboard Tempat Penampung."}
           {!isSubmitted &&
             isApproved &&
-            "Pendaftaran Anda telah disetujui. Tekan tombol dibawah untuk mengakses halaman Dashboard Tempat Penampung."}
-          {!isSubmitted &&
-            isDecline &&
-            `Pendaftaran Anda ditolak. Silakan periksa catatan penolakan di bawah ini dan ajukan pendaftaran kembali.`}
+            "Sealamat! Pendaftaran Anda telah disetujui. Tekan tombol dibawah untuk mengakses halaman Dashboard Tempat Penampung."}
+          {!isSubmitted && isDecline && (
+            <>
+              Mohon maaf, pendaftaran Anda ditolak. Silakan periksa alasan
+              penolakan di bawah ini.{" "}
+              <strong>Pengajuan ulang dapat dilakukan setelah 7 hari</strong>.
+            </>
+          )}
         </p>
         {isDecline && (
           <p className="text-[#E52020]">
@@ -389,19 +389,6 @@ export default function DaftarTempatPenampung() {
             }
             variant="orange"
             className="w-full"
-          />
-        ) : isDecline ? (
-          <ButtonCustom
-            label="Buat Ulang Pendaftaran"
-            variant="orange"
-            className="w-full"
-            onClick={() => {
-              setIsSubmitted(false);
-              setIsPending(false);
-              setIsDecline(false);
-              setIsApproved(false);
-              reset();
-            }}
           />
         ) : null
       ) : (
@@ -534,7 +521,7 @@ export default function DaftarTempatPenampung() {
                   placeholder="Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
                   value={watch("alamat.summary") || ""}
                   register={register("alamat")}
-                  onClick={() => setIsModalOpen(!isModalOpen)}
+                  onClick={() => setIsModalOpen(true)}
                   className="flex-1"
                   required
                   errors={errors?.alamat?.message}
