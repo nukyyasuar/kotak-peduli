@@ -22,13 +22,14 @@ const getEventsWithParams = async (
   collectionCenterId,
   page,
   keyword,
+  sort,
   statusFilters
 ) => {
   try {
     const params = new URLSearchParams({
       page: page.toString(),
-      limit: "2",
-      sort: "endDate:asc",
+      limit: "10",
+      sort: sort,
     });
 
     if (keyword) {
