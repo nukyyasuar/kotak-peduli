@@ -7,12 +7,12 @@ import {
 const getCollectionCenters = async () => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers?limit=50&sort=name:asc`,
+      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers?limit=50&sort=name:asc&statusTypes=APPROVED`,
       createRequestOptions("GET")
     );
     const result = await handleApiResponse(response);
 
-    return result.data;
+    return result;
   } catch (error) {
     throw new Error(error.message);
   }
@@ -81,6 +81,7 @@ const getCollectionCenterDonations = async (
   id,
   page,
   keyword,
+  sort,
   statusFilters,
   donationTypesFilters,
   pickupFilters
@@ -89,7 +90,7 @@ const getCollectionCenterDonations = async (
     const params = new URLSearchParams({
       page: page.toString(),
       limit: "10",
-      sort: "createdAt:desc",
+      sort: sort,
     });
 
     const appendMultipleFilters = (params, key, values) => {
@@ -149,6 +150,37 @@ const processCollectionCenter = async (collectionCenterid, payload) => {
   }
 };
 
+const verifyPhoneNumberCollectionCenter = async (
+  collectionCenterId,
+  payload
+) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers/${collectionCenterId}/phone`,
+      createRequestOptions("PATCH", payload)
+    );
+    const result = await handleApiResponse(response);
+
+    return result;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+const updateAvatarCollectionCenter = async (collectionCenterId, payload) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers/${collectionCenterId}/attachments`,
+      createRequestOptions("POST", payload)
+    );
+    const result = await handleApiResponse(response);
+
+    return result;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 export {
   getCollectionCenters,
   getCollectionCentersWithParams,
@@ -157,4 +189,6 @@ export {
   getCollectionCenterDonations,
   updateCollectionCenter,
   processCollectionCenter,
+  verifyPhoneNumberCollectionCenter,
+  updateAvatarCollectionCenter,
 };
