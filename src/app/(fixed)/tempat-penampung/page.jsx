@@ -107,12 +107,9 @@ export default function TempatPenampung() {
     const fetchCollectionCenters = async () => {
       setIsGetCollectionCentersLoading(true);
       try {
-        const data = await getCollectionCenters();
-        const approvedData = data.filter(
-          (item) => item.approval.latestStatus === "APPROVED"
-        );
+        const result = await getCollectionCenters();
 
-        setDataCollectionCenters(approvedData);
+        setDataCollectionCenters(result.data);
       } catch (error) {
         toast.error("Gagal memuat data tempat penampung");
       } finally {
@@ -279,7 +276,7 @@ export default function TempatPenampung() {
                 <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
                   <div
                     ref={detailModalRef}
-                    className="bg-white rounded-lg p-8 space-y-5 text-black"
+                    className="bg-white rounded-lg p-8 space-y-5 text-black max-w-200"
                   >
                     <h1 className="font-bold text-xl">
                       Detail Tempat Penampung
@@ -288,7 +285,7 @@ export default function TempatPenampung() {
                     {/* Detail Informasi */}
                     <div className="text-base border-b border-black pb-5 flex gap-5">
                       {/* Left Section */}
-                      <div className="rounded-lg relative w-70 h-48 bg-[#EDEDED] overflow-hidden">
+                      <div className="rounded-lg relative min-w-70 h-48 bg-[#EDEDED] overflow-hidden">
                         {dataOneCollectionCenter?.attachment?.file?.path ? (
                           <Image
                             src={dataOneCollectionCenter?.attachment?.file.path}
@@ -300,7 +297,7 @@ export default function TempatPenampung() {
                       </div>
 
                       {/* Right Section */}
-                      <div className="max-w-lg">
+                      <div className="w-full">
                         <h2 className="font-bold">
                           {dataOneCollectionCenter.name}
                         </h2>
@@ -339,7 +336,7 @@ export default function TempatPenampung() {
                     {/* Events */}
                     <div className="text-base border-b border-black pb-4">
                       <FormInput
-                        label="Pilih Event"
+                        label="Event yang Sedang Berlangsung"
                         name="goods"
                         value={selectedEvent}
                         onChange={setSelectedEvent}
@@ -378,7 +375,7 @@ export default function TempatPenampung() {
                     {/* Drop Point */}
                     <div className="text-base">
                       <FormInput
-                        label="Pilih Cabang/Drop Point"
+                        label="Cabang/Drop Point yang Tersedia"
                         name="dropPoint"
                         value={selectedDropPoint}
                         onChange={setSelectedDropPoint}
@@ -390,7 +387,7 @@ export default function TempatPenampung() {
                         className="mb-1"
                         inputType="dropdown"
                       />
-                      <p className="text-end">
+                      <p>
                         {dataSelectedPost?.address?.reference &&
                         dataSelectedPost?.address?.detail
                           ? `(${dataSelectedPost?.address?.reference}) ${dataSelectedPost?.address?.detail}`
