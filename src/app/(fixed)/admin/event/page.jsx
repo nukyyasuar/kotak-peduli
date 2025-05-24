@@ -70,7 +70,13 @@ export default function CollectionCenterEvents() {
     },
   });
 
-  const collectionCenterId = localStorage.getItem("collectionCenterId");
+  const getInitialValue = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("collectionCenterId");
+    }
+    return null;
+  };
+  const collectionCenterId = getInitialValue();
 
   handleOutsideModal({
     ref: finishEventModalRef,

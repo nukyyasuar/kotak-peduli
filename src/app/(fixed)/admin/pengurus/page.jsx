@@ -67,7 +67,6 @@ export default function CollectionCenterMembers() {
     },
   });
 
-  const collectionCenterId = localStorage.getItem("collectionCenterId");
   const totalSelectedFiltersCount = selectedMemberRolesFilters?.length;
 
   const memberRoleListDataFormatted = memberRolesListData.map((item) => {
@@ -81,6 +80,14 @@ export default function CollectionCenterMembers() {
       name: item.name,
     };
   });
+
+  const getInitialValue = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("collectionCenterId");
+    }
+    return null;
+  };
+  const collectionCenterId = getInitialValue();
 
   const toggleMenu = (index) => {
     setOpenMenuIndex(openMenuIndex === index ? null : index);

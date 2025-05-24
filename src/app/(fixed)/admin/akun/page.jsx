@@ -85,8 +85,15 @@ export default function DaftarTempatPenampung() {
     name: "waktuOperasional",
   });
 
+  const getInitialValue = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("collectionCenterId");
+    }
+    return null;
+  };
+  const collectionCenterId = getInitialValue();
+
   const watchValue = watch();
-  const collectionCenterId = localStorage.getItem("collectionCenterId");
   const watchPhoneNumber = watch("nomorTelepon");
   const avatarPath = dataDetailCollectionCenter?.attachment?.file?.path;
 

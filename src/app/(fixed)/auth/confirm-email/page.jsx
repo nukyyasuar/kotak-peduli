@@ -6,10 +6,11 @@ import { toast } from "react-toastify";
 import { confirmEmail } from "src/services/api/verifyEmail";
 
 export default function ConfirmEmail() {
-  const token = new URLSearchParams(window.location.search).get("token");
   const [status, setStatus] = useState("");
 
   useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("token");
+
     const confirmationEmail = async () => {
       try {
         if (!token || typeof token !== "string") return;
