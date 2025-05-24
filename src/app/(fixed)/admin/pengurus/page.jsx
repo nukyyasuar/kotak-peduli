@@ -6,12 +6,6 @@ import { toast } from "react-toastify";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 
-import { FormInput } from "src/components/formInput";
-import handleOutsideModal from "src/components/handleOutsideModal";
-import { ButtonCustom } from "src/components/button";
-import { memberRolesList } from "src/components/options";
-import FilterCheckboxDonationTable from "src/components/donationItems/FilterCheckboxDonationTable";
-
 import {
   getMembersWithParams,
   createUpdateMember,
@@ -20,8 +14,16 @@ import {
 } from "src/services/api/member";
 import { getPosts } from "src/services/api/post";
 import memberSchema from "src/components/schema/memberSchema";
+import { useAuth } from "src/services/auth/AuthContext";
 
-export default function CollectionCenterPosts() {
+import Unauthorize from "src/components/unauthorize";
+import { FormInput } from "src/components/formInput";
+import handleOutsideModal from "src/components/handleOutsideModal";
+import { ButtonCustom } from "src/components/button";
+import { memberRolesList } from "src/components/options";
+import FilterCheckboxDonationTable from "src/components/donationItems/FilterCheckboxDonationTable";
+
+export default function CollectionCenterMembers() {
   const deleteMemberModalRef = useRef(null);
 
   const [searchKeyword, setSearchKeyword] = useState("");
@@ -46,6 +48,7 @@ export default function CollectionCenterPosts() {
   const [memberRolesListData, setMemberRolesListData] = useState([]);
   const [dataPosts, setDataPosts] = useState([]);
 
+  const { hasPermission } = useAuth();
   const {
     register,
     watch,
@@ -54,7 +57,6 @@ export default function CollectionCenterPosts() {
     setValue,
     control,
     reset,
-    clearErrors,
   } = useForm({
     resolver: yupResolver(memberSchema),
     mode: "onBlur",
@@ -268,224 +270,230 @@ export default function CollectionCenterPosts() {
   }, [collectionCenterId]);
 
   return (
-    <div className="min-h-[82dvh] bg-[#F5E9D4] py-12">
-      <main className="max-w-[1200px] mx-auto space-y-4 text-black">
-        <h1 className="text-[32px] text-[#543A14] font-bold text-center">
-          PENGURUS
-        </h1>
+    <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
+      {!hasPermission("READ_ROLE") ? (
+        <Unauthorize />
+      ) : (
+        <main className="max-w-[1200px] mx-auto space-y-4 text-black">
+          <h1 className="text-[32px] text-[#543A14] font-bold text-center">
+            PENGURUS
+          </h1>
 
-        {/* Fitur Tabel */}
-        <div className="flex justify-between items-center mb-4">
-          {/* Search */}
-          <div className="relative">
-            <FormInput
-              inputType="text"
-              placeholder="Cari nama / email pengurus"
-              inputStyles="bg-white w-3xs relative pl-10"
-              value={searchKeyword}
-              onChange={(keyword) => {
-                setSearchKeyword(keyword);
-              }}
-            />
-            <Icon
-              icon="cuida:search-outline"
-              width={24}
-              height={24}
-              color="#C2C2C2"
-              className="absolute top-1/2 -translate-y-1/2 left-2"
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Filter */}
+          {/* Fitur Tabel */}
+          <div className="flex justify-between items-center mb-4">
+            {/* Search */}
             <div className="relative">
-              {/* Button Filter */}
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`border border-[#C2C2C2] rounded-lg px-3 h-12 flex items-center justify-between ${totalSelectedFiltersCount ? "bg-[#543A14] text-white" : "bg-white text-[#C2C2C2]"}`}
-              >
-                <span className="mr-1">
-                  {totalSelectedFiltersCount || null}
-                </span>{" "}
-                Filter
-                <Icon
-                  icon="mdi:chevron-down"
-                  width={24}
-                  height={24}
-                  color="#C2C2C2"
-                />
-              </button>
-
-              {/* Modal(Dropdown) Filter */}
-              {isFilterOpen && (
-                <div className="absolute right-0 mt-4 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                  <div className="p-4">
-                    {/* Input Checkbox Filter */}
-                    <div className="mb-4 max-h-50 overflow-scroll">
-                      <FilterCheckboxDonationTable
-                        title="Role"
-                        items={memberRolesList}
-                        selected={tempSelectedMemberRolesFilters}
-                        onChange={handleTempMemberRoleFilterChange}
-                      />
-                    </div>
-                    <div className="flex justify-between">
-                      <button
-                        onClick={handleApplyFilters}
-                        className="bg-[#4A3F35] text-white px-4 py-2 rounded-lg"
-                      >
-                        Filter
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleResetFilters();
-                          setIsFilterOpen(false);
-                        }}
-                        className="text-gray-700 px-4 py-2 rounded-lg"
-                      >
-                        Reset
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <FormInput
+                inputType="text"
+                placeholder="Cari nama / email pengurus"
+                inputStyles="bg-white w-3xs relative pl-10"
+                value={searchKeyword}
+                onChange={(keyword) => {
+                  setSearchKeyword(keyword);
+                }}
+              />
+              <Icon
+                icon="cuida:search-outline"
+                width={24}
+                height={24}
+                color="#C2C2C2"
+                className="absolute top-1/2 -translate-y-1/2 left-2"
+              />
             </div>
 
-            {/* Button Tambah Pengurus */}
-            <ButtonCustom
-              label="Tambah Data"
-              variant="brown"
-              icon="material-symbols:add"
-              onClick={() => {
-                setIsAddMemberModalOpen(true);
-              }}
-            />
-          </div>
-        </div>
+            <div className="flex items-center gap-4">
+              {/* Filter */}
+              <div className="relative">
+                {/* Button Filter */}
+                <button
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`border border-[#C2C2C2] rounded-lg px-3 h-12 flex items-center justify-between ${totalSelectedFiltersCount ? "bg-[#543A14] text-white" : "bg-white text-[#C2C2C2]"}`}
+                >
+                  <span className="mr-1">
+                    {totalSelectedFiltersCount || null}
+                  </span>{" "}
+                  Filter
+                  <Icon
+                    icon="mdi:chevron-down"
+                    width={24}
+                    height={24}
+                    color="#C2C2C2"
+                  />
+                </button>
 
-        {/* Tabel Pengurus */}
-        <div
-          className={`bg-white p-6 rounded-lg ${totalData <= 0 && "text-center"}`}
-        >
-          {totalData <= 0 ? (
-            "Data tidak ditemukan"
-          ) : (
-            <table className="w-full bg-white rounded-lg">
-              <thead>
-                <tr className="text-left border-b border-b-[#EDEDED]">
-                  <th className="pb-2">Nama</th>
-                  <th className="pb-2">Email</th>
-                  <th className="pb-2">No. Telepon</th>
-                  <th className="pb-2">Penempatan</th>
-                  <th className="pb-2">Role</th>
-                  <th className="pb-2">Menu</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {dataMembers.map((item, index) => {
-                  const user = item?.user;
-
-                  const fullName = `${user?.firstName} ${user?.lastName}`;
-
-                  const role = memberRolesList.find(
-                    (member) => member.value === item?.role?.name
-                  )?.label;
-
-                  return (
-                    <tr key={index} className="border-b border-b-[#EDEDED]">
-                      <td className="py-3">{fullName}</td>
-                      <td className="py-3">{user?.email}</td>
-                      <td className="py-3">{user?.phoneNumber}</td>
-                      <td className="py-3">
-                        {item.title || "Tempat Penampung"}
-                      </td>
-                      <td className="py-3">{role}</td>
-                      <td className="py-3 relative text-start">
+                {/* Modal(Dropdown) Filter */}
+                {isFilterOpen && (
+                  <div className="absolute right-0 mt-4 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                    <div className="p-4">
+                      {/* Input Checkbox Filter */}
+                      <div className="mb-4 max-h-50 overflow-scroll">
+                        <FilterCheckboxDonationTable
+                          title="Role"
+                          items={memberRolesList}
+                          selected={tempSelectedMemberRolesFilters}
+                          onChange={handleTempMemberRoleFilterChange}
+                        />
+                      </div>
+                      <div className="flex justify-between">
                         <button
-                          onClick={() => toggleMenu(index)}
-                          className="border border-[#C2C2C2] rounded-sm p-1"
+                          onClick={handleApplyFilters}
+                          className="bg-[#4A3F35] text-white px-4 py-2 rounded-lg"
                         >
-                          <Icon
-                            icon="iconamoon:menu-burger-vertical"
-                            width={16}
-                            height={16}
-                            color="black"
-                            className="rotate-90"
-                          />
+                          Filter
                         </button>
+                        <button
+                          onClick={() => {
+                            handleResetFilters();
+                            setIsFilterOpen(false);
+                          }}
+                          className="text-gray-700 px-4 py-2 rounded-lg"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-                        {/* Dropdown Menu */}
-                        {openMenuIndex === index && (
-                          <div className="w-35 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
-                            <ul className="py-2">
-                              <li
-                                className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
-                                onClick={() => {
-                                  setSelectedMemberId(item.id);
-                                  setIsEditMemberModalOpen(true);
-                                  setOpenMenuIndex(null);
-                                }}
-                              >
-                                Ubah Data
-                              </li>
-                              <li
-                                className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
-                                onClick={() => {
-                                  setSelectedMemberId(item.id);
-                                  setIsDeleteMemberModalOpen(true);
-                                  setOpenMenuIndex(null);
-                                }}
-                              >
-                                Hapus Data
-                              </li>
-                            </ul>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalData > 0 && (
-          <div className="flex justify-end space-x-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="p-2 text-[#543A14] disabled:text-[#C2C2C2]"
-            >
-              {"< Previous"}
-            </button>
-
-            {[...Array(totalPages)].map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentPage(index + 1)}
-                className={`w-10 h-10 rounded-lg ${
-                  currentPage === index + 1
-                    ? "bg-[#4A3F35] text-white"
-                    : "text-gray-700 hover:text-gray-900"
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="p-2 text-gray-700 hover:text-gray-900 disabled:text-gray-300"
-            >
-              Next {">"}
-            </button>
+              {/* Button Tambah Pengurus */}
+              <ButtonCustom
+                label="Tambah Data"
+                variant="brown"
+                icon="material-symbols:add"
+                onClick={() => {
+                  setIsAddMemberModalOpen(true);
+                }}
+              />
+            </div>
           </div>
-        )}
-      </main>
+
+          {/* Tabel Pengurus */}
+          <div
+            className={`bg-white p-6 rounded-lg ${totalData <= 0 && "text-center"}`}
+          >
+            {totalData <= 0 ? (
+              "Data tidak ditemukan"
+            ) : (
+              <table className="w-full bg-white rounded-lg">
+                <thead>
+                  <tr className="text-left border-b border-b-[#EDEDED]">
+                    <th className="pb-2">Nama</th>
+                    <th className="pb-2">Email</th>
+                    <th className="pb-2">No. Telepon</th>
+                    <th className="pb-2">Penempatan</th>
+                    <th className="pb-2">Role</th>
+                    <th className="pb-2">Menu</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {dataMembers.map((item, index) => {
+                    const user = item?.user;
+
+                    const fullName = `${user?.firstName} ${user?.lastName}`;
+
+                    const role = memberRolesList.find(
+                      (member) => member.value === item?.role?.name
+                    )?.label;
+
+                    return (
+                      <tr key={index} className="border-b border-b-[#EDEDED]">
+                        <td className="py-3">{fullName}</td>
+                        <td className="py-3">{user?.email}</td>
+                        <td className="py-3">{user?.phoneNumber}</td>
+                        <td className="py-3">
+                          {item.title || "Tempat Penampung"}
+                        </td>
+                        <td className="py-3">{role}</td>
+                        <td className="py-3 relative text-start">
+                          <button
+                            onClick={() => toggleMenu(index)}
+                            className="border border-[#C2C2C2] rounded-sm p-1"
+                          >
+                            <Icon
+                              icon="iconamoon:menu-burger-vertical"
+                              width={16}
+                              height={16}
+                              color="black"
+                              className="rotate-90"
+                            />
+                          </button>
+
+                          {/* Dropdown Menu */}
+                          {openMenuIndex === index && (
+                            <div className="w-35 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
+                              <ul className="py-2">
+                                <li
+                                  className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedMemberId(item.id);
+                                    setIsEditMemberModalOpen(true);
+                                    setOpenMenuIndex(null);
+                                  }}
+                                >
+                                  Ubah Data
+                                </li>
+                                <li
+                                  className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedMemberId(item.id);
+                                    setIsDeleteMemberModalOpen(true);
+                                    setOpenMenuIndex(null);
+                                  }}
+                                >
+                                  Hapus Data
+                                </li>
+                              </ul>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalData > 0 && (
+            <div className="flex justify-end space-x-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 text-[#543A14] disabled:text-[#C2C2C2]"
+              >
+                {"< Previous"}
+              </button>
+
+              {[...Array(totalPages)].map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentPage(index + 1)}
+                  className={`w-10 h-10 rounded-lg ${
+                    currentPage === index + 1
+                      ? "bg-[#4A3F35] text-white"
+                      : "text-gray-700 hover:text-gray-900"
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(p + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="p-2 text-gray-700 hover:text-gray-900 disabled:text-gray-300"
+              >
+                Next {">"}
+              </button>
+            </div>
+          )}
+        </main>
+      )}
 
       {/* Modal Tambah & Ubah Event */}
       {(isAddMemberModalOpen || isEditMemberModalOpen) && (
