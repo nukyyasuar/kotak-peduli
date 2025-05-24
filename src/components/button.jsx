@@ -2,7 +2,7 @@ import { Icon } from "@iconify/react";
 import { BeatLoader } from "react-spinners";
 
 const baseClass =
-  "text-base py-2 rounded-lg font-bold px-7 flex items-center justify-center gap-1";
+  "text-base py-2 rounded-lg font-bold px-7 flex items-center justify-center gap-1 transition";
 const variantStyles = {
   white: "bg-white text-[#543A14] border border-[#543A14]hover:text-white",
   brown: "bg-[#543a14] text-white hover:bg-[#6B4D20] hover:text-white",
