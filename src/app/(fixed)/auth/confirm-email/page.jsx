@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { BeatLoader } from "react-spinners";
+import { Icon } from "@iconify/react";
 
 import { confirmEmail } from "src/services/api/verifyEmail";
 
 export default function ConfirmEmail() {
   const [status, setStatus] = useState("");
+  const [token, setToken] = useState("");
+
+  useEffect(() => {
+    const tokenFromUrl = new URLSearchParams(window.location.search).get(
+      "token"
+    );
+    if (tokenFromUrl) setToken(tokenFromUrl);
+  }, []);
 
   useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("token");
@@ -41,10 +51,33 @@ export default function ConfirmEmail() {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-white z-20 text-black">
       <div>
-        {status === "loading" && <p>Memverifikasi email...</p>}
-        {status === "success" && <p>Email berhasil diverifikasi. 🎉</p>}
+        {status === "loading" && (
+          <div className="text-center space-y-3 text-xl">
+            <BeatLoader color="#F0BB78" size={20} />
+            <p>Proses memverifikasi email Anda...</p>
+          </div>
+        )}
+        {status === "success" && (
+          <div className="flex flex-col items-center space-y-3 text-xl">
+            <Icon
+              icon="icon-park-solid:check-one"
+              width={60}
+              height={60}
+              color="#1F7D53"
+            />
+            <p>Selamat! Email Anda berhasil diverifikasi.</p>
+          </div>
+        )}
         {status === "error" && (
-          <p>Verifikasi gagal. Coba lagi atau hubungi admin.</p>
+          <div className="flex flex-col items-center space-y-3 text-xl">
+            <Icon
+              icon="material-symbols:error"
+              width={60}
+              height={60}
+              color="#E52020"
+            />
+            <p>Verifikasi gagal. Coba lagi atau hubungi admin.</p>
+          </div>
         )}
       </div>
     </div>

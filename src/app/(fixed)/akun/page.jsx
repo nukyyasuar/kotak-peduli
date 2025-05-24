@@ -45,6 +45,7 @@ export default function Akun() {
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [isLoadingSendOtp, setIsLoadingSendOtp] = useState(false);
   const [isLoadingVerifyOtp, setIsLoadingVerifyOtp] = useState(false);
+  const [isLoadingSentVerifEmail, setIsLoadingSentVerifEmail] = useState(false);
 
   const { register, handleSubmit, watch, setValue, reset } = useForm({
     defaultValues: {
@@ -160,10 +161,13 @@ export default function Akun() {
 
   const handleVerifyEmail = async () => {
     try {
+      setIsLoadingSentVerifEmail(true);
+
       await verifyEmail();
       toast.success(
         "Tautan verifikasi email berhasil dikirim. Silahkan periksa email Anda."
       );
+
       setIsEmailVerifSent(true);
     } catch (error) {
       if (error.message === "Email already verified") {
@@ -171,6 +175,8 @@ export default function Akun() {
       } else {
         toast.error(error.message || "Gagal mengirim tautan verifikasi email");
       }
+    } finally {
+      setIsLoadingSentVerifEmail(false);
     }
   };
 
@@ -496,42 +502,36 @@ export default function Akun() {
                     className="bg-white rounded-lg p-8 space-y-6 text-black"
                   >
                     <h1 className="font-bold text-xl">Verfikasi Email</h1>
-                    {isEmailVerifSent ? (
-                      <div className="flex flex-col items-center gap-3">
-                        <Icon
-                          icon="icon-park-solid:check-one"
-                          width={120}
-                          height={120}
-                          color="#1F7D53"
+                    <div className="flex gap-1">
+                      <span>Link verifikasi akan dikirim ke email Anda:</span>
+                      <span className="font-bold">{watch("email")}</span>
+                    </div>
+                    {isLoadingSentVerifEmail ? (
+                      <div className="flex items-center justify-center">
+                        <ClipLoader
+                          color="#F5A623"
+                          loading={isLoadingSentVerifEmail}
+                          size={24}
                         />
-                        <div className="w-md">
-                          <p className="text-center">
-                            Email Anda berhasil diverifikasi. Notifikasi terkait
-                            status barang donasi dan jadwal
-                            pengiriman/penjemputan akan dikirimkan ke email
-                            Anda.
-                          </p>
-                        </div>
                       </div>
                     ) : (
-                      <>
-                        <div className="flex flex-col gap-1">
-                          <span>
-                            Kami telah mengirimkan tautan verifikasi ke email
-                            Anda, berikut:
-                          </span>
-                          <span className="font-bold">{watch("email")}</span>
+                      isEmailVerifSent && (
+                        <div className="flex items-center gap-3">
+                          <div className="w-md">
+                            <p>
+                              Link verifikasi telah dikirim ke email anda.
+                              Silakan periksa dan lakukan verifikasi dengan
+                              mengklik link tersebut.
+                            </p>
+                          </div>
+                          <Icon
+                            icon="icon-park-solid:check-one"
+                            width={48}
+                            height={48}
+                            color="#1F7D53"
+                          />
                         </div>
-                        {/* <ButtonCustom
-                    type="button"
-                    label="Kirim Ulang Tautan Verifikasi (00:00)"
-                    variant="brown"
-                    className="w-full"
-                    onClick={() => {
-                      setIsEmailVerifSent(true);
-                    }}
-                  /> */}
-                      </>
+                      )
                     )}
                   </div>
                 </div>
