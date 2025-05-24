@@ -111,7 +111,6 @@ export default function CollectionCenterPosts() {
         longitude: data.alamat.longitude,
       },
     };
-    console.log("Payload yang dikirim:", payload);
 
     if (isEditPostModalOpen) {
       try {

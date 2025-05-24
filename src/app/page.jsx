@@ -85,8 +85,6 @@ export default function Home() {
     fetchTestimonies();
   }, []);
 
-  console.log("Data testimonies:", dataTestimonies);
-
   return (
     <section className="bg-[#FFF0DC]">
       {/* Hero Section */}

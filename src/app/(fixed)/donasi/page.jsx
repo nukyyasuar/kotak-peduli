@@ -250,8 +250,6 @@ export default function Home() {
       );
     });
 
-    console.log("formdata:", formData);
-
     try {
       await createDonation(formData);
       toast.success(

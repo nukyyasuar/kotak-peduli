@@ -43,8 +43,6 @@ export default function Testimony() {
     formData.append("file", data.file);
     formData.append("collectionCenterId", collectionCenterId);
 
-    console.log("Form Data:", formData);
-
     try {
       await createTestimony(formData);
       toast.success("Ucapan terima kasih berhasil dikirim.");

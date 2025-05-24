@@ -25,7 +25,6 @@ const confirmEmail = async (token) => {
       createRequestOptions("POST", token)
     );
     const result = await handleApiResponse(response);
-    console.log(result);
     return result.data;
   } catch (error) {
     throw new Error(error.message);

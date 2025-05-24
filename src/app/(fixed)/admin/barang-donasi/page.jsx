@@ -239,7 +239,6 @@ export default function CollectionCenterDonationItems() {
   };
 
   const onSubmitCollectionCenterShippingDate = async (data) => {
-    console.log("data", data);
     setIsSubmitShippingDateLoading(true);
 
     try {
@@ -277,7 +276,6 @@ export default function CollectionCenterDonationItems() {
       isApproved: selectedStatusPemeriksaan?.value,
       notes: data.note || undefined,
     };
-    console.log("payload", payload);
 
     const formData = new FormData();
     if (selectedStatusPemeriksaan?.value) {
@@ -289,7 +287,6 @@ export default function CollectionCenterDonationItems() {
     if (data.fotoDisalurkan) {
       formData.append("files", data.fotoDisalurkan);
     }
-    console.log("formData", formData);
 
     try {
       await processDonation(selectedDonationId, formData);

@@ -83,7 +83,6 @@ export default function Registration() {
   };
 
   const onSubmit = async (data) => {
-    console.log("data", data);
     setIsLoadingSubmit(true);
 
     try {

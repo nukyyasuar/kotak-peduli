@@ -17,7 +17,6 @@ export const setupRecaptcha = async (containerId, forceReset = false) => {
     if (forceReset && recaptchaVerifier) {
       try {
         recaptchaVerifier.clear();
-        console.log("Existing reCAPTCHA verifier cleared");
       } catch (err) {
         console.error("Error clearing reCAPTCHA verifier:", err);
       }
@@ -36,21 +35,17 @@ export const setupRecaptcha = async (containerId, forceReset = false) => {
         'script[src*="recaptcha"]'
       );
       existingScripts.forEach((script) => script.remove());
-      console.log("Cleared existing reCAPTCHA scripts and container content");
+      ("Cleared existing reCAPTCHA scripts and container content");
 
       // Ensure container is clean
       const newContainer = document.createElement("div");
       newContainer.id = containerId;
       container.parentNode.replaceChild(newContainer, container);
-      console.log("Replaced reCAPTCHA container with new element");
 
       recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
         size: "invisible",
-        callback: () => {
-          console.log("reCAPTCHA solved");
-        },
+        callback: () => {},
         "expired-callback": () => {
-          console.log("reCAPTCHA expired");
           recaptchaVerifier = null;
         },
         "error-callback": (error) => {
@@ -59,10 +54,8 @@ export const setupRecaptcha = async (containerId, forceReset = false) => {
         },
       });
 
-      console.log("reCAPTCHA verifier initialized");
       await recaptchaVerifier.render();
     } else {
-      console.log("Using existing reCAPTCHA verifier");
     }
 
     return recaptchaVerifier;
@@ -94,14 +87,12 @@ export const sendPhoneVerificationCode = async (phoneNumber) => {
       );
     }
 
-    console.log("Sending OTP to:", formattedPhoneNumber);
     const confirmationResult = await signInWithPhoneNumber(
       auth,
       formattedPhoneNumber,
       verifier
     );
 
-    console.log("New ConfirmationResult created:", confirmationResult);
     return confirmationResult;
   } catch (error) {
     console.error("Error sending phone verification code:", error);
@@ -135,9 +126,7 @@ export const verifyPhoneCode = async (confirmationResult, verificationCode) => {
     ) {
       throw new Error("Invalid confirmation result. Please request a new OTP.");
     }
-    console.log("Verifying OTP code:", verificationCode);
     const result = await confirmationResult.confirm(verificationCode);
-    console.log("OTP verification successful, user:", result.user);
     return result.user;
   } catch (error) {
     console.error("Error verifying OTP code:", error);

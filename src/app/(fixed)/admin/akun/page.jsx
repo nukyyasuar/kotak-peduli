@@ -223,7 +223,6 @@ export default function DaftarTempatPenampung() {
 
   const onSubmitUpdate = async (data) => {
     const updated = await buildUpdatedPayload(data, dataDetailCollectionCenter);
-    console.log("updated:", updated);
 
     try {
       setIsLoadingUpdateCollectionCenter(true);

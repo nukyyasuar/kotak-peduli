@@ -160,8 +160,6 @@ export default function CollectionCenterMembers() {
       ],
     };
 
-    console.log("Payload yang dikirim:", payload);
-
     const isEdit = isEditMemberModalOpen;
 
     try {

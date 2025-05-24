@@ -115,7 +115,6 @@ export default function CollectionCenterEvents() {
       endDate: new Date(data?.endDate).toISOString(),
       isActive: isFinishEventModalOpen ? false : true,
     };
-    console.log("Payload", payload);
 
     if (isEditEventModalOpen || isFinishEventModalOpen) {
       try {

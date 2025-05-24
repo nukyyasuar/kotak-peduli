@@ -141,8 +141,6 @@ export default function DaftarTempatPenampung() {
       formData.append("idToken", idTokenValue);
     }
 
-    console.log("Submitted formdata:", formData);
-
     try {
       setIsLoadingCreateCollectionCenter(true);
       await createCollectionCenter(formData);
@@ -151,10 +149,6 @@ export default function DaftarTempatPenampung() {
       );
       setIsSubmitted(true);
       setIsPending(true);
-
-      // setTimeout(() => {
-      //   location.reload();
-      // }, 1000);
     } catch (error) {
       console.error("Error:", error);
       toast.error("Pendaftaran gagal");
@@ -181,7 +175,6 @@ export default function DaftarTempatPenampung() {
     if (!collectionCenterId) return;
 
     const detailData = await getOneCollectionCenter(collectionCenterId);
-    console.log("detailData", detailData);
     setDataDetailCollectionCenter(detailData);
 
     const approvalStatus = detailData?.approval.latestStatus;

@@ -128,7 +128,7 @@ export default function RiwayatDonasi() {
         alasan: watch("alasan"),
       }),
     };
-    console.log("Payload:", payload);
+
     if (requiredAlasanMessage) {
       setIsCreateShippingDateLoading(false);
       return;
