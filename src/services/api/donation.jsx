@@ -20,10 +20,18 @@ const createDonation = async (payload) => {
   }
 };
 
-const getDonations = async () => {
+const getDonations = async (statusFilter) => {
+  const params = new URLSearchParams({
+    limit: "50",
+  });
+
+  if (statusFilter) {
+    params.append("statusTypes", statusFilter);
+  }
+
   try {
     const response = await fetchWithAuth(
-      `${process.env.NEXT_PUBLIC_DOMAIN}/users/profile/donations`,
+      `${process.env.NEXT_PUBLIC_DOMAIN}/users/profile/donations?${params.toString()}`,
       createRequestOptions("GET")
     );
     const result = await handleApiResponse(response);
