@@ -1,3 +1,128 @@
+// Homepage
+const testimonials = [
+  {
+    name: "Fulani",
+    role: "Ketua Pengurus",
+    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam.",
+    image: "/reviewer-photo.webp",
+  },
+  {
+    name: "Fulana",
+    role: "Ketua Pengurus",
+    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam.",
+    image: "/reviewer-photo.webp",
+  },
+];
+
+const clothesCriteria = [
+  { text: "Bersih", type: "allow" },
+  { text: "Layak Pakai", type: "allow" },
+  { text: "Pakaian Dalam", type: "deny" },
+  { text: "Robek", type: "deny" },
+];
+
+const bookCriteria = [
+  { text: "Terbaca Jelas", type: "allow" },
+  { text: "Cover Utuh", type: "allow" },
+  { text: "Basah", type: "deny" },
+  { text: "Sobek", type: "deny" },
+];
+
+const electronicCriteria = [
+  { text: "Berfungsi", type: "allow" },
+  { text: "Bersih", type: "allow" },
+  { text: "Kerusakan Besar", type: "deny" },
+  { text: "Komponen Utama Hilang", type: "deny" },
+];
+
+const toyCriteria = [
+  { text: "Berfungsi", type: "allow" },
+  { text: "Aman Untuk Anak-Anak", type: "allow" },
+  { text: "Berbahaya", type: "deny" },
+  { text: "Rusak Parah", type: "deny" },
+];
+//
+
+// Navbar
+const baseMenuList = [
+  { href: "/cerita-kami", text: "Cerita Kami" },
+  { href: "/tempat-penampung", text: "Tempat Penampung" },
+  { href: "/dashboard", text: "Dashboard", permission: "READ_COLLECTION" },
+  {
+    href: "/admin/barang-donasi",
+    text: "Barang Donasi",
+    type: "admin",
+    permission: "READ_DONATION",
+  },
+  {
+    href: "/admin/event",
+    text: "Event",
+    type: "admin",
+    permission: "READ_EVENT",
+  },
+  {
+    href: "/admin/cabang",
+    text: "Cabang",
+    type: "admin",
+    permission: "READ_POST",
+  },
+  {
+    href: "/admin/pengurus",
+    text: "Pengurus",
+    type: "admin",
+    permission: "READ_ROLE",
+  },
+  {
+    href: "/admin/akun",
+    text: "Akun",
+    type: "admin",
+    permission: "UPDATE_COLLECTION",
+  },
+  {
+    href: "/admin/testimoni",
+    text: "Testimoni",
+    type: "admin",
+  },
+];
+
+const buttonMenuList = [
+  { href: "/daftar", text: "Daftar" },
+  { href: "/login", text: "Masuk" },
+];
+//
+
+// Admin/Barang Donasi
+const digitalCheckingUpdateStatus = [
+  {
+    label: "Pemeriksaan Digital (Disetujui)",
+    name: "PENDING",
+    value: true,
+    color: "#1F7D53",
+  },
+  {
+    label: "Pemeriksaan Digital (Ditolak)",
+    name: "REJECTED",
+    value: false,
+    color: "#E52020",
+  },
+];
+
+const physicalCheckingUpdateStatus = [
+  {
+    label: "Pemeriksaan Fisik (Disetujui)",
+    name: "STORED",
+    value: true,
+    color: "#1F7D53",
+  },
+  {
+    label: "Pemeriksaan Fisik (Ditolak)",
+    name: "REDIRECTED",
+    value: false,
+    color: "#E52020",
+  },
+];
+//
+
 const statusList = [
   { label: "Semua", value: "" },
   { label: "Pemeriksaan Digital", value: "DIGITAL_CHECKING" },
@@ -129,6 +254,15 @@ const minutes = Array.from({ length: 60 }, (_, i) => ({
 }));
 
 export {
+  testimonials,
+  clothesCriteria,
+  bookCriteria,
+  electronicCriteria,
+  toyCriteria,
+  baseMenuList,
+  buttonMenuList,
+  digitalCheckingUpdateStatus,
+  physicalCheckingUpdateStatus,
   statusList,
   donationTypes,
   shippingTypes,
