@@ -5,73 +5,25 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { usePathname } from "next/navigation";
-
-import { logout } from "src/services/api/logout";
-import { getProfile } from "src/services/api/profile";
 import { toast } from "react-toastify";
 
-const baseMenuList = [
-  { href: "/cerita-kami", text: "Cerita Kami" },
-  { href: "/tempat-penampung", text: "Tempat Penampung" },
-  { href: "/dashboard", text: "Dashboard", type: "admin_console" },
-  { href: "/admin/barang-donasi", text: "Barang Donasi", type: "admin" },
-  { href: "/admin/event", text: "Event", type: "admin" },
-  { href: "/admin/cabang", text: "Cabang", type: "admin" },
-  { href: "/admin/pengurus", text: "Pengurus", type: "admin" },
-  { href: "/admin/akun", text: "Akun", type: "admin" },
-];
+import { useAuth } from "src/services/auth/AuthContext";
+import { logout } from "src/services/api/logout";
+import { getProfile } from "src/services/api/profile";
 
-const buttonMenuList = [
-  { href: "/daftar", text: "Daftar" },
-  { href: "/login", text: "Masuk" },
-];
-
-function NavBtn({ href, text, variant = "nav" }) {
-  const pathname = usePathname();
-
-  const baseClasses = "rounded-lg flex items-center";
-
-  const variants = {
-    nav: "py-1 rounded-none hover:border-b-3 hover:border-[#543a14] hover:font-bold hover:text-[#543a14]",
-    btn: "border-2 border-[#F0BB78] text-[#131010] font-bold hover:bg-[#F0BB78] hover:text-white px-7",
-    active: "border-b-3 border-[#543a14] rounded-none font-bold text-[#543a14]",
-  };
-
-  const isActive = pathname === href;
-
-  return (
-    <Link
-      href={href}
-      className={`${baseClasses} ${variants[variant]} ${isActive ? variants.active : "text-black"}`}
-    >
-      {text}
-    </Link>
-  );
-}
-
-const LogoutMenu = ({ handleLogout }) => {
-  return (
-    <div className="absolute w-10 h-12 py-2 text-black">
-      <div className="absolute bg-white shadow-lg border border-[#C2C2C2] rounded-lg z-20 w-fit right-0">
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 rounded-lg text-sm w-full hover:bg-[#E52020] hover:text-white cursor-pointer"
-        >
-          Logout
-        </button>
-      </div>
-    </div>
-  );
-};
+import { NavBtn, LogoutMenu } from "./headerComp";
+import { baseMenuList, buttonMenuList } from "src/components/options";
 
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [role, setRole] = useState("null");
   const [showLogout, setShowLogout] = useState(false);
   const [dataProfile, setDataProfile] = useState(null);
-  const pathname = usePathname();
+  const [authToken, setAuthToken] = useState(null);
 
-  const authToken = localStorage?.getItem("authToken");
+  const pathname = usePathname();
+  const { hasPermission } = useAuth();
+
   const userRole = dataProfile?.roleId === 2 ? "admin_console" : null;
 
   const handleLogout = async () => {
@@ -109,6 +61,7 @@ export default function Header() {
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
+    setAuthToken(token);
     localStorage.setItem("role", userRole);
 
     if (token) {
@@ -138,11 +91,15 @@ export default function Header() {
                 />
               </Link>
             </div>
+
             {/* Navigasi */}
             <div className="flex gap-8">
               {pathname.includes("/admin")
                 ? baseMenuList.map((item, index) => {
                     if (item.type === "admin") {
+                      if (item.permission && !hasPermission(item.permission))
+                        return null;
+
                       return (
                         <NavBtn
                           key={index}
@@ -153,25 +110,21 @@ export default function Header() {
                       );
                     }
                   })
-                : baseMenuList
-                    .filter((item) => {
-                      if (userRole !== "admin_console") {
-                        return item.type !== "admin_console";
-                      }
-                      return true;
-                    })
-                    .map((item, index) => {
-                      if (item.type !== "admin") {
-                        return (
-                          <NavBtn
-                            key={index}
-                            index={index}
-                            href={item.href}
-                            text={item.text}
-                          />
-                        );
-                      }
-                    })}
+                : baseMenuList.map((item, index) => {
+                    if (item.type !== "admin") {
+                      if (item.permission && !hasPermission(item.permission))
+                        return null;
+
+                      return (
+                        <NavBtn
+                          key={index}
+                          index={index}
+                          href={item.href}
+                          text={item.text}
+                        />
+                      );
+                    }
+                  })}
             </div>
           </div>
 
@@ -180,11 +133,13 @@ export default function Header() {
             {role === "admin" ? null : (
               <Link
                 href={authToken ? "/donasi" : "/login"}
-                className="text-[#FFF0DC] font-bold h-10 px-7  border bg-[#543a14] flex items-center rounded-lg hover:bg-[#6B4D20] z-10"
+                className="text-[#FFF0DC] font-bold h-10 px-7  border bg-[#543a14] flex items-center rounded-lg hover:bg-[#6B4D20] z-10 transition"
               >
                 Donasi Sekarang
               </Link>
             )}
+
+            {/* Avatar || Button Login Register */}
             {isLoggedIn ? (
               <div
                 className="relative z-0"
