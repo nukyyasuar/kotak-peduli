@@ -47,7 +47,6 @@ export default function AkunLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const userRole = localStorage.getItem("role");
 
   return (
     <section className="max-w-[1200px] py-12 mx-auto">

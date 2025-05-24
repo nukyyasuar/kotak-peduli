@@ -94,7 +94,14 @@ export default function CollectionCenterDonationItems() {
     },
   });
 
-  const collectionCenterId = localStorage.getItem("collectionCenterId");
+  const getInitialValue = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("collectionCenterId");
+    }
+    return null;
+  };
+  const collectionCenterId = getInitialValue();
+
   const selectedStatusFilterCount = selectedStatusFilters?.length;
   const selectedDonationTypesFilterCount = selectedDonationTypesFilters?.length;
   const totalSelectedFiltersCount =

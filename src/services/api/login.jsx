@@ -29,7 +29,7 @@ const loginWithEmail = async (email, password) => {
   }
 };
 
-export const loginWithGoogle = async () => {
+const loginWithGoogle = async () => {
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const googleProvider = new GoogleAuthProvider();

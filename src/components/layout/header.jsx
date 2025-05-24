@@ -24,8 +24,6 @@ export default function Header() {
   const pathname = usePathname();
   const { hasPermission } = useAuth();
 
-  const userRole = dataProfile?.roleId === 2 ? "admin_console" : null;
-
   const handleLogout = async () => {
     try {
       const result = await logout();
@@ -62,13 +60,9 @@ export default function Header() {
   useEffect(() => {
     const token = localStorage.getItem("authToken");
     setAuthToken(token);
-    localStorage.setItem("role", userRole);
 
     if (token) {
       setIsLoggedIn(true);
-      if (userRole) {
-        setRole(userRole);
-      }
     } else {
       setIsLoggedIn(false);
       setRole(null);

@@ -13,7 +13,6 @@ import { FormInput } from "src/components/formInput";
 import testimonySchema from "src/components/schema/testimonySchema";
 
 export default function Testimony() {
-  const collectionCenterId = localStorage.getItem("collectionCenterId");
   const [isLoadingSubmit, setIsLoadingSubmit] = useState(false);
 
   const {
@@ -33,6 +32,14 @@ export default function Testimony() {
       file: "",
     },
   });
+
+  const getInitialValue = () => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("collectionCenterId");
+    }
+    return null;
+  };
+  const collectionCenterId = getInitialValue();
 
   const onSubmit = async (data) => {
     const formData = new FormData();
