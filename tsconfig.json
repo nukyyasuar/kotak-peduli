@@ -34,7 +34,7 @@
     ".next/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx"
-, "src/app/layout.tsx", "src/services/helpers.jsx", "src/services/api/register.jsx", "src/services/api/login.jsx", "src/services/auth/firebase.jsx"  ],
+, "src/app/layout.jsx", "src/services/helpers.jsx", "src/services/api/register.jsx", "src/services/api/login.jsx", "src/services/auth/firebase.jsx"  ],
   "exclude": [
     "node_modules"
   ]
