@@ -6,8 +6,18 @@ import { toast } from "react-toastify";
 import { useForm } from "react-hook-form";
 import { ClipLoader } from "react-spinners";
 
+import { getCollectionCenterDonations } from "src/services/api/collectionCenter";
+import {
+  getOneDonation,
+  createCollectionCenterShippingDate,
+  processDonation,
+} from "src/services/api/donation";
+import { useAuth } from "src/services/auth/AuthContext";
+
 import { FormInput } from "src/components/formInput";
 import {
+  digitalCheckingUpdateStatus,
+  physicalCheckingUpdateStatus,
   donationTypes,
   statusList,
   shippingTypes,
@@ -20,46 +30,10 @@ import { ButtonCustom } from "src/components/button";
 import FormattedWIBDate from "src/components/dateFormatter";
 import FilterCheckboxDonationTable from "src/components/donationItems/FilterCheckboxDonationTable";
 import { TextBetween } from "src/components/text";
-
-import { getCollectionCenterDonations } from "src/services/api/collectionCenter";
-import {
-  getOneDonation,
-  createCollectionCenterShippingDate,
-  processDonation,
-} from "src/services/api/donation";
+import Unauthorize from "src/components/unauthorize";
 
 const baseClassNameInput =
   "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base ";
-
-const digitalCheckingUpdateStatus = [
-  {
-    label: "Pemeriksaan Digital (Disetujui)",
-    name: "PENDING",
-    value: true,
-    color: "#1F7D53",
-  },
-  {
-    label: "Pemeriksaan Digital (Ditolak)",
-    name: "REJECTED",
-    value: false,
-    color: "#E52020",
-  },
-];
-
-const physicalCheckingUpdateStatus = [
-  {
-    label: "Pemeriksaan Fisik (Disetujui)",
-    name: "STORED",
-    value: true,
-    color: "#1F7D53",
-  },
-  {
-    label: "Pemeriksaan Fisik (Ditolak)",
-    name: "REDIRECTED",
-    value: false,
-    color: "#E52020",
-  },
-];
 
 export default function CollectionCenterDonationItems() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -102,6 +76,7 @@ export default function CollectionCenterDonationItems() {
   const isFirstFetchDonations = useRef(true);
   const updateStatusModalRef = useRef(null);
   const detailModalRef = useRef(null);
+  const { hasPermission } = useAuth();
 
   const {
     watch,
@@ -279,14 +254,6 @@ export default function CollectionCenterDonationItems() {
         reset();
         setIsShippingDateModalOpen(false);
         location.reload();
-        // fetchDonations(
-        //   currentPage,
-        //   debouncedSearch,
-        //   sort,
-        //   selectedStatusFilters,
-        //   selectedDonationTypesFilters,
-        //   selectedPickupFilters
-        // );
       } catch (error) {
         console.error("Error updating status:", error);
         toast.error("Gagal memproses donasi");
@@ -392,335 +359,345 @@ export default function CollectionCenterDonationItems() {
   }, [searchKeyword]);
 
   return (
-    <div className="min-h-[82dvh] bg-[#F5E9D4] py-12">
-      <main className="max-w-[1200px] mx-auto space-y-4 text-black">
-        <h1 className="text-[32px] text-[#543A14] font-bold text-center">
-          BARANG DONASI
-        </h1>
+    <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
+      {!hasPermission("READ_DONATION") ? (
+        <Unauthorize />
+      ) : (
+        <main className="max-w-[1200px] mx-auto space-y-4 text-black">
+          <h1 className="text-[32px] text-[#543A14] font-bold text-center">
+            BARANG DONASI
+          </h1>
 
-        {/* Fitur Tabel */}
-        <div className="flex justify-between mb-4">
-          {/* Search */}
-          <div className="relative">
-            <FormInput
-              inputType="text"
-              placeholder="Cari nama donatur"
-              inputStyles="bg-white w-3xs relative pl-10"
-              value={searchKeyword}
-              onChange={(keyword) => {
-                setSearchKeyword(keyword);
-              }}
-            />
-            <Icon
-              icon="cuida:search-outline"
-              width={24}
-              height={24}
-              color="#C2C2C2"
-              className="absolute top-1/2 -translate-y-1/2 left-2"
-            />
-          </div>
-
-          {/* Filter */}
-          <div className="relative">
-            {/* Button Filter */}
-            <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`border border-[#C2C2C2] rounded-lg px-3 h-12 flex items-center justify-between ${totalSelectedFiltersCount ? "bg-[#543A14] text-white" : "bg-white text-[#C2C2C2]"}`}
-            >
-              <span className="mr-1">{totalSelectedFiltersCount || null}</span>{" "}
-              Filter
+          {/* Fitur Tabel */}
+          <div className="flex justify-between mb-4">
+            {/* Search */}
+            <div className="relative">
+              <FormInput
+                inputType="text"
+                placeholder="Cari nama donatur"
+                inputStyles="bg-white w-3xs relative pl-10"
+                value={searchKeyword}
+                onChange={(keyword) => {
+                  setSearchKeyword(keyword);
+                }}
+              />
               <Icon
-                icon="mdi:chevron-down"
+                icon="cuida:search-outline"
                 width={24}
                 height={24}
                 color="#C2C2C2"
-              />
-            </button>
-
-            {/* Modal(Dropdown) Filter */}
-            {isFilterOpen && (
-              <div className="absolute right-0 mt-4 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                <div className="p-4">
-                  {/* Input Search Filter */}
-                  <div className="relative mb-3">
-                    <FormInput
-                      inputType="text"
-                      placeholder="Cari filter"
-                      inputStyles="bg-white relative pl-10"
-                      value={filterSearchKeyword}
-                      onChange={(keyword) => {
-                        setFilterSearchKeyword(keyword);
-                      }}
-                    />
-                    <Icon
-                      icon="cuida:search-outline"
-                      width={24}
-                      height={24}
-                      color="#C2C2C2"
-                      className="absolute top-1/2 -translate-y-1/2 left-2"
-                    />
-                  </div>
-
-                  {/* Input Checkbox Filter */}
-                  <div className="mb-4 max-h-50 overflow-scroll">
-                    <FilterCheckboxDonationTable
-                      title="Status"
-                      items={statusList}
-                      selected={tempSelectedStatusFilters}
-                      onChange={handleTempStatusFilterChange}
-                      search={filterSearchKeyword}
-                    />
-                    <FilterCheckboxDonationTable
-                      title="Tipe Barang"
-                      items={donationTypes}
-                      selected={tempSelectedDonationTypesFilters}
-                      onChange={handleTempDonationTypesFilterChange}
-                      search={filterSearchKeyword}
-                    />
-                    <FilterCheckboxDonationTable
-                      title="Tipe Pengiriman"
-                      items={shippingTypes}
-                      selected={tempSelectedPickupFilters}
-                      onChange={handleTempPickupFilterChange}
-                      search={filterSearchKeyword}
-                    />
-                  </div>
-                  <div className="flex justify-between">
-                    <button
-                      onClick={handleApplyFilters}
-                      className="bg-[#4A3F35] text-white px-4 py-2 rounded-lg"
-                    >
-                      Filter
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleResetFilters();
-                        setIsFilterOpen(false);
-                      }}
-                      className="text-gray-700 px-4 py-2 rounded-lg"
-                    >
-                      Reset
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Tabel Barang Donasi */}
-        <div
-          className={`bg-white p-6 rounded-lg ${totalData <= 0 && "text-center"}`}
-        >
-          {isLoadingFetchDonations ? (
-            <div className="flex justify-center">
-              <ClipLoader
-                color="#543A14"
-                size={30}
-                loading={isLoadingFetchDonations}
+                className="absolute top-1/2 -translate-y-1/2 left-2"
               />
             </div>
-          ) : totalData < 0 ? (
-            "Data tidak ditemukan"
-          ) : (
-            <table className="w-full bg-white rounded-lg">
-              <thead>
-                <tr className="text-left border-b border-b-[#EDEDED]">
-                  <th
-                    className="pb-2 flex gap-1 items-center cursor-pointer"
-                    onClick={() =>
-                      setSort((prev) =>
-                        prev === "createdAt:desc"
-                          ? "createdAt:asc"
-                          : "createdAt:desc"
-                      )
-                    }
-                  >
-                    Tanggal Donasi
-                    <Icon
-                      icon="material-symbols:sort"
-                      width={20}
-                      height={20}
-                      color="black"
-                      className={sort === "createdAt:asc" ? "scale-y-[-1]" : ""}
-                    />
-                  </th>
-                  <th className="pb-2">Nama Donatur</th>
-                  <th className="pb-2">Jenis Barang</th>
-                  <th className="pb-2">Tipe Pengiriman</th>
-                  <th
-                    className="pb-2 flex gap-1 items-center cursor-pointer"
-                    onClick={() =>
-                      setSort((prev) =>
-                        prev === "pickupDate:desc"
-                          ? "pickupDate:asc"
-                          : "pickupDate:desc"
-                      )
-                    }
-                  >
-                    Tanggal Pengiriman
-                    <Icon
-                      icon="material-symbols:sort"
-                      width={20}
-                      height={20}
-                      color="black"
-                      className={
-                        sort === "pickupDate:desc" ? "scale-y-[-1]" : ""
+
+            {/* Filter */}
+            <div className="relative">
+              {/* Button Filter */}
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`border border-[#C2C2C2] rounded-lg px-3 h-12 flex items-center justify-between ${totalSelectedFiltersCount ? "bg-[#543A14] text-white" : "bg-white text-[#C2C2C2]"}`}
+              >
+                <span className="mr-1">
+                  {totalSelectedFiltersCount || null}
+                </span>{" "}
+                Filter
+                <Icon
+                  icon="mdi:chevron-down"
+                  width={24}
+                  height={24}
+                  color="#C2C2C2"
+                />
+              </button>
+
+              {/* Modal(Dropdown) Filter */}
+              {isFilterOpen && (
+                <div className="absolute right-0 mt-4 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                  <div className="p-4">
+                    {/* Input Search Filter */}
+                    <div className="relative mb-3">
+                      <FormInput
+                        inputType="text"
+                        placeholder="Cari filter"
+                        inputStyles="bg-white relative pl-10"
+                        value={filterSearchKeyword}
+                        onChange={(keyword) => {
+                          setFilterSearchKeyword(keyword);
+                        }}
+                      />
+                      <Icon
+                        icon="cuida:search-outline"
+                        width={24}
+                        height={24}
+                        color="#C2C2C2"
+                        className="absolute top-1/2 -translate-y-1/2 left-2"
+                      />
+                    </div>
+
+                    {/* Input Checkbox Filter */}
+                    <div className="mb-4 max-h-50 overflow-scroll">
+                      <FilterCheckboxDonationTable
+                        title="Status"
+                        items={statusList}
+                        selected={tempSelectedStatusFilters}
+                        onChange={handleTempStatusFilterChange}
+                        search={filterSearchKeyword}
+                      />
+                      <FilterCheckboxDonationTable
+                        title="Tipe Barang"
+                        items={donationTypes}
+                        selected={tempSelectedDonationTypesFilters}
+                        onChange={handleTempDonationTypesFilterChange}
+                        search={filterSearchKeyword}
+                      />
+                      <FilterCheckboxDonationTable
+                        title="Tipe Pengiriman"
+                        items={shippingTypes}
+                        selected={tempSelectedPickupFilters}
+                        onChange={handleTempPickupFilterChange}
+                        search={filterSearchKeyword}
+                      />
+                    </div>
+                    <div className="flex justify-between">
+                      <button
+                        onClick={handleApplyFilters}
+                        className="bg-[#4A3F35] text-white px-4 py-2 rounded-lg"
+                      >
+                        Filter
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleResetFilters();
+                          setIsFilterOpen(false);
+                        }}
+                        className="text-gray-700 px-4 py-2 rounded-lg"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Tabel Barang Donasi */}
+          <div
+            className={`bg-white p-6 rounded-lg ${totalData <= 0 && "text-center"}`}
+          >
+            {isLoadingFetchDonations ? (
+              <div className="flex justify-center">
+                <ClipLoader
+                  color="#543A14"
+                  size={30}
+                  loading={isLoadingFetchDonations}
+                />
+              </div>
+            ) : totalData < 0 ? (
+              "Data tidak ditemukan"
+            ) : (
+              <table className="w-full bg-white rounded-lg">
+                <thead>
+                  <tr className="text-left border-b border-b-[#EDEDED]">
+                    <th
+                      className="pb-2 flex gap-1 items-center cursor-pointer"
+                      onClick={() =>
+                        setSort((prev) =>
+                          prev === "createdAt:desc"
+                            ? "createdAt:asc"
+                            : "createdAt:desc"
+                        )
                       }
-                    />
-                  </th>
-                  <th className="pb-2">Status</th>
-                  <th className="pb-2">Menu</th>
-                </tr>
-              </thead>
+                    >
+                      Tanggal Donasi
+                      <Icon
+                        icon="material-symbols:sort"
+                        width={20}
+                        height={20}
+                        color="black"
+                        className={
+                          sort === "createdAt:asc" ? "scale-y-[-1]" : ""
+                        }
+                      />
+                    </th>
+                    <th className="pb-2">Nama Donatur</th>
+                    <th className="pb-2">Jenis Barang</th>
+                    <th className="pb-2">Tipe Pengiriman</th>
+                    <th
+                      className="pb-2 flex gap-1 items-center cursor-pointer"
+                      onClick={() =>
+                        setSort((prev) =>
+                          prev === "pickupDate:desc"
+                            ? "pickupDate:asc"
+                            : "pickupDate:desc"
+                        )
+                      }
+                    >
+                      Tanggal Pengiriman
+                      <Icon
+                        icon="material-symbols:sort"
+                        width={20}
+                        height={20}
+                        color="black"
+                        className={
+                          sort === "pickupDate:desc" ? "scale-y-[-1]" : ""
+                        }
+                      />
+                    </th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2">Menu</th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                {dataDonations.map((item, index) => {
-                  const donorFullName = `${item.user?.firstName} ${item.user?.lastName}`;
-                  const donationItemType = donationTypes.find((options) => {
-                    return options.value === item.donationType;
-                  })?.label;
-                  const donationPickupType = item.pickupType?.includes(
-                    "PICKED_UP"
-                  )
-                    ? "Dijemput"
-                    : "Dikirim Sendiri";
-                  const donationShippingDate = item.pickupDate ? (
-                    <FormattedWIBDate date={item.pickupDate} type="time" />
-                  ) : item.userAvailability?.length > 0 ? (
-                    "Tanggal belum dipilih"
-                  ) : item.approval?.latestStatus !== "DIGITAL_CHECKING" ? (
-                    "Belum ada opsi tanggal"
-                  ) : (
-                    "Proses pemeriksaan digital"
-                  );
-                  const donationStatus = statusList.find((status) => {
-                    return status.value === item.approval?.latestStatus;
-                  })?.label;
-                  const donationStatusValue = statusList.find((status) => {
-                    return status.value === item.approval?.latestStatus;
-                  }).value;
+                <tbody>
+                  {dataDonations.map((item, index) => {
+                    const donorFullName = `${item.user?.firstName} ${item.user?.lastName}`;
+                    const donationItemType = donationTypes.find((options) => {
+                      return options.value === item.donationType;
+                    })?.label;
+                    const donationPickupType = item.pickupType?.includes(
+                      "PICKED_UP"
+                    )
+                      ? "Dijemput"
+                      : "Dikirim Sendiri";
+                    const donationShippingDate = item.pickupDate ? (
+                      <FormattedWIBDate date={item.pickupDate} type="time" />
+                    ) : item.userAvailability?.length > 0 ? (
+                      "Tanggal belum dipilih"
+                    ) : item.approval?.latestStatus !== "DIGITAL_CHECKING" ? (
+                      "Belum ada opsi tanggal"
+                    ) : (
+                      "Proses pemeriksaan digital"
+                    );
+                    const donationStatus = statusList.find((status) => {
+                      return status.value === item.approval?.latestStatus;
+                    })?.label;
+                    const donationStatusValue = statusList.find((status) => {
+                      return status.value === item.approval?.latestStatus;
+                    }).value;
 
-                  return (
-                    <tr key={index} className="border-b border-b-[#EDEDED]">
-                      <td className="py-3">
-                        <FormattedWIBDate date={item.createdAt} />
-                      </td>
-                      <td className="py-3 w-50">{donorFullName}</td>
-                      <td className="py-3">{donationItemType}</td>
-                      <td className="py-3">{donationPickupType}</td>
-                      <td className="py-3">{donationShippingDate}</td>
-                      <td className="py-3">{donationStatus}</td>
-                      <td className="py-3 relative text-start">
-                        <button
-                          onClick={() => toggleMenu(index)}
-                          className="border border-[#C2C2C2] rounded-sm p-1"
-                        >
-                          <Icon
-                            icon="iconamoon:menu-burger-vertical"
-                            width={16}
-                            height={16}
-                            color="black"
-                            className="rotate-90"
-                          />
-                        </button>
+                    return (
+                      <tr key={index} className="border-b border-b-[#EDEDED]">
+                        <td className="py-3">
+                          <FormattedWIBDate date={item.createdAt} />
+                        </td>
+                        <td className="py-3 w-50">{donorFullName}</td>
+                        <td className="py-3">{donationItemType}</td>
+                        <td className="py-3">{donationPickupType}</td>
+                        <td className="py-3">{donationShippingDate}</td>
+                        <td className="py-3">{donationStatus}</td>
+                        <td className="py-3 relative text-start">
+                          <button
+                            onClick={() => toggleMenu(index)}
+                            className="border border-[#C2C2C2] rounded-sm p-1"
+                          >
+                            <Icon
+                              icon="iconamoon:menu-burger-vertical"
+                              width={16}
+                              height={16}
+                              color="black"
+                              className="rotate-90"
+                            />
+                          </button>
 
-                        {/* Dropdown Menu */}
-                        {openMenuIndex === index && (
-                          <div className="w-35 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
-                            {/* {isFetchDetailDonationLoading ? (
-                              <div className="flex justify-center">
-                                <ClipLoader
-                                  color="#543A14"
-                                  size={5}
-                                  loading={isFetchDetailDonationLoading}
-                                />
-                              </div>
-                            ) : ( */}
-                            <ul className="py-2">
-                              <li
-                                className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
-                                onClick={() => {
-                                  setIsDetailModalOpen(true);
-                                  setSelectedDonationId(item.id);
-                                }}
-                              >
-                                Lihat Detail
-                              </li>
-                              {donationStatusValue !== "PENDING" &&
-                                donationStatusValue !== "CONFIRMING" &&
-                                donationStatusValue !== "CONFIRMED" &&
-                                donationStatusValue !== "DISTRIBUTED" &&
-                                donationStatusValue !== "REJECTED" && (
-                                  <li
-                                    className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
-                                    onClick={() => {
-                                      setIsUpdateStatusModalOpen(true);
-                                      setSelectedDonationId(item.id);
-                                    }}
-                                  >
-                                    Ubah Status
-                                  </li>
-                                )}
-                              {item.userAvailability?.length > 0 && (
+                          {/* Dropdown Menu */}
+                          {openMenuIndex === index && (
+                            <div className="w-35 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
+                              {/* {isFetchDetailDonationLoading ? (
+                                <div className="flex justify-center">
+                                  <ClipLoader
+                                    color="#543A14"
+                                    size={5}
+                                    loading={isFetchDetailDonationLoading}
+                                  />
+                                </div>
+                              ) : ( */}
+                              <ul className="py-2">
                                 <li
                                   className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
                                   onClick={() => {
+                                    setIsDetailModalOpen(true);
                                     setSelectedDonationId(item.id);
-                                    setIsShippingDateModalOpen(true);
                                   }}
                                 >
-                                  Pilih tanggal
+                                  Lihat Detail
                                 </li>
-                              )}
-                            </ul>
-                            {/* )} */}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-
-        {/* Pagination */}
-        {totalData > 0 && (
-          <div className="flex justify-end space-x-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-              disabled={currentPage === 1}
-              className="p-2 text-[#543A14] disabled:text-[#C2C2C2]"
-            >
-              {"< Previous"}
-            </button>
-
-            {[...Array(totalPages)].map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentPage(index + 1)}
-                className={`w-10 h-10 rounded-lg ${
-                  currentPage === index + 1
-                    ? "bg-[#4A3F35] text-white"
-                    : "text-gray-700 hover:text-gray-900"
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-              disabled={currentPage === totalPages}
-              className="p-2 text-gray-700 hover:text-gray-900 disabled:text-gray-300"
-            >
-              Next {">"}
-            </button>
+                                {donationStatusValue !== "PENDING" &&
+                                  donationStatusValue !== "CONFIRMING" &&
+                                  donationStatusValue !== "CONFIRMED" &&
+                                  donationStatusValue !== "DISTRIBUTED" &&
+                                  donationStatusValue !== "REJECTED" && (
+                                    <li
+                                      className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
+                                      onClick={() => {
+                                        setIsUpdateStatusModalOpen(true);
+                                        setSelectedDonationId(item.id);
+                                      }}
+                                    >
+                                      Ubah Status
+                                    </li>
+                                  )}
+                                {item.userAvailability?.length > 0 && (
+                                  <li
+                                    className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
+                                    onClick={() => {
+                                      setSelectedDonationId(item.id);
+                                      setIsShippingDateModalOpen(true);
+                                    }}
+                                  >
+                                    Pilih tanggal
+                                  </li>
+                                )}
+                              </ul>
+                              {/* )} */}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
           </div>
-        )}
-      </main>
+
+          {/* Pagination */}
+          {totalData > 0 && (
+            <div className="flex justify-end space-x-1">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="p-2 text-[#543A14] disabled:text-[#C2C2C2]"
+              >
+                {"< Previous"}
+              </button>
+
+              {[...Array(totalPages)].map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentPage(index + 1)}
+                  className={`w-10 h-10 rounded-lg ${
+                    currentPage === index + 1
+                      ? "bg-[#4A3F35] text-white"
+                      : "text-gray-700 hover:text-gray-900"
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              ))}
+
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(p + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="p-2 text-gray-700 hover:text-gray-900 disabled:text-gray-300"
+              >
+                Next {">"}
+              </button>
+            </div>
+          )}
+        </main>
+      )}
 
       {/* Modal Detail */}
       <ModalDetailDonation
@@ -760,7 +737,7 @@ export default function CollectionCenterDonationItems() {
                       <label
                         key={index}
                         className={`cursor-pointer rounded-lg border px-4 py-2 transition-all 
-                          ${watch("waktuPengirimanTempatPenampung") === value ? "bg-[#F0BB78] text-white font-bold border-[#F0BB78]" : "border-[#C2C2C2]  hover:border-[#F0BB78]"}`}
+                        ${watch("waktuPengirimanTempatPenampung") === value ? "bg-[#F0BB78] text-white font-bold border-[#F0BB78]" : "border-[#C2C2C2]  hover:border-[#F0BB78]"}`}
                       >
                         <input
                           type="radio"
@@ -958,11 +935,11 @@ export default function CollectionCenterDonationItems() {
                             <label
                               key={option.name}
                               className={`cursor-pointer rounded-lg border px-4 py-2 transition-all 
-                              ${
-                                watch("statusPemeriksaan") === option.name
-                                  ? `bg-[${option.color}] text-white font-bold border-[${option.color}]`
-                                  : `border-[#C2C2C2] text-[${option.color}] hover:border-black`
-                              }`}
+                            ${
+                              watch("statusPemeriksaan") === option.name
+                                ? `bg-[${option.color}] text-white font-bold border-[${option.color}]`
+                                : `border-[#C2C2C2] text-[${option.color}] hover:border-black`
+                            }`}
                             >
                               <input
                                 type="radio"
