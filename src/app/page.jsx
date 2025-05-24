@@ -3,141 +3,94 @@
 import Image from "next/image";
 import { Icon } from "@iconify/react";
 import { useState, useEffect } from "react";
+import { ClipLoader } from "react-spinners";
 
-function BannerText({ title, subtitle }) {
-  return (
-    <div className="bg-[#543a14] text-white pl-12 pr-20 h-[130px] flex flex-col justify-center w-fit shadow-lg shadow-neutral-500">
-      <h2 className="text-[32px] font-bold mb-2">{title}</h2>
-      <p className="text-xl">{subtitle}</p>
-    </div>
-  );
-}
-function BenefitCards({ src, alt, text }) {
-  return (
-    <div className="flex flex-col items-center text-center bg-[#F0BB78] rounded-[20px] shadow-md p-7 gap-4 max-w-[280px]">
-      <div className="w-full">
-        <Image src={src} alt={alt} width={80} height={80} />
-      </div>
-      <p className="text-sm text-[#FFFFFF] text-left">{text}</p>
-    </div>
-  );
-}
-function Summary({ count, title }) {
-  return (
-    <div className="flex items-center gap-3">
-      <p className="text-[28px] font-bold text-[#543A14] bg-[#FFF0DC] p-2 rounded-lg">
-        {count}
-      </p>
-      <p className="text-[#FFF0DC] text-2xl font-bold">{title}</p>
-    </div>
-  );
-}
-function SectionTitle({ color, title }) {
-  return (
-    <h2 className={`text-center text-[32px] text-[${color}] font-bold mb-8`}>
-      {title.toUpperCase()}
-    </h2>
-  );
-}
-function KriteriaCard({ src, alt, title, criteria }) {
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="relative h-[150px] aspect-auto">
-        <Image src={src} alt={alt} fill layout="contain" />
-      </div>
-      <div>
-        <h3 className="text-[#F0BB78] font-bold text-2xl mb-1">{title}</h3>
-        <div>
-          <div className="mb-4">
-            <ul className="flex flex-col gap-2">
-              {criteria.map((item, index) => (
-                <li key={index} className="flex items-center gap-2">
-                  <Icon
-                    icon={
-                      item.type === "allow"
-                        ? "icon-park-solid:check-one"
-                        : "gridicons:cross-circle"
-                    }
-                    width={20}
-                    height={20}
-                    color={item.type === "allow" ? "#1F7D53" : "#E52020"}
-                  />
-                  <span className="text-[#131010] text-base">{item.text}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+import { getAnalytics } from "src/services/api/analytic";
+import { getTestimonies } from "src/services/api/testimony";
 
-const testimonials = [
-  {
-    name: "Fulani",
-    role: "Ketua Pengurus",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam.",
-    image: "/reviewer-photo.webp",
-  },
-  {
-    name: "Fulana",
-    role: "Ketua Pengurus",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam.",
-    image: "/reviewer-photo.webp",
-  },
-];
-const clothesCriteria = [
-  { text: "Bersih", type: "allow" },
-  { text: "Layak Pakai", type: "allow" },
-  { text: "Pakaian Dalam", type: "deny" },
-  { text: "Robek", type: "deny" },
-];
-const bookCriteria = [
-  { text: "Terbaca Jelas", type: "allow" },
-  { text: "Cover Utuh", type: "allow" },
-  { text: "Basah", type: "deny" },
-  { text: "Sobek", type: "deny" },
-];
-const electronicCriteria = [
-  { text: "Berfungsi", type: "allow" },
-  { text: "Bersih", type: "allow" },
-  { text: "Kerusakan Besar", type: "deny" },
-  { text: "Komponen Utama Hilang", type: "deny" },
-];
-const toyCriteria = [
-  { text: "Berfungsi", type: "allow" },
-  { text: "Aman Untuk Anak-Anak", type: "allow" },
-  { text: "Berbahaya", type: "deny" },
-  { text: "Rusak Parah", type: "deny" },
-];
+import {
+  BannerText,
+  BenefitCards,
+  SectionTitle,
+  KriteriaCard,
+} from "src/components/homepage";
+import {
+  testimonials,
+  clothesCriteria,
+  bookCriteria,
+  electronicCriteria,
+  toyCriteria,
+} from "src/components/options";
 
 export default function Home() {
-  // State untuk testimonial aktif
   const [activeIndex, setActiveIndex] = useState(0);
+  const [dataAnalytics, setDataAnalytics] = useState(null);
+  const [dataTestimonies, setDataTestimonies] = useState(null);
+  const [isLoadingFetchAnalytics, setIsLoadingFetchAnalytics] = useState(false);
+  const [isLoadingFetchTestimonies, setIsLoadingFetchTestimonies] =
+    useState(false);
 
-  // Fungsi untuk navigasi manual
+  const analyticsTotalList = [
+    {
+      label: "Total Tempat Penampung",
+      value: dataAnalytics?.collectionCenters,
+    },
+    {
+      label: "Total Donasi Diterima",
+      value: dataAnalytics?.completedDonations,
+    },
+    {
+      label: "Total Donasi Disalurkan",
+      value: dataAnalytics?.distributedDonations,
+    },
+  ];
+
   const handleSlide = (direction) => {
     setActiveIndex((prevIndex) => {
       if (direction === "prev") {
-        return prevIndex === 0 ? testimonials.length - 1 : prevIndex - 1;
+        return prevIndex === 0 ? dataTestimonies?.length - 1 : prevIndex - 1;
       }
-      return (prevIndex + 1) % testimonials.length;
+      return (prevIndex + 1) % dataTestimonies?.length;
     });
   };
 
-  // Auto-slide setiap 5 detik
+  const fetchAnalytics = async () => {
+    try {
+      setIsLoadingFetchAnalytics(true);
+
+      const result = await getAnalytics();
+      setDataAnalytics(result.data);
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+    } finally {
+      setIsLoadingFetchAnalytics(false);
+    }
+  };
+
+  const fetchTestimonies = async () => {
+    try {
+      setIsLoadingFetchTestimonies(true);
+
+      const result = await getTestimonies();
+      setDataTestimonies(result.data);
+    } catch (error) {
+      console.error("Error fetching testimonies:", error);
+    } finally {
+      setIsLoadingFetchTestimonies(false);
+    }
+  };
+
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((prevIndex) => (prevIndex + 1) % testimonials.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [testimonials.length]);
+    fetchAnalytics();
+    fetchTestimonies();
+  }, []);
+
+  console.log("Data testimonies:", dataTestimonies);
 
   return (
     <section className="bg-[#FFF0DC]">
       {/* Hero Section */}
-      <section className="relative w-full h-[90dvh]">
+      <section className="relative w-full h-[92dvh]">
         <Image
           src="/banner_home.webp"
           alt="Banner"
@@ -156,6 +109,17 @@ export default function Home() {
               subtitle="Apapun itu sangat berarti bagi mereka yang membutuhkan"
             />
           </div>
+        </div>
+
+        {/* Scroll */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-md flex items-center gap-2 text-gray-700 text-sm">
+          <span>Yuk! Lihat lebih lanjut</span>
+          <Icon
+            icon="ep:arrow-down-bold"
+            width={12}
+            color="black"
+            className="animate-bounce"
+          />
         </div>
       </section>
 
@@ -192,15 +156,35 @@ export default function Home() {
       <section className="py-12 flex justify-center bg-[#543a14]">
         <div className="w-fit max-w-[1005px]">
           <SectionTitle color="#FFF0DC" title="terimakasih para donatur" />
+
           {/* Donatur Statistics */}
           <div className="flex flex-col gap-6">
-            <div className="flex justify-between">
-              <Summary count="999" title="Donasi Diterima" />
-              <Summary count="999" title="Telah Disalurkan" />
-              <Summary count="999" title="Tempat Penampungan" />
+            <div className="flex justify-center gap-8">
+              {analyticsTotalList.map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-[#FFF0DC] flex flex-col items-center justify-center p-8 rounded-lg font-bold gap-2"
+                >
+                  {isLoadingFetchAnalytics ? (
+                    <ClipLoader
+                      color="#F0BB78"
+                      loading={isLoadingFetchAnalytics}
+                      size={32}
+                    />
+                  ) : (
+                    <span className="text-[32px] text-[#F0BB78]">
+                      {item.value}
+                    </span>
+                  )}
+                  <span className="text-xl text-[#543a14]">{item.label}</span>
+                </div>
+              ))}
             </div>
-            <div className="bg-[#FFF0DC] rounded-[20px] py-8 px-6">
+
+            {/* Card Testimoni */}
+            <div className="bg-[#FFF0DC] rounded-2xl px-6 h-90 flex flex-col justify-center items-center">
               <div className="flex gap-8">
+                {/* Tombol Prev */}
                 <div className="flex items-center">
                   <button
                     className="cursor-pointer"
@@ -213,28 +197,59 @@ export default function Home() {
                     />
                   </button>
                 </div>
-                <div className="flex gap-[72px]">
-                  <Image
-                    src={testimonials[activeIndex].image}
-                    alt="Testimonial"
-                    width={298}
-                    height={298}
-                    className="rounded-lg"
-                  />
-                  <div className="flex items-center max-w-[467px]">
-                    <div>
-                      <p className="text-[#131010] text-base mb-9">
-                        {testimonials[activeIndex].text}
-                      </p>
-                      <p className="text-[#543A14] text-base font-bold">
-                        {testimonials[activeIndex].name}
-                      </p>
-                      <p className="text-[#543A14] text-base">
-                        {testimonials[activeIndex].role}
-                      </p>
-                    </div>
+
+                {/* Konten Testimoni */}
+                {isLoadingFetchTestimonies ? (
+                  <div className="flex justify-center items-center w-full h-full">
+                    <ClipLoader
+                      color="#F0BB78"
+                      loading={isLoadingFetchTestimonies}
+                      size={32}
+                    />
                   </div>
-                </div>
+                ) : (
+                  dataTestimonies?.length > 0 &&
+                  dataTestimonies?.map((item, index) => {
+                    const filePath = item.attachment?.files[0]?.path;
+
+                    return (
+                      <div
+                        key={index}
+                        className={`${
+                          index === activeIndex ? "block" : "hidden"
+                        } flex items-center gap-[72px] h-75`}
+                      >
+                        {filePath && (
+                          <div className="relative w-75 aspect-square">
+                            <Image
+                              src={filePath || ""}
+                              alt="Testimonial"
+                              fill
+                              className="rounded-lg object-cover"
+                            />
+                          </div>
+                        )}
+                        <div
+                          className={`flex items-center ${filePath ? "w-[467px]" : "w-full"}`}
+                        >
+                          <div>
+                            <p className="text-[#131010] text-base mb-9">
+                              {item.message}
+                            </p>
+                            <p className="text-[#543A14] text-base font-bold">
+                              {item.name}
+                            </p>
+                            <p className="text-[#543A14] text-base">
+                              {item.title}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+
+                {/* Tombol Next */}
                 <div className="flex items-center">
                   <button
                     className="cursor-pointer"
@@ -248,8 +263,10 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+
+              {/* Bullet Point */}
               <div className="flex justify-center gap-3 mt-3">
-                {testimonials.map((_, index) => (
+                {dataTestimonies?.map((_, index) => (
                   <button
                     key={index}
                     className={`w-2 h-2 rounded-full ${
