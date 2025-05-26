@@ -69,6 +69,8 @@ const FormInput = ({
   ref,
   model,
   type,
+  togglePassword,
+  showPassword,
   accept,
   inputStyles,
   isAutocomplete,
@@ -95,237 +97,259 @@ const FormInput = ({
   // END
 
   return (
-    <div className={`flex flex-col gap-1 w-full ${className}`}>
-      {label && (
-        <label className="text-base font-bold">
-          {label}
-          {required && <span className="text-[#E52020]">*</span>}
-        </label>
-      )}
+    <>
+      <div className={`flex flex-col gap-1 ${className}`}>
+        {label && (
+          <label className="text-base font-bold">
+            {label}
+            {required && <span className="text-[#E52020]">*</span>}
+          </label>
+        )}
 
-      {inputType === "dropdown" && (
-        <Select
-          isSearchable={false}
-          name={name}
-          value={mappedValue}
-          onChange={(selected) => onChange(selected?.value)}
-          options={formattedOptions}
-          noOptionsMessage={() => "Belum ada opsi"}
-          placeholder={placeholder}
-          onMenuOpen={() => setIsOpen(true)}
-          onMenuClose={() => setIsOpen(false)}
-          styles={customStyles}
-          components={{
-            DropdownIndicator: () => (
-              <Icon
-                icon="ep:arrow-up-bold"
-                width={16}
-                height={16}
-                className={`${isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"}`}
+        {inputType === "dropdown" && (
+          <Select
+            isSearchable={false}
+            name={name}
+            value={mappedValue}
+            onChange={(selected) => onChange(selected?.value)}
+            options={formattedOptions}
+            noOptionsMessage={() => "Belum ada opsi"}
+            placeholder={placeholder}
+            onMenuOpen={() => setIsOpen(true)}
+            onMenuClose={() => setIsOpen(false)}
+            styles={customStyles}
+            components={{
+              DropdownIndicator: () => (
+                <Icon
+                  icon="ep:arrow-up-bold"
+                  width={16}
+                  height={16}
+                  className={`${isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"}`}
+                />
+              ),
+              IndicatorSeparator: () => null,
+            }}
+          />
+        )}
+
+        {inputType === "dropdownInput" && (
+          <Controller
+            name={name}
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                key={key}
+                isMulti={type === "checkbox"}
+                isSearchable={true}
+                isDisabled={disabled}
+                value={
+                  type === "checkbox"
+                    ? formattedOptions.filter((opt) =>
+                        field.value?.includes(opt.value)
+                      )
+                    : type === "dynamic"
+                      ? field.value
+                      : formattedOptions.find(
+                          (opt) => opt.value === field.value
+                        )
+                }
+                onChange={
+                  type === "checkbox"
+                    ? (selected) => {
+                        const value = selected.map((option) => option.value);
+                        field.onChange(value);
+                        onChange?.(value);
+                      }
+                    : (selected) => {
+                        field.onChange(selected?.value);
+                        onChange?.(selected);
+                      }
+                }
+                options={formattedOptions}
+                placeholder={placeholder}
+                styles={customStyles}
+                onMenuOpen={onMenuOpen}
+                onMenuClose={() => {
+                  if (isOpen) setIsOpen(false);
+                }}
+                components={{
+                  DropdownIndicator: () => (
+                    <Icon
+                      icon="ep:arrow-up-bold"
+                      width={16}
+                      height={16}
+                      className={`${
+                        isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"
+                      }`}
+                    />
+                  ),
+                  IndicatorSeparator: () => null,
+                  ...(customMenu && { Menu: customMenu }),
+                }}
+                className={inputStyles}
               />
-            ),
-            IndicatorSeparator: () => null,
-          }}
-        />
-      )}
+            )}
+          />
+        )}
 
-      {inputType === "dropdownInput" && (
-        <Controller
-          name={name}
-          control={control}
-          render={({ field }) => (
-            <Select
-              {...field}
-              key={key}
-              isMulti={type === "checkbox"}
-              isSearchable={true}
-              isDisabled={disabled}
-              value={
-                type === "checkbox"
-                  ? formattedOptions.filter((opt) =>
-                      field.value?.includes(opt.value)
-                    )
-                  : type === "dynamic"
-                    ? field.value
-                    : formattedOptions.find((opt) => opt.value === field.value)
-              }
-              onChange={
-                type === "checkbox"
-                  ? (selected) => {
-                      const value = selected.map((option) => option.value);
-                      field.onChange(value);
-                      onChange?.(value);
-                    }
-                  : (selected) => {
-                      field.onChange(selected?.value);
-                      onChange?.(selected);
-                    }
-              }
-              options={formattedOptions}
-              placeholder={placeholder}
-              styles={customStyles}
-              onMenuOpen={onMenuOpen}
-              onMenuClose={() => {
-                if (isOpen) setIsOpen(false);
-              }}
-              components={{
-                DropdownIndicator: () => (
-                  <Icon
-                    icon="ep:arrow-up-bold"
-                    width={16}
-                    height={16}
-                    className={`${
-                      isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"
-                    }`}
-                  />
-                ),
-                IndicatorSeparator: () => null,
-                ...(customMenu && { Menu: customMenu }),
-              }}
-              className={inputStyles}
-            />
-          )}
-        />
-      )}
+        {inputType === "dropdownCustomOptions" && (
+          <Controller
+            name={name}
+            control={control}
+            render={({ field }) => (
+              <Select
+                {...field}
+                isSearchable={false}
+                value={null}
+                onChange={() => {}}
+                placeholder={placeholder}
+                styles={customStyles}
+                menuIsOpen={isOpen}
+                onMenuOpen={() => setIsOpen(true)}
+                onMenuClose={() => setIsOpen(false)}
+                components={{
+                  Menu: customMenu,
+                  DropdownIndicator: () => (
+                    <Icon
+                      icon="ep:arrow-up-bold"
+                      width={16}
+                      height={16}
+                      className={`transition-transform ${
+                        isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"
+                      }`}
+                    />
+                  ),
+                  IndicatorSeparator: () => null,
+                }}
+              />
+            )}
+          />
+        )}
 
-      {inputType === "dropdownCustomOptions" && (
-        <Controller
-          name={name}
-          control={control}
-          render={({ field }) => (
-            <Select
-              {...field}
-              isSearchable={false}
-              value={null}
-              onChange={() => {}}
-              placeholder={placeholder}
-              styles={customStyles}
-              menuIsOpen={isOpen}
-              onMenuOpen={() => setIsOpen(true)}
-              onMenuClose={() => setIsOpen(false)}
-              components={{
-                Menu: customMenu,
-                DropdownIndicator: () => (
-                  <Icon
-                    icon="ep:arrow-up-bold"
-                    width={16}
-                    height={16}
-                    className={`transition-transform ${
-                      isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"
-                    }`}
-                  />
-                ),
-                IndicatorSeparator: () => null,
-              }}
-            />
-          )}
-        />
-      )}
+        {inputType === "dropdownChecklistOther" && (
+          <Controller
+            name={name}
+            control={control}
+            render={({ field }) => (
+              <CreatableSelect
+                {...field}
+                isMulti
+                options={options}
+                menuIsOpen={isOpen}
+                onMenuOpen={() => setIsOpen(true)}
+                onMenuClose={() => setIsOpen(false)}
+                placeholder={placeholder}
+                onChange={(selected) => field.onChange(selected)}
+                className="basic-multi-select"
+                classNamePrefix="select"
+                styles={customStyles}
+                components={{
+                  DropdownIndicator: () => (
+                    <Icon
+                      icon="ep:arrow-up-bold"
+                      width={16}
+                      height={16}
+                      className={`transition-transform ${
+                        isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"
+                      }`}
+                    />
+                  ),
+                  IndicatorSeparator: () => null,
+                }}
+              />
+            )}
+          />
+        )}
 
-      {inputType === "dropdownChecklistOther" && (
-        <Controller
-          name={name}
-          control={control}
-          render={({ field }) => (
-            <CreatableSelect
-              {...field}
-              isMulti
-              options={options}
-              menuIsOpen={isOpen}
-              onMenuOpen={() => setIsOpen(true)}
-              onMenuClose={() => setIsOpen(false)}
-              placeholder={placeholder}
-              onChange={(selected) => field.onChange(selected)}
-              className="basic-multi-select"
-              classNamePrefix="select"
-              styles={customStyles}
-              components={{
-                DropdownIndicator: () => (
-                  <Icon
-                    icon="ep:arrow-up-bold"
-                    width={16}
-                    height={16}
-                    className={`transition-transform ${
-                      isOpen ? "rotate-180 text-black" : "text-[#C2C2C2]"
-                    }`}
-                  />
-                ),
-                IndicatorSeparator: () => null,
-              }}
-            />
-          )}
-        />
-      )}
+        {inputType === "textArea" && (
+          <textarea
+            ref={ref}
+            name={name}
+            value={value}
+            onChange={(e) => {
+              onChange?.(e.target.value);
+            }}
+            placeholder={placeholder}
+            className={`${baseClass} ${inputStyles} flex-1`}
+            onClick={onClick}
+            readOnly={label.toLowerCase().includes("alamat")}
+            {...register}
+          />
+        )}
 
-      {inputType === "textArea" ? (
-        <textarea
-          ref={ref}
-          name={name}
-          value={value}
-          onChange={(e) => {
-            onChange?.(e.target.value);
-          }}
-          placeholder={placeholder}
-          className={`${baseClass} ${inputStyles} flex-1`}
-          onClick={onClick}
-          readOnly={label.toLowerCase().includes("alamat")}
-          {...register}
-        />
-      ) : inputType === "text" ? (
-        <input
-          ref={ref}
-          type={type ?? "text"}
-          accept={accept}
-          name={name}
-          value={value}
-          onChange={(e) => onChange?.(e.target.value)}
-          placeholder={placeholder}
-          className={`${baseClass} ${inputStyles} ${value && `border-black`} ${disabled ? disabledClass : ""} max-h-12`}
-          onClick={onClick}
-          disabled={disabled}
-          {...register}
-        />
-      ) : null}
-
-      {inputType === "controlledText" && (
-        <Controller
-          name={name}
-          control={control}
-          render={({ field }) => (
+        <div className="relative">
+          {inputType === "text" && (
             <input
-              {...field}
-              type="text"
-              ref={(el) => {
-                field.ref(el);
-                if (ref) ref.current = el;
-              }}
-              defaultValue={isAutocomplete ? undefined : (value ?? field.value)}
-              value={field.value}
-              onChange={(e) => {
-                field.onChange(e);
-                onChange?.(e.target.value);
-              }}
+              ref={ref}
+              type={type ?? "text"}
+              accept={accept}
+              name={name}
+              value={value}
+              onChange={(e) => onChange?.(e.target.value)}
               placeholder={placeholder}
-              className={`${baseClass} ${disabled ? disabledClass : ""}`}
+              className={`${baseClass} ${inputStyles} ${value && `border-black`} ${disabled ? disabledClass : ""} max-h-12`}
               onClick={onClick}
               disabled={disabled}
+              {...register}
             />
           )}
-        />
-      )}
-
-      {inputType === "custom" && (
-        <div
-          className={`${baseClass} ${inputStyles} ${disabled ? disabledClass : ""}`}
-        >
-          {customValueRender?.()}
+          {togglePassword && (
+            <button
+              type="button"
+              onClick={togglePassword}
+              className="absolute right-3 top-3 text-[#C2C2C2] hover:text-black transition z-20"
+            >
+              <Icon
+                icon={showPassword ? "mdi:eye-off" : "mdi:eye"}
+                width={24}
+              />
+            </button>
+          )}
         </div>
-      )}
 
-      {errors && (!label || !label.toLowerCase().includes("foto")) && (
-        <p className="text-[#E52020] text-sm">{errors}</p>
-      )}
-    </div>
+        {inputType === "controlledText" && (
+          <Controller
+            name={name}
+            control={control}
+            render={({ field }) => (
+              <input
+                {...field}
+                type="text"
+                ref={(el) => {
+                  field.ref(el);
+                  if (ref) ref.current = el;
+                }}
+                defaultValue={
+                  isAutocomplete ? undefined : (value ?? field.value)
+                }
+                value={field.value}
+                onChange={(e) => {
+                  field.onChange(e);
+                  onChange?.(e.target.value);
+                }}
+                placeholder={placeholder}
+                className={`${baseClass} ${disabled ? disabledClass : ""}`}
+                onClick={onClick}
+                disabled={disabled}
+              />
+            )}
+          />
+        )}
+
+        {inputType === "custom" && (
+          <div
+            className={`${baseClass} ${inputStyles} ${disabled ? disabledClass : ""}`}
+          >
+            {customValueRender?.()}
+          </div>
+        )}
+
+        {errors && (!label || !label.toLowerCase().includes("foto")) && (
+          <p className="text-[#E52020] text-sm">{errors}</p>
+        )}
+      </div>
+    </>
   );
 };
 
