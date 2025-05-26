@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
 
-import { getProfile } from "src/services/api/profile";
+import { sidebarMenu } from "src/components/options";
 
 const SidebarCustom = ({ href, menu, icon, isActive }) => {
   return (
@@ -23,24 +22,6 @@ const SidebarCustom = ({ href, menu, icon, isActive }) => {
   );
 };
 
-const sidebarMenu = [
-  {
-    href: "/akun",
-    menu: "Informasi Akun",
-    icon: "mdi:user",
-  },
-  {
-    href: "/akun/riwayat-donasi",
-    menu: "Riwayat Donasi",
-    icon: "solar:box-bold",
-  },
-  {
-    href: "/akun/tempat-penampung",
-    menu: "Tempat Penampung",
-    icon: "teenyicons:building-solid",
-  },
-];
-
 export default function AkunLayout({
   children,
 }: {
@@ -50,9 +31,9 @@ export default function AkunLayout({
 
   return (
     <section className="max-w-[1200px] py-12 mx-auto">
-      <div className="flex gap-8">
+      <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar */}
-        <div className="space-y-8 min-w-60">
+        <div className="px-8 lg:px-0 space-y-8 min-w-60">
           <div className="text-[#543A14]">
             <h2>Halo,</h2>
             <h1 className="font-bold">Donatur</h1>

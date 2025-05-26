@@ -88,7 +88,7 @@ export default function Home() {
   return (
     <section className="bg-[#FFF0DC]">
       {/* Hero Section */}
-      <section className="relative w-full h-[92dvh]">
+      <section className="relative w-full h-[80vh] sm:h-[92dvh]">
         <Image
           src="/banner_home.webp"
           alt="Banner"
@@ -96,7 +96,7 @@ export default function Home() {
           objectFit="cover"
           priority
         />
-        <div className="absolute inset-0 flex items-start justify-end pt-8">
+        <div className="absolute inset-0 flex items-start justify-end pt-4 sm:pt-8 px-4 sm:px-0">
           <div className="flex flex-col gap-4 items-end">
             <BannerText
               title="Dari bekas menjadi berkah."
@@ -111,7 +111,7 @@ export default function Home() {
 
         {/* Scroll */}
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-md flex items-center gap-2 text-gray-700 text-sm">
-          <span>Yuk! Lihat lebih lanjut</span>
+          <span className="text-nowrap">Yuk! Lihat lebih lanjut</span>
           <Icon
             icon="ep:arrow-down-bold"
             width={12}
@@ -122,10 +122,10 @@ export default function Home() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-12 flex justify-center bg-white">
-        <div className="w-[1200px]">
+      <section className="py-10 sm:py-12 px-4 sm:px-8 flex justify-center bg-white">
+        <div className="w-full max-w-[1200px]">
           <SectionTitle color="#F0BB78" title="indahnya berdonasi" />
-          <div className="flex justify-between">
+          <div className="flex justify-center flex-wrap gap-4 sm:gap-5">
             <BenefitCards
               src="/hand-giving-circle-icon.svg"
               alt="Hand giving a heart"
@@ -151,17 +151,17 @@ export default function Home() {
       </section>
 
       {/* Testimonial Section */}
-      <section className="py-12 flex justify-center bg-[#543a14]">
-        <div className="w-fit max-w-[1005px]">
+      <section className="py-10 sm:py-12 px-4 sm:px-8 flex justify-center bg-[#543a14]">
+        <div className="w-full max-w-[1005px]">
           <SectionTitle color="#FFF0DC" title="terimakasih para donatur" />
 
-          {/* Donatur Statistics */}
           <div className="flex flex-col gap-6">
-            <div className="flex justify-center gap-8">
+            {/* Statistik Donatur */}
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-6 md:gap-8">
               {analyticsTotalList.map((item, index) => (
                 <div
                   key={index}
-                  className="bg-[#FFF0DC] flex flex-col items-center justify-center p-8 rounded-lg font-bold gap-2"
+                  className="bg-[#FFF0DC] flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 rounded-lg font-bold gap-2 w-full sm:w-fit"
                 >
                   {isLoadingFetchAnalytics ? (
                     <ClipLoader
@@ -170,18 +170,20 @@ export default function Home() {
                       size={32}
                     />
                   ) : (
-                    <span className="text-[32px] text-[#F0BB78]">
+                    <span className="text-xl sm:text-2xl md:text-[32px] text-[#F0BB78] text-center">
                       {item.value}
                     </span>
                   )}
-                  <span className="text-xl text-[#543a14]">{item.label}</span>
+                  <span className="text-sm sm:text-base md:text-xl text-[#543a14] text-center">
+                    {item.label}
+                  </span>
                 </div>
               ))}
             </div>
 
             {/* Card Testimoni */}
-            <div className="bg-[#FFF0DC] rounded-2xl px-6 h-90 flex flex-col justify-center items-center">
-              <div className="flex gap-8">
+            <div className="bg-[#FFF0DC] rounded-2xl px-4 sm:px-6 py-8 flex flex-col justify-center items-center">
+              <div className="flex items-center gap-3 lg:gap-8 w-full">
                 {/* Tombol Prev */}
                 <div className="flex items-center">
                   <button
@@ -214,11 +216,11 @@ export default function Home() {
                       <div
                         key={index}
                         className={`${
-                          index === activeIndex ? "block" : "hidden"
-                        } flex items-center gap-[72px] h-75`}
+                          index === activeIndex ? "flex" : "hidden"
+                        } flex-col lg:flex-row items-center gap-6 lg:gap-[72px] w-full`}
                       >
                         {filePath && (
-                          <div className="relative w-75 aspect-square">
+                          <div className="relative w-full max-w-[280px] md:max-w-[300px] aspect-square">
                             <Image
                               src={filePath || ""}
                               alt="Testimonial"
@@ -227,19 +229,13 @@ export default function Home() {
                             />
                           </div>
                         )}
-                        <div
-                          className={`flex items-center ${filePath ? "w-[467px]" : "w-full"}`}
-                        >
-                          <div>
-                            <p className="text-[#131010] text-base mb-9">
+                        <div className="flex-1 flex items-center justify-center">
+                          <div className="text-center lg:text-left max-w-xl text-sm sm:text-base text-[#543A14]">
+                            <p className="text-[#131010] mb-4 md:mb-6">
                               {item.message}
                             </p>
-                            <p className="text-[#543A14] text-base font-bold">
-                              {item.name}
-                            </p>
-                            <p className="text-[#543A14] text-base">
-                              {item.title}
-                            </p>
+                            <p className="font-bold">{item.name}</p>
+                            <p className="">{item.title}</p>
                           </div>
                         </div>
                       </div>
@@ -280,10 +276,10 @@ export default function Home() {
       </section>
 
       {/* Kriteria Barang Layak Donasi Section */}
-      <section className="py-12 bg-white flex justify-center">
-        <div className="w-[1200px]">
+      <section className="py-10 sm:py-12 px-4 sm:px-8 bg-white flex justify-center">
+        <div className="w-full">
           <SectionTitle color="#F0BB78" title="kriteria barang layak donasi" />
-          <div className="flex flex-row flex-wrap justify-center gap-20">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-10 sm:gap-20">
             <KriteriaCard
               src="/pile-clothes.svg"
               alt="Pile of clothes"

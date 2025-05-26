@@ -664,6 +664,7 @@ export default function DaftarTempatPenampung() {
                   {/* Modal Alamat Lengkap */}
                   <AddressModal
                     isOpen={isModalOpen}
+                    watch={watch}
                     dataProfile={dataDetailCollectionCenter}
                     handleClose={() => setIsModalOpen(false)}
                     setValue={setValue}

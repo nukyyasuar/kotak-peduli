@@ -20,7 +20,7 @@ const IconText = ({ text, src, alt, iconType, variant }) => {
         )}
       </div>
       <p
-        className={`text-base ${variant === "white" && "font-bold text-[#543A14]"}`}
+        className={`text-sm sm:text-base ${variant === "white" && "font-bold text-[#543A14]"}`}
       >
         {text}
       </p>
@@ -28,14 +28,23 @@ const IconText = ({ text, src, alt, iconType, variant }) => {
   );
 };
 
-const TextBetween = ({ label, value, className, textClassName }) => {
+const TextBetween = ({
+  label,
+  value,
+  className,
+  textClassName,
+  labelClassName,
+}) => {
   return (
-    <div className={`flex justify-between gap-8 ${className}`}>
-      <p>{label}:</p>
+    <div className={`flex flex-col lg:flex-row justify-between ${className}`}>
+      <p className={`${labelClassName} font-bold`}>{label}:</p>
       {Array.isArray(value) ? (
         <div>
           {value.map((item, index) => (
-            <p key={index} className={`flex justify-end ${textClassName}`}>
+            <p
+              key={index}
+              className={`flex justify-start lg:justify-end ${textClassName}`}
+            >
               {item}
             </p>
           ))}
