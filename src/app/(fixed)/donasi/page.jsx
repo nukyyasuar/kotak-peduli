@@ -7,7 +7,7 @@ import { components } from "react-select";
 import { Tooltip } from "react-tooltip";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { toast } from "react-toastify";
-import { PulseLoader } from "react-spinners";
+import { PulseLoader, ClipLoader } from "react-spinners";
 
 import { FormInput } from "src/components/formInput";
 import { ButtonCustom } from "src/components/button";
@@ -39,6 +39,7 @@ export default function Home() {
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [isCreateDonationLoading, setIsCreateDonationLoading] = useState(false);
   const [isFetchPostsLoading, setIsFetchPostsLoading] = useState(false);
+  const [isLoadingFetchProfile, setIsLoadingFetchProfile] = useState(false);
 
   const {
     register,
@@ -68,6 +69,7 @@ export default function Home() {
 
   const selectedTempatPenampung = watch("tempatPenampung");
   const selectedCabang = watch("cabang");
+  const watchBarangDonasi = watch("barangDonasi");
   const pickupTypes =
     dataCollectionCenter.pickupTypes
       ?.filter((item) => {
@@ -113,10 +115,12 @@ export default function Home() {
   const handleAddDonationType = (value, label) => {
     setIsAddDonationType(!isAddDonationType);
 
-    const exists = watch("barangDonasi").find((item) => item.value === value);
+    const currentDonasi = watch("barangDonasi") || [];
+    const exists = currentDonasi.find((item) => item.jenis === value);
+
     if (!exists) {
       setValue("barangDonasi", [
-        ...watch("barangDonasi"),
+        ...currentDonasi,
         {
           jenis: value,
           label: label,
@@ -132,7 +136,7 @@ export default function Home() {
 
   const handleRemoveDonationItem = (valueToRemove) => {
     const errorPathsToClear = [];
-    watch("barangDonasi").forEach((item, index) => {
+    watch("barangDonasi")?.forEach((item, index) => {
       if (item.jenis === valueToRemove) {
         errorPathsToClear.push(
           `barangDonasi.${index}.jumlah`,
@@ -147,7 +151,7 @@ export default function Home() {
       clearErrors(errorPathsToClear);
     }
 
-    const updatedItems = watch("barangDonasi").filter(
+    const updatedItems = watch("barangDonasi")?.filter(
       (item) => item.jenis !== valueToRemove
     );
 
@@ -363,28 +367,46 @@ export default function Home() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        setIsLoadingFetchProfile(true);
+
         const data = await getProfile();
         setDataProfile(data);
-        reset((prevValues) => ({
-          ...prevValues,
-          namaLengkap: data.firstName + " " + data.lastName,
-          nomorTelepon: data.phoneNumber.slice(3),
-          alamat: {
-            jalan: data?.address?.detail || "",
-            patokan: data?.address?.reference || "",
-            latitude: data?.address?.latitude || "",
-            longitude: data?.address?.longitude || "",
-            summary:
-              `(${data?.address?.reference}) ${data?.address?.detail}` || "",
-          },
-        }));
       } catch (error) {
-        toast.error("Gagal memuat profil. Silakan coba lagi.");
         console.error("Error fetching profile data:", error);
+      } finally {
+        setIsLoadingFetchProfile(false);
       }
     };
     fetchProfile();
   }, []);
+
+  useEffect(() => {
+    if (dataProfile) {
+      const reference = dataProfile?.address?.reference;
+      const detail = dataProfile?.address?.detail;
+
+      const formattedAddress =
+        reference && detail ? `(${reference}) ${detail}` : detail || "";
+
+      const formattedPhoneNumber = dataProfile?.phoneNumber?.startsWith("+62")
+        ? dataProfile?.phoneNumber.slice(3)
+        : dataProfile?.phoneNumber;
+
+      reset({
+        namaDepan: dataProfile.firstName || "",
+        namaBelakang: dataProfile.lastName || "",
+        nomorTelepon: formattedPhoneNumber || "",
+        email: dataProfile.email || "",
+        alamat: {
+          summary: formattedAddress || "",
+          jalan: dataProfile?.address?.detail || "",
+          patokan: dataProfile?.address?.reference || "",
+          latitude: dataProfile?.address?.latitude || "",
+          longitude: dataProfile?.address?.longitude || "",
+        },
+      });
+    }
+  }, [dataProfile, reset]);
 
   useEffect(() => {
     if (watch("alamat.summary")) {
@@ -402,12 +424,14 @@ export default function Home() {
 
   return (
     <section className="bg-white py-12 flex flex-col justify-center text-black">
-      <div className="max-w-[1200px] mx-auto">
+      <div className="w-full max-w-[1200px] px-4 sm:px-6 lg:px-0 mx-auto">
         {/* Title */}
         <div className="w-full flex justify-center mb-6">
-          <div className="text-center w-1/2">
-            <h1 className="text-[32px] font-bold">Yuk Donasikan Barangmu</h1>
-            <p className="text-[#543A14] text-base">
+          <div className="max-w-[1200px] px-4 sm:px-6 lg:px-8 mx-auto text-center">
+            <h1 className="text-2xl  sm:text-[32px] font-bold">
+              Yuk Donasikan Barangmu
+            </h1>
+            <p className="text-[#543A14] text-sm sm:text-base">
               Isi form berikut untuk mendeskripsikan barang yang ingin kamu
               donasikan dan bantu kami menyalurkan barangmu kepada yang
               membutuhkan.
@@ -418,24 +442,29 @@ export default function Home() {
         <form
           onSubmit={handleSubmit(onSubmit)}
           onKeyDown={handleKeyDown}
-          className="flex flex-col items-center w-[1200px] gap-5"
+          className="flex flex-col items-center gap-5"
         >
           {/* Form General Info */}
-          <div className="flex gap-5 w-full">
+          <div className="flex flex-col lg:flex-row gap-5 w-full">
             {/* Form Informasi Donatur */}
             <div className="flex flex-col gap-3 w-full">
               <h3 className="text-xl font-bold">Informasi Donatur</h3>
-              <div className="grid grid-cols-2 gap-5">
+              <div className="flex flex-col sm:flex-row gap-5">
                 <FormInput
                   name="namaLengkap"
                   label="Nama Lengkap"
                   required
                   inputType="text"
-                  placeholder="Contoh: Matthew Emmanuel"
+                  placeholder={
+                    isLoadingFetchProfile
+                      ? "Memuat nama lengkap..."
+                      : "Contoh: Matthew"
+                  }
                   value={namaLengkap}
                   register={register("namaLengkap")}
                   errors={errors?.namaLengkap?.message}
                   disabled
+                  className="w-full"
                 />
                 <FormInput
                   name="nomorTelepon"
@@ -443,11 +472,16 @@ export default function Home() {
                   inputType="text"
                   required
                   value={dataProfile?.phoneNumber?.slice(3) || ""}
-                  placeholder="Contoh: 81212312312"
+                  placeholder={
+                    isLoadingFetchProfile
+                      ? "Memuat nomor telepon..."
+                      : "Contoh: 81212312312"
+                  }
                   register={register("nomorTelepon")}
                   inputStyles="bg-[#D9D9D9] cursor-not-allowed"
                   errors={errors?.nomorTelepon?.message}
                   disabled
+                  className="w-full"
                 />
               </div>
               <FormInput
@@ -455,17 +489,24 @@ export default function Home() {
                 inputType="textArea"
                 name="alamat"
                 required
-                placeholder="Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
+                placeholder={
+                  isLoadingFetchProfile
+                    ? "Memuat alamat lengkap..."
+                    : "Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
+                }
                 value={watch("alamat.summary") || ""}
-                register={register("alamat")}
+                // register={register("alamat")}
                 onClick={() => setIsModalOpen(!isModalOpen)}
                 className="flex-1"
                 errors={errors?.alamat?.message}
+                inputStyles="flex-grow w-full"
+                disabled={isLoadingFetchProfile}
               />
 
               {/* Modal Alamat Lengkap */}
               <AddressModal
                 isOpen={isModalOpen}
+                watch={watch}
                 dataProfile={dataProfile}
                 handleClose={() => setIsModalOpen(false)}
                 setValue={setValue}
@@ -481,7 +522,7 @@ export default function Home() {
                 required
                 control={control}
                 options={collectionCenters}
-                placeholder="Pilih tempat penampung tujuan donasi"
+                placeholder="Pilih tempat penampung tujuan"
                 onChange={(selected) => {
                   setValue("tempatPenampung", selected?.value || "");
                   setValue("cabang", "");
@@ -500,9 +541,9 @@ export default function Home() {
                     ? isFetchPostsLoading
                       ? "Sedang mengambil data cabang..."
                       : posts
-                        ? "Pilih cabang / drop point tujuan donasi"
+                        ? "Pilih cabang / drop point tujuan"
                         : "Cabang / drop point tidak tersedia"
-                    : "Pilih tempat penampung terlebih dahulu"
+                    : "Tempat penampung belum dipilih"
                 }
                 disabled={posts.length <= 0}
               />
@@ -510,7 +551,7 @@ export default function Home() {
               {/* Button Hitung Jarak */}
               <ButtonCustom
                 variant={calculatingBtnDisabled ? "disabled" : "orange"}
-                label={`Hitung Jarak Alamat Ke ${selectedCabang ? "Cabang" : "Tempat Penampung"}`}
+                label={`Hitung Jarak ke ${selectedCabang ? "Cabang" : "Tempat Penampung"}`}
                 type="button"
                 className="w-full h-12 text-[#C2C2C2]"
                 onClick={calculateAddressDistance}
@@ -524,7 +565,7 @@ export default function Home() {
                 required
                 control={control}
                 options={pickupTypes}
-                placeholder={`${!isEmptyObject(watch("alamat")) ? (selectedTempatPenampung ? (isCalculating ? "Sedang menghitung jarak..." : addressDistance ? "Pilih metode pengiriman yang sesuai" : "Hitung jarak terlebih dahulu") : "Pilih tempat penampung terlebih dahulu") : "Masukkan alamat lengkap terlebih dahulu"}`}
+                placeholder={`${!isEmptyObject(watch("alamat")) ? (selectedTempatPenampung ? (isCalculating ? "Sedang menghitung jarak..." : addressDistance ? "Pilih metode pengiriman yang sesuai" : "Hitung jarak terlebih dahulu") : "Tempat penampung belum dipilih") : "Alamat lengkap belum diisi"}`}
                 disabled={
                   !selectedTempatPenampung || isCalculating || !addressDistance
                 }
@@ -569,7 +610,7 @@ export default function Home() {
             <h3 className="text-xl font-bold mb-3">Jenis Barang Donasi</h3>
 
             {/* Form Detail Barang */}
-            {watch("barangDonasi").map((item, index) => {
+            {watchBarangDonasi?.map((item, index) => {
               const selectedEvent = dataEvents?.find(
                 (event) => event.value === item.event
               );
@@ -577,7 +618,8 @@ export default function Home() {
                 selectedEvent && !selectedEvent?.types?.includes(item.jenis);
 
               return (
-                <>
+                <div key={index}>
+                  {/* Cek Jenis Barang Event */}
                   {selectedEvent && isJenisInvalid && (
                     <p className="text-[#E52020] text-sm font-medium mb-2">
                       Jenis barang donasi tidak sesuai dengan tipe yang
@@ -602,6 +644,7 @@ export default function Home() {
                       {}. Mohon periksa kembali jenis barang donasi Anda.
                     </p>
                   )}
+
                   <div
                     key={index}
                     className="bg-[#FFF0DC] px-5 pb-5 rounded-lg mb-3 relative"
@@ -638,7 +681,7 @@ export default function Home() {
                         />
                       )}
                       {/* Jumlah & Berat */}
-                      <div className="flex gap-5">
+                      <div className="flex flex-col sm:flex-row gap-5">
                         <FormInput
                           label="Jumlah Barang"
                           inputType="text"
@@ -650,6 +693,7 @@ export default function Home() {
                             errors?.barangDonasi?.[index]?.jumlah?.message
                           }
                           required
+                          className="w-full"
                         />
                         <FormInput
                           label="Total Berat Barang (kg)"
@@ -660,16 +704,17 @@ export default function Home() {
                           inputStyles="bg-white"
                           errors={errors?.barangDonasi?.[index]?.berat?.message}
                           required
+                          className="w-full"
                         />
                       </div>
                       {/* Foto & Event */}
-                      <div className="flex gap-5">
+                      <div className="flex flex-col sm:flex-row gap-5">
                         <div className="flex-1">
                           <div className="flex w-full items-end gap-3">
                             <FormInput
                               inputType="custom"
                               label="Foto Barang"
-                              className=""
+                              className="w-full"
                               inputStyles="bg-white relative min-h-[3rem] flex items-center gap-2 px-2 py-1 border rounded-lg max-w-[461px] overflow-scroll"
                               errors={
                                 errors?.barangDonasi?.[index]?.foto?.message
@@ -768,20 +813,20 @@ export default function Home() {
                           name={`barangDonasi.${index}.event`}
                           control={control}
                           options={dataEvents}
-                          placeholder="Pilih event tujuan donasi (jika tersedia)"
+                          placeholder="Pilih event tujuan (jika tersedia)"
                           className="flex-1"
                           inputStyles="bg-white"
                         />
                       </div>
                     </div>
                   </div>
-                </>
+                </div>
               );
             })}
 
             {/* Button Tambah Jenis Barang */}
-            {watch("barangDonasi").length !== donationTypeOptions?.length && (
-              <div className="flex gap-6 max-h-10">
+            {watch("barangDonasi")?.length !== donationTypeOptions?.length && (
+              <div className="flex flex-col-reverse sm:flex-row gap-5 sm:gap-6">
                 <ButtonCustom
                   variant={!watch("tipePengiriman") ? "disabled" : `orange`}
                   label="Tambah Jenis Barang"
@@ -789,7 +834,7 @@ export default function Home() {
                     setIsAddDonationType(!isAddDonationType);
                   }}
                   icon="mdi:plus"
-                  className="max-w-1/4 text-nowrap"
+                  className="text-nowrap"
                   type="button"
                   disabled={!watch("tipePengiriman")}
                   data-tooltip-id="addDonationType-tooltip"
@@ -797,9 +842,9 @@ export default function Home() {
                 />
 
                 {isAddDonationType && (
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     {donationTypeOptions?.map(({ value, label }) => {
-                      const isDisabled = watch("barangDonasi").some(
+                      const isDisabled = watch("barangDonasi")?.some(
                         (item) => item.jenis === value
                       );
 
@@ -812,10 +857,12 @@ export default function Home() {
                             !isDisabled && handleAddDonationType(value, label)
                           }
                           type="button"
-                          className={
-                            isDisabled &&
-                            "bg-[#F0BB78] text-white cursor-not-allowed"
-                          }
+                          className={`max-h-10
+                            ${
+                              isDisabled &&
+                              "bg-[#F0BB78] text-white cursor-not-allowed"
+                            }
+                          `}
                           disabled={isDisabled}
                         />
                       );

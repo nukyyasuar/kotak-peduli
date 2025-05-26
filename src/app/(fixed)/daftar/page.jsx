@@ -33,6 +33,7 @@ export default function Registration() {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSubmit, setIsLoadingSubmit] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   // Add new state to control view
@@ -65,6 +66,10 @@ export default function Registration() {
       password: "",
     },
   });
+
+  const togglePassword = () => {
+    setShowPassword((prev) => !prev);
+  };
 
   const formatTimer = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -426,52 +431,47 @@ export default function Registration() {
   }, [isTimerRunning, timer]);
 
   return (
-    <div className="h-dvh bg-white flex">
-      <Head>
-        <title>
-          {showOtpVerification
-            ? "Verifikasi OTP - Beri Barang"
-            : "Beri Barang - Daftar"}
-        </title>
-        <meta
-          name="description"
-          content={
-            showOtpVerification
-              ? "Verifikasi OTP untuk donasi selamat datang di Beri Barang"
-              : "Beri Barang donation registration page"
-          }
+    <div className="min-h-screen flex flex-col bg-white text-black">
+      {/* Logo */}
+      <div className="absolute top-5 left-5">
+        <Image
+          src="/logo_kotakPeduli.svg"
+          alt="Kotak Peduli Logo"
+          width={100}
+          height={100}
         />
-      </Head>
+      </div>
 
-      <div className="w-full max-w-6xl mx-auto py-12 flex flex-col md:flex-row items-center">
-        <div className="md:w-1/2 mb-8 md:mb-0 flex justify-center">
-          <div className="bg-[#FFF0DC] rounded-lg p-8">
-            <div className="relative">
+      {/* Main Content */}
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-20 flex flex-col md:flex-row items-center justify-center flex-1">
+        {/* Left Section */}
+        <div className="md:w-1/2 w-full mb-10 md:mb-0 flex justify-center px-4">
+          <div className="bg-[#FFF0DC] rounded-lg p-6 sm:p-8 w-full max-w-sm sm:max-w-md">
+            <div className="relative aspect-square">
               <Image
                 src="/Main Design Frame.webp"
                 alt="Donation Illustration"
-                width={400}
-                height={400}
+                fill
                 className="object-contain"
               />
             </div>
           </div>
         </div>
 
-        <div className="w-full md:w-1/2 md:pl-12 text-black">
+        {/* Form / OTP Section */}
+        <div className="w-full md:w-1/2 px-4 sm:px-6">
           {!showOtpVerification ? (
-            /* Form Registrasi*/
-            <div className="space-y-5">
+            <div className="max-w-md mx-auto space-y-6">
               <div id="recaptcha-container" className="hidden" />
 
               <div className="text-center">
-                <h1 className="text-[28px] font-bold ">DAFTAR</h1>
-                <p>Bersama menyejahterakan masyarakat</p>
+                <h1 className="text-2xl sm:text-4xl font-bold mb-1">DAFTAR</h1>
+                <p className="text-base">Bersama menyejahterakan masyarakat</p>
               </div>
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
                 <div className="space-y-3">
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <FormInput
                       inputType="text"
                       name="firstName"
@@ -518,14 +518,17 @@ export default function Registration() {
                   />
                   <FormInput
                     inputType="text"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     name="password"
                     register={register("password")}
                     value={watch("password")}
                     label="Password"
-                    placeholder="Masukkan minimum 6 karakter"
+                    placeholder="Masukkan minimum 8 karakter"
                     errors={errors?.password?.message}
                     required
+                    togglePassword={togglePassword}
+                    showPassword={showPassword}
+                    inputStyles="relative"
                   />
                 </div>
 
@@ -534,33 +537,28 @@ export default function Registration() {
                   variant="orange"
                   disabled={isLoading}
                   className="w-full h-12"
-                  label={[
+                  label={
                     isLoading ? (
                       <>
-                        <ClipLoader
-                          color="white"
-                          size={20}
-                          className="mr-2"
-                          loading={isLoading}
-                        />
+                        <ClipLoader color="white" size={20} className="mr-2" />
                         Memproses...
                       </>
                     ) : (
                       "Buat Akun"
-                    ),
-                  ]}
+                    )
+                  }
                 />
 
-                <Spacer text="atau menggunakan" />
-
-                <ButtonCustom
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  label="Google"
-                  variant="outlineOrange"
-                  icon="devicon:google"
-                  className="w-full h-12 gap-2"
-                />
+                {/* Optional Google Login */}
+                {/* <Spacer text="atau menggunakan" />
+            <ButtonCustom
+              type="button"
+              onClick={handleGoogleLogin}
+              label="Google"
+              variant="outlineOrange"
+              icon="devicon:google"
+              className="w-full h-12 gap-2"
+            /> */}
 
                 <TextWithLink
                   href="/login"
@@ -570,8 +568,8 @@ export default function Registration() {
               </form>
             </div>
           ) : (
-            /* Verifikasi OTP */
-            <div className="p-6 flex flex-col justify-center gap-5 text-black">
+            // OTP Verification Section
+            <div className="p-6 flex flex-col justify-center gap-5 text-black max-w-md mx-auto">
               <div
                 id="recaptcha-container"
                 ref={recaptchaContainerRef}
@@ -580,14 +578,16 @@ export default function Registration() {
 
               <button
                 onClick={goBackToRegistration}
-                className="text-xs flex justify-start cursor-pointer hover:underline mb-3"
+                className="text-sm flex justify-start cursor-pointer hover:underline mb-3"
               >
                 {`<`} Kembali ke formulir pendaftaran
               </button>
 
               <div className="text-center">
-                <h2 className="text-[28px] font-bold">Verifikasi OTP</h2>
-                <p>
+                <h2 className="text-2xl sm:text-3xl font-bold">
+                  Verifikasi OTP
+                </h2>
+                <p className="text-sm sm:text-base">
                   Masukkan kode OTP yang telah dikirimkan ke{" "}
                   <span className="font-bold">
                     +62{watch("phoneNumber") || "nomor telepon anda"}
@@ -595,7 +595,7 @@ export default function Registration() {
                 </p>
               </div>
 
-              <div className="flex gap-2 justify-center">
+              <div className="flex gap-2 justify-center flex-wrap max-w-xs mx-auto">
                 {otp.map((data, index) => (
                   <input
                     key={index}
@@ -605,7 +605,7 @@ export default function Registration() {
                     onChange={(e) => handleOtpChange(e.target, index, e)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
                     ref={(el) => (inputRefs.current[index] = el)}
-                    className="w-10 h-10 text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
+                    className="w-9 h-9 sm:w-10 sm:h-10 text-center text-base sm:text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
                     style={{
                       color: data ? "#131010" : "#000",
                       outlineColor: data ? "#131010" : "#C2C2C2",
@@ -623,7 +623,7 @@ export default function Registration() {
                 disabled={isLoading}
                 className="w-full h-12"
                 onClick={handleVerifyOtp}
-                label={[
+                label={
                   isLoading ? (
                     <div className="flex items-center justify-center">
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -631,8 +631,8 @@ export default function Registration() {
                     </div>
                   ) : (
                     "Konfirmasi"
-                  ),
-                ]}
+                  )
+                }
               />
 
               <ButtonCustom
@@ -644,7 +644,7 @@ export default function Registration() {
                   (isTimerRunning || isResendLoading) &&
                   "opacity-50 cursor-not-allowed"
                 }`}
-                label={[
+                label={
                   isResendLoading ? (
                     <div className="flex items-center justify-center">
                       <div className="w-5 h-5 border-2 border-[#F0BB78] border-t-transparent rounded-full animate-spin"></div>
@@ -652,8 +652,8 @@ export default function Registration() {
                     </div>
                   ) : (
                     `Kirim Ulang Kode (${formatTimer(timer)})`
-                  ),
-                ]}
+                  )
+                }
               />
             </div>
           )}

@@ -15,6 +15,7 @@ export default function AddressModal({
   isOpen,
   handleClose,
   setValue,
+  watch,
   dataProfile,
 }) {
   const [mapError, setMapError] = useState(null);
@@ -31,7 +32,7 @@ export default function AddressModal({
     control,
     getValues: getValueDetail,
     register,
-    watch,
+    watch: watchDetail,
     setValue: setValueDetail,
     formState: { errors },
     handleSubmit,
@@ -255,10 +256,10 @@ export default function AddressModal({
 
   // Function handle menyimpan lokasi yang dipilih ke 'alamat'. Pada button 'simpan' di modal
   const handleSaveLocation = () => {
-    if (watch("alamat.jalan")) {
+    if (watchDetail("alamat.jalan")) {
       setValueDetail(
         "alamat.summary",
-        `${watch("alamat.patokan") ? `(${watch("alamat.patokan")}) ` : ""}${watch("alamat.jalan")}`
+        `${watchDetail("alamat.patokan") ? `(${watchDetail("alamat.patokan")}) ` : ""}${watchDetail("alamat.jalan")}`
       );
       setValue("alamat", getValueDetail("alamat"));
     } else {
@@ -268,7 +269,7 @@ export default function AddressModal({
   };
 
   const handleCloseVariant = () => {
-    if (dataProfile?.address) {
+    if (dataProfile?.address === watch("alamat")) {
       const { detail, reference, latitude, longitude } = dataProfile.address;
 
       reset({
@@ -281,11 +282,11 @@ export default function AddressModal({
         },
       });
     } else {
-      setValue("alamat.summary", watch("alamat.summary"));
-      setValue("alamat.latitude", watch("alamat.latitude"));
-      setValue("alamat.longitude", watch("alamat.longitude"));
-      setValue("alamat.jalan", watch("alamat.jalan"));
-      setValue("alamat.patokan", watch("alamat.patokan"));
+      setValueDetail("alamat.summary", watch("alamat.summary"));
+      setValueDetail("alamat.latitude", watch("alamat.latitude"));
+      setValueDetail("alamat.longitude", watch("alamat.longitude"));
+      setValueDetail("alamat.jalan", watch("alamat.jalan"));
+      setValueDetail("alamat.patokan", watch("alamat.patokan"));
     }
 
     handleClose();
@@ -295,7 +296,7 @@ export default function AddressModal({
   useEffect(() => {
     if (!isOpen || !window.google?.maps?.places) return;
 
-    const summary = watch("alamat.summary");
+    const summary = watchDetail("alamat.summary");
     setGeolocationError(null);
     setMapError(null);
     if (summary) {
@@ -310,16 +311,17 @@ export default function AddressModal({
       }
     }
 
-    if (watch("alamat.jalan")) {
-      initMap(watch("alamat.jalan"));
-      updateMapWithAddress(watch("alamat.jalan"));
+    if (watchDetail("alamat.jalan")) {
+      initMap(watchDetail("alamat.jalan"));
+      updateMapWithAddress(watchDetail("alamat.jalan"));
     } else {
       getUserLocation((location) => {
         initMap(location);
         setValueDetail("alamat.latitude", location.lat);
         setValueDetail("alamat.longitude", location.lng);
         reverseGeocode(location, (address) => {
-          if (!watch("alamat.jalan")) setValueDetail("alamat.jalan", address);
+          if (!watchDetail("alamat.jalan"))
+            setValueDetail("alamat.jalan", address);
         });
       });
     }
@@ -352,6 +354,7 @@ export default function AddressModal({
   useEffect(() => {
     if (dataProfile?.address) {
       const { detail, reference, latitude, longitude } = dataProfile.address;
+
       reset({
         alamat: {
           jalan: detail || "",
@@ -366,7 +369,7 @@ export default function AddressModal({
 
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20 m-0">
+    <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20 m-0 px-4">
       <div className="bg-white rounded-lg flex flex-col p-8 text-black gap-6 w-lg">
         <h3 className="text-xl font-bold">Detail Alamat</h3>
         <div className="space-y-4 max-h-[50dvh] overflow-scroll no-scrollbar">

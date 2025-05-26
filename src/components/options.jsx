@@ -123,6 +123,96 @@ const physicalCheckingUpdateStatus = [
 ];
 //
 
+// Cerita Kami
+const missionList = [
+  {
+    src: "simple-icons:task",
+    alt: "Task list icon",
+    text: "Memfasilitasi donasi barang dengan mudah",
+  },
+  {
+    src: "/hand-giving-brown-icon.svg",
+    alt: "Hand giving a heart",
+    text: "Memastikan barang diterima oleh mereka yang membutuhkan",
+    iconType: "img",
+  },
+  {
+    src: "fluent:bin-recycle-20-filled",
+    alt: "Recycle bin",
+    text: "Mengurangi limbah dengan memanfaatkan kembali barang",
+  },
+];
+
+const donationSteps = [
+  {
+    step: 1,
+    title: "Isi Form Donasi",
+    desc: "Pilih jenis barang donasi, tempat penampungan yang dituju, dan data barang",
+  },
+  {
+    step: 2,
+    title: "Pengiriman/Penjemputan",
+    desc: "Mengirim sendiri atau dijemput oleh tempat penampung jika tersedia",
+  },
+  {
+    step: 3,
+    title: "Pemeriksaan Kelayakan",
+    desc: "Kondisi barang diperiksa oleh tempat penampung",
+  },
+  {
+    step: 4,
+    title: "Penyimpanan Sementara",
+    desc: "Barang masuk inventaris tempat penampung sebelum disalurkan",
+  },
+  {
+    step: 5,
+    title: "Penyaluran Barang",
+    desc: "Barang disalurkan ke pihak yang membutuhkan oleh tempat penampung",
+  },
+];
+
+const teamMembers = [
+  {
+    src: "/steven.png",
+    alt: "Steven image",
+    nim: "2502014975",
+    name: "Steven Farrelio Jorgensen",
+  },
+  {
+    src: "/nuky.png",
+    alt: "Nuky image",
+    nim: "2502073794",
+    name: "Nuky Yasuar Zamzamy",
+  },
+  {
+    src: "/matthew.png",
+    alt: "Matthew image",
+    nim: "2504016241",
+    name: "Matthew Emmanuel",
+  },
+];
+//
+
+// Sidebard Menu Akun
+const sidebarMenu = [
+  {
+    href: "/akun",
+    menu: "Informasi Akun",
+    icon: "mdi:user",
+  },
+  {
+    href: "/akun/riwayat-donasi",
+    menu: "Riwayat Donasi",
+    icon: "solar:box-bold",
+  },
+  {
+    href: "/akun/tempat-penampung",
+    menu: "Tempat Penampung",
+    icon: "teenyicons:building-solid",
+  },
+];
+//
+
 const statusList = [
   { label: "Semua", value: "" },
   { label: "Pemeriksaan Digital", value: "DIGITAL_CHECKING" },
@@ -263,6 +353,10 @@ export {
   buttonMenuList,
   digitalCheckingUpdateStatus,
   physicalCheckingUpdateStatus,
+  missionList,
+  donationSteps,
+  teamMembers,
+  sidebarMenu,
   statusList,
   donationTypes,
   shippingTypes,

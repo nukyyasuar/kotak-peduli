@@ -348,17 +348,59 @@ export default function Akun() {
       />
     </div>
   ) : (
-    <div>
+    <div className="px-8 lg:px-0">
       <div className="mb-6 text-[#543A14]">
         <h2 className="text-xl font-bold">Profil</h2>
         <p className="text-base">Sesuaikan informasi data diri Anda</p>
       </div>
 
-      {/* Form */}
+      {/* Main Section */}
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="flex justify-between gap-8"
+        className="flex flex-col lg:flex-row-reverse gap-8"
       >
+        {/* Gambar Profil */}
+        <div className="flex flex-col items-center">
+          <div className="w-52 aspect-square bg-gray-100 rounded-full mb-3 flex items-center justify-center relative group">
+            {dataProfile?.avatar?.file && !isAvatarEdit ? (
+              <Image
+                src={dataProfile?.avatar?.file?.path}
+                alt="profile"
+                className="rounded-full object-cover aspect-square"
+                fill="true"
+              />
+            ) : previewUrl ? (
+              <Image
+                src={previewUrl}
+                alt="profile"
+                className="rounded-full object-cover"
+                fill
+              />
+            ) : (
+              <Icon icon="mdi:user" color="white" width={128} height={128} />
+            )}
+            <label
+              htmlFor="foto"
+              className="absolute flex items-center justify-center bg-[#F0BB78] text-white hover:bg-[#E09359] py-2 px-7 rounded-lg font-bold gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={() => setIsAvatarEdit(true)}
+            >
+              Ubah Gambar
+            </label>
+            <input
+              id="foto"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </div>
+          <div className="text-sm text-black text-center">
+            <p>*Ukuran maksimal 5MB</p>
+            <p>*Format .jpg atau .png</p>
+          </div>
+        </div>
+
+        {/* Form */}
         <div className="space-y-6 w-full">
           <div className="space-y-3 text-black">
             <div className="flex gap-3">
@@ -368,6 +410,7 @@ export default function Akun() {
                 placeholder="Contoh: Matthew"
                 register={register("namaDepan")}
                 inputStyles={`w-full bg-white`}
+                className="w-full"
               />
               <FormInput
                 label="Nama Belakang"
@@ -375,9 +418,10 @@ export default function Akun() {
                 placeholder="Contoh: Emmanuel"
                 register={register("namaBelakang")}
                 inputStyles={`w-full bg-white`}
+                className="w-full"
               />
             </div>
-            <div className="flex items-end">
+            <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-0">
               <FormInput
                 label="Nomor Telepon (Whatsapp)"
                 inputType="text"
@@ -385,12 +429,13 @@ export default function Akun() {
                 value={dataProfile?.phoneNumber?.slice(3) || ""}
                 inputStyles={`w-full border-none`}
                 disabled
+                className="w-full"
               />
               <ButtonCustom
                 variant="orange"
                 type="button"
                 label={`Ubah Nomor Telepon`}
-                className="ml-3 text-nowrap h-12"
+                className="ml-3 text-nowrap h-12 w-full sm:w-auto"
                 onClick={() => setIsEditPhoneNumber(true)}
               />
               {isEditPhoneNumber && (
@@ -408,6 +453,7 @@ export default function Akun() {
                         placeholder="Contoh: 81212312312"
                         register={register("nomorTelepon")}
                         inputStyles={`w-full`}
+                        className="w-full"
                       />
                       {dataProfile?.phoneNumber !==
                         "+62" + watch("nomorTelepon") && (
@@ -474,6 +520,7 @@ export default function Akun() {
                 placeholder="Contoh: user@example.com"
                 register={register("email")}
                 inputStyles={`w-full bg-white relative`}
+                className="w-full"
               />
               {dataProfile?.emailVerifiedAt ? (
                 <Icon
@@ -550,6 +597,7 @@ export default function Akun() {
             {/* Modal Alamat Lengkap */}
             <AddressModal
               isOpen={isModalOpen}
+              watch={watch}
               dataProfile={dataProfile}
               handleClose={() => setIsModalOpen(false)}
               setValue={setValue}
@@ -595,47 +643,6 @@ export default function Akun() {
               />
             </div>
           )}
-        </div>
-
-        {/* Gambar Profil */}
-        <div className="flex flex-col items-center">
-          <div className="w-52 aspect-square bg-gray-100 rounded-full mb-3 flex items-center justify-center relative group">
-            {dataProfile?.avatar?.file && !isAvatarEdit ? (
-              <Image
-                src={dataProfile?.avatar?.file?.path}
-                alt="profile"
-                className="rounded-full object-cover aspect-square"
-                fill="true"
-              />
-            ) : previewUrl ? (
-              <Image
-                src={previewUrl}
-                alt="profile"
-                className="rounded-full object-cover"
-                fill
-              />
-            ) : (
-              <Icon icon="mdi:user" color="white" width={128} height={128} />
-            )}
-            <label
-              htmlFor="foto"
-              className="absolute flex items-center justify-center bg-[#F0BB78] text-white hover:bg-[#E09359] py-2 px-7 rounded-lg font-bold gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => setIsAvatarEdit(true)}
-            >
-              Ubah Gambar
-            </label>
-            <input
-              id="foto"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </div>
-          <div className="text-sm text-black text-center">
-            <p>*Ukuran maksimal 5MB</p>
-            <p>*Format .jpg atau .png</p>
-          </div>
         </div>
       </form>
     </div>

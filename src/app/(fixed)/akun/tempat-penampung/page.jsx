@@ -81,6 +81,8 @@ export default function DaftarTempatPenampung() {
     },
   });
 
+  console.log("alamat:", watch("alamat"));
+
   const watchPhoneNumber = watch("nomorTelepon");
   const collectionCenterId =
     dataProfile?.collectionCenterCollaborator?.collectionCenterId;
@@ -217,9 +219,21 @@ export default function DaftarTempatPenampung() {
         ? dataProfile?.phoneNumber.slice(3)
         : dataProfile?.phoneNumber;
 
+      const reference = dataProfile?.address?.reference;
+      const detail = dataProfile?.address?.detail;
+      const formattedAddress =
+        reference && detail ? `(${reference}) ${detail}` : detail || "";
+
       reset({
         nomorTelepon: formattedPhoneNumber || "",
         email: dataProfile.email || "",
+        alamat: {
+          summary: formattedAddress || "",
+          jalan: dataProfile?.address?.detail || "",
+          patokan: dataProfile?.address?.reference || "",
+          latitude: dataProfile?.address?.latitude || "",
+          longitude: dataProfile?.address?.longitude || "",
+        },
       });
       setPhoneNumberHolder(formattedPhoneNumber);
     }
@@ -320,7 +334,7 @@ export default function DaftarTempatPenampung() {
   };
 
   return isLoadingCreateCollectionCenter || isLoadingCollectionCenter ? (
-    <div className="flex items-center justify-center h-screen">
+    <div className="flex items-center justify-center h-50 sm:h-screen">
       <ClipLoader
         color="#F5A623"
         loading={isLoadingCreateCollectionCenter || isLoadingCollectionCenter}
@@ -330,7 +344,7 @@ export default function DaftarTempatPenampung() {
       />
     </div>
   ) : (
-    <div className="space-y-3">
+    <div className="space-y-3 px-8 lg:px-0">
       <div className="mb-6 text-[#543A14] space-y-2">
         <h2 className="text-xl font-bold">
           Daftar Sebagai Tempat Penampung{" "}
@@ -397,7 +411,7 @@ export default function DaftarTempatPenampung() {
                 required
                 errors={errors?.namaTempatPenampung?.message}
               />
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <FormInput
                   label="Email"
                   inputType="text"
@@ -406,6 +420,7 @@ export default function DaftarTempatPenampung() {
                   register={register("email")}
                   required
                   errors={errors?.email?.message}
+                  className="w-full"
                 />
                 <FormInput
                   label="Nomor Telepon (Whatsapp)"
@@ -416,17 +431,18 @@ export default function DaftarTempatPenampung() {
                   inputStyles={"border-none"}
                   required
                   disabled
+                  className="w-full"
                 />
                 <div className="flex items-end">
                   <ButtonCustom
                     variant="orange"
                     type="button"
                     label={`Ubah Nomor Telepon`}
-                    className="text-nowrap h-12"
+                    className="text-nowrap h-12 w-full"
                     onClick={() => setIsEditPhoneNumber(true)}
                   />
                   {isEditPhoneNumber && (
-                    <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
+                    <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20 px-4">
                       <div
                         ref={editPhoneNumberModalRef}
                         className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
@@ -435,13 +451,14 @@ export default function DaftarTempatPenampung() {
                           Ubah Nomor Telepon
                         </h3>
 
-                        <div className="flex items-end">
+                        <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 items-end">
                           <FormInput
                             label="Nomor Telepon (Whatsapp)"
                             inputType="text"
                             placeholder="Contoh: 81212312312"
                             register={register("nomorTelepon")}
                             inputStyles={`w-full`}
+                            className={"w-full"}
                           />
                           {dataProfile?.phoneNumber !==
                             "+62" + watch("nomorTelepon") && (
@@ -449,7 +466,7 @@ export default function DaftarTempatPenampung() {
                               variant="orange"
                               type="button"
                               label={`Kirim OTP`}
-                              className="h-12 ml-3 text-nowrap"
+                              className="h-12 ml-3 text-nowrap w-full sm:w-auto"
                               isLoading={isLoadingSendOtp}
                               onClick={handleSendOtp}
                             />
@@ -463,8 +480,8 @@ export default function DaftarTempatPenampung() {
                             <h3 className="text-lg font-bold">
                               Verifikasi OTP
                             </h3>
-                            <div className="flex gap-3">
-                              <div className="flex gap-3">
+                            <div className="flex flex-col sm:flex-row gap-3">
+                              <div className="flex gap-1 sm:gap-3">
                                 {otp.map((data, index) => (
                                   <input
                                     key={index}
@@ -478,7 +495,7 @@ export default function DaftarTempatPenampung() {
                                     ref={(el) =>
                                       (inputRefs.current[index] = el)
                                     }
-                                    className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
+                                    className="h-10 sm:h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
                                     style={{
                                       color: data ? "#131010" : "#000",
                                       outlineColor: data
@@ -513,7 +530,7 @@ export default function DaftarTempatPenampung() {
                   inputType="textArea"
                   placeholder="Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
                   value={watch("alamat.summary") || ""}
-                  register={register("alamat")}
+                  // register={register("alamat")}
                   onClick={() => setIsModalOpen(true)}
                   className="flex-1"
                   required
@@ -523,15 +540,17 @@ export default function DaftarTempatPenampung() {
                 {/* Modal Alamat Lengkap */}
                 <AddressModal
                   isOpen={isModalOpen}
+                  watch={watch}
+                  dataProfile={dataProfile}
                   handleClose={() => setIsModalOpen(false)}
                   setValue={setValue}
                 />
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <FormInput
                   label="Ketersediaan Penjemputan"
                   inputType="dropdownInput"
-                  placeholder="Pilih apakah penjemputan tersedia atau tidak"
+                  placeholder="Pilih ketersediaan penjemputan"
                   control={control}
                   name="penjemputan"
                   options={[
@@ -540,6 +559,7 @@ export default function DaftarTempatPenampung() {
                   ]}
                   required
                   errors={errors?.penjemputan?.message}
+                  className="w-full"
                 />
                 {watch("penjemputan") === "PICKED_UP" && (
                   <FormInput
@@ -547,14 +567,15 @@ export default function DaftarTempatPenampung() {
                     inputType="text"
                     placeholder="Contoh: 10"
                     register={register("batasJarak")}
+                    className="w-full"
                   />
                 )}
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <FormInput
                   label="Waktu Operasional (WIB)"
                   inputType="text"
-                  placeholder="Pilih hari dan jam operasional yang sesuai"
+                  placeholder="Pilih hari dan jam operasional"
                   onClick={() => {
                     setIsModalOperationalOpen(!isModalOperationalOpen);
                   }}
@@ -573,6 +594,7 @@ export default function DaftarTempatPenampung() {
                   }
                   required
                   errors={errors?.waktuOperasional?.message}
+                  className="w-full"
                 />
                 {/* Modal Waktu Operasional */}
                 <OperationalModal
@@ -591,6 +613,7 @@ export default function DaftarTempatPenampung() {
                   type="checkbox"
                   required
                   errors={errors?.jenisBarang?.message}
+                  className="w-full"
                 />
               </div>
 
@@ -605,7 +628,7 @@ export default function DaftarTempatPenampung() {
 
               {/* Input Foto + Preview */}
               <div className="flex w-full">
-                <div className="flex gap-3 w-full mt-1">
+                <div className="flex flex-col sm:flex-row gap-3 w-full mt-1">
                   <div className="flex flex-col items-center">
                     <div className="w-60 h-40 bg-gray-100 rounded-lg mb-3 flex items-center justify-center relative group">
                       {previewUrl ? (
@@ -625,7 +648,7 @@ export default function DaftarTempatPenampung() {
                       )}
                       <label
                         htmlFor="foto"
-                        className="absolute flex items-center justify-center bg-[#F0BB78] text-white hover:bg-[#E09359] py-2 px-7 rounded-lg font-bold gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute flex items-center justify-center bg-[#F0BB78] text-white hover:bg-[#E09359] py-2 px-7 rounded-lg font-bold gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
                       >
                         Ubah Gambar
                       </label>

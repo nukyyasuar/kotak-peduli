@@ -214,7 +214,7 @@ export default function RiwayatDonasi() {
   }, [selectedIdDonation]);
 
   return (
-    <section className="space-y-6 ">
+    <section className="space-y-6 px-4 sm:px-6 md:px-8">
       <div className="text-[#543A14]">
         <h2 className="text-xl font-bold">Riwayat Donasi</h2>
         <p className="text-base">
@@ -275,86 +275,92 @@ export default function RiwayatDonasi() {
               return (
                 <div key={index}>
                   <div
-                    className="rounded-lg p-3 pt-0 flex gap-8 hover:shadow-lg border"
+                    className="flex flex-col sm:flex-row gap-4 sm:gap-8 p-4 rounded-lg border hover:shadow-lg"
                     key={index}
                     onClick={() => {
                       setIsDetailModalOpen(true);
                       setSelectedIdDonation(donation.id);
                     }}
                   >
-                    <div className="min-w-[180px] aspect-square bg-[#C2C2C2] rounded-b-lg relative">
-                      <AttachmentImage
-                        fileName={donation.attachments?.files?.[0].name}
-                        index={index}
-                        onLoad={handleImageLoaded}
-                        onSelect={(url) => {
-                          setImgSrc(url);
-                        }}
-                        className="rounded-t-none"
-                      />
+                    {/* Thumbnail */}
+                    <div className="flex justify-center">
+                      <div className="w-[120px] sm:w-[180px] aspect-square bg-[#C2C2C2] rounded-lg relative flex-shrink-0">
+                        <AttachmentImage
+                          fileName={donation.attachments?.files?.[0].name}
+                          index={index}
+                          onLoad={handleImageLoaded}
+                          onSelect={(url) => {
+                            setImgSrc(url);
+                          }}
+                        />
+                      </div>
                     </div>
 
+                    {/* Informasi Summary */}
                     <div className="w-full">
-                      <div className="flex flex-col justify-between text-black text-sm h-full">
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col gap-1 pt-3">
-                            <span className="font-bold">
-                              {donation.collectionCenter.name}
-                            </span>
-                            <span>{donation?.post?.name}</span>
-                          </div>
+                      <div className="flex flex-col justify-between flex-1 text-sm text-black gap-3">
+                        <div className="flex flex-col sm:flex-row-reverse justify-between items-start gap-3">
                           <span
-                            className={`${statusGreenDonation ? `bg-[#1F7D53]` : statusRedDonation ? `bg-[#E52020]` : `bg-[#543A14]`}  text-white px-6 py-2 font-bold rounded-b-lg`}
+                            className={`px-4 py-1 text-sm font-bold rounded-full ${
+                              statusGreenDonation
+                                ? "bg-[#1F7D53]"
+                                : statusRedDonation
+                                  ? "bg-[#E52020]"
+                                  : "bg-[#543A14]"
+                            } text-white`}
                           >
                             {status}
                           </span>
+                          <div>
+                            <p className="font-bold">
+                              {donation.collectionCenter.name}
+                            </p>
+                            <p>{donation?.post?.name}</p>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <div className="space-y-1">
-                            <div className="flex gap-2">
-                              <span>Event:</span>
-                              <span>{donation?.event?.name || "-"}</span>
-                            </div>
-                            <span>
+
+                        <div className="flex flex-col sm:flex-row justify-between gap-2">
+                          <div className="text-sm space-y-1">
+                            <p>
+                              <span className="font-bold">Event: </span>
+                              {donation?.event?.name || "-"}
+                            </p>
+                            <p>
+                              <span className="font-bold">Jenis: </span>
                               {donationTypes.find(
                                 (type) => type.value === donation.donationType
                               )?.label || donation.donationType}{" "}
                               ({donation.quantity}pcs, {donation.weight}kg)
-                            </span>
+                            </p>
                           </div>
-                          <div className="space-y-1">
-                            <div className="flex gap-2">
-                              <span>Metode Pengiriman:</span>
-                              <span>
-                                {shippingTypes.find(
-                                  (type) => type.value === donation.pickupType
-                                )?.label || donation.pickupType}
-                              </span>
-                            </div>
-                            <div className="flex gap-2">
-                              <span>Tanggal Pengiriman:</span>
-                              <span
-                                className={`font-bold text-${isHighlightedLatestStatus ? "[#F0BB78]" : "black"} w-60`}
-                              >
-                                {statusTextHighlighted[latestStatus] || (
-                                  <FormattedWIBDate
-                                    date={donation.pickupDate}
-                                    type="time"
-                                  />
-                                )}
-                              </span>
-                            </div>
+                          <div className="text-sm space-y-1">
+                            <p>
+                              <span className="font-bold">Metode: </span>
+                              {shippingTypes.find(
+                                (type) => type.value === donation.pickupType
+                              )?.label || donation.pickupType}
+                            </p>
+                            <p>
+                              <span className="font-bold">Tanggal: </span>
+                              {statusTextHighlighted[latestStatus] || (
+                                <FormattedWIBDate
+                                  date={donation.pickupDate}
+                                  type="time"
+                                />
+                              )}
+                            </p>
                           </div>
                         </div>
-                        <div className="flex gap-3">
+
+                        {/* Button Card */}
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <ButtonCustom
                             variant="outlineOrange"
                             type="button"
                             label="Hubungi Tempat Penampung"
-                            className="w-fit"
+                            className="text-sm sm:text-base"
                             onClick={(e) => {
                               e.stopPropagation();
-
                               const urlWhatsapp = `https://wa.me/${phoneNumber}?text=Halo, saya ingin menanyakan tentang donasi saya dengan ID barang donasi: ${donation.id}.`;
                               window.open(urlWhatsapp, "_blank");
                             }}
@@ -364,12 +370,11 @@ export default function RiwayatDonasi() {
                             <ButtonCustom
                               variant="orange"
                               type="button"
+                              className="text-sm sm:text-base"
                               label={
                                 latestStatus === "PENDING"
-                                  ? "Atur opsi tanggal pengiriman"
-                                  : latestStatus === "CONFIRMED"
-                                    ? "Atur ulang opsi tanggal pengiriman"
-                                    : ""
+                                  ? "Atur opsi tanggal"
+                                  : "Atur ulang tanggal"
                               }
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -382,6 +387,7 @@ export default function RiwayatDonasi() {
                             <ButtonCustom
                               variant="orange"
                               type="button"
+                              className="w-full sm:w-fit"
                               label="Antar Donasi Sekarang"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -418,18 +424,19 @@ export default function RiwayatDonasi() {
 
       {/* Modal Tanggal Pengiriman */}
       {isShippingDateModalOpen && (
-        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
-          <div className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px]">
+        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center px-4">
+          <div className="bg-white rounded-lg p-4 md:p-8 space-y-6 text-black w-full max-w-screen-sm max-h-[90vh] overflow-y-auto">
             <h1 className="font-bold text-xl">
               Atur {shelterShippingDate && "Ulang"} Tanggal Pengiriman
             </h1>
+
             {isFetchDetailDonationLoading ? (
-              <div className="flex justify-center items-center h-70 w-150">
+              <div className="flex justify-center items-center h-60 w-full">
                 <ClipLoader color="#543A14" size={30} />
               </div>
             ) : (
               <>
-                <div className="flex flex-col pb-4 border-b">
+                <div className="flex flex-col pb-4 border-b space-y-1">
                   <span>{detailDonation?.collectionCenter?.name}</span>
                   {detailDonation?.post && (
                     <span>{detailDonation?.post?.name}</span>
@@ -463,7 +470,8 @@ export default function RiwayatDonasi() {
                     />
                   )}
                 </div>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   {shelterShippingDate && (
                     <div>
                       <FormInput
@@ -480,11 +488,11 @@ export default function RiwayatDonasi() {
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-3">
+                  <div className="space-y-1">
                     <span className="font-bold">
                       Pilih Tanggal & Waktu (Maks. 5 Opsi)
                     </span>
-                    <p className="text-sm">
+                    <p className="text-sm text-gray-600">
                       Tempat penampung akan memilih salah satu yang sesuai
                       dengan jadwal mereka, lalu mengonfirmasikannya kepada
                       Anda.
@@ -492,9 +500,9 @@ export default function RiwayatDonasi() {
                   </div>
 
                   {fields.map((field, index) => (
-                    <div key={field.id}>
-                      <div className="space-y-1">
-                        <div className="flex justify-between w-full">
+                    <div key={field.id} className="space-y-1">
+                      <div className="flex md:items-center justify-between">
+                        <div className="flex flex-col sm:flex-row gap-2 sm:gap-8">
                           <DatePicker
                             placeholderText="Pilih tanggal"
                             selected={watch(`waktuPengiriman.${index}.date`)}
@@ -506,15 +514,16 @@ export default function RiwayatDonasi() {
                             dateFormat="EEEE, dd/MM/yyyy"
                             locale={id}
                             popperPlacement="right"
-                            className="border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 focus:outline-none focus:border-black placeholder:text-[#C2C2C2] bg-white w-44"
+                            className="border border-[#C2C2C2] rounded-lg px-4 py-3 min-h-12 focus:outline-none focus:border-black placeholder:text-[#C2C2C2] bg-white w-full md:w-44"
                           />
-                          <div className="flex items-center gap-1">
+
+                          <div className="flex items-center justify-between gap-2">
                             <FormInput
                               inputType="dropdownInput"
                               options={hours}
                               control={control}
                               name={`waktuPengiriman.${index}.hour`}
-                              placeholder={"17"}
+                              placeholder="17"
                               inputStyles="w-25"
                             />
                             <span>:</span>
@@ -523,21 +532,20 @@ export default function RiwayatDonasi() {
                               options={minutes}
                               control={control}
                               name={`waktuPengiriman.${index}.minute`}
-                              placeholder={"00"}
+                              placeholder="00"
                               inputStyles="w-25"
                             />
                           </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2">
                           {fields.length < 5 && (
                             <button
                               type="button"
                               onClick={() =>
-                                append({
-                                  date: "",
-                                  hour: "",
-                                  minute: "",
-                                })
+                                append({ date: "", hour: "", minute: "" })
                               }
-                              className="bg-[#F0BB78] text-white rounded-lg text-sm text-nowrap h-12 px-5"
+                              className="bg-[#F0BB78] text-white rounded-lg text-sm h-12 px-4"
                             >
                               + Add
                             </button>
@@ -546,35 +554,32 @@ export default function RiwayatDonasi() {
                             <button
                               type="button"
                               onClick={() => remove(index)}
-                              className="bg-[#E52020] text-white rounded-lg text-sm text-nowrap h-12 px-5"
+                              className="bg-[#E52020] text-white rounded-lg text-sm h-12 px-4"
                             >
                               <Icon icon="mdi:trash" width={20} color="white" />
                             </button>
                           )}
                         </div>
-                        {errors.waktuPengiriman?.[index] && (
-                          <p className="text-red-500 text-sm">
-                            {errors.waktuPengiriman[index].message}
-                          </p>
-                        )}
                       </div>
+                      {errors.waktuPengiriman?.[index] && (
+                        <p className="text-red-500 text-sm">
+                          {errors.waktuPengiriman[index].message}
+                        </p>
+                      )}
                     </div>
                   ))}
+
                   {errors.waktuPengiriman?.root?.message && (
                     <p className="text-red-500 text-sm">
                       {errors.waktuPengiriman.root.message}
                     </p>
                   )}
 
-                  <div className="flex justify-end space-x-3 mt-4">
+                  <div className="flex flex-col md:flex-row justify-end gap-3 pt-2">
                     <ButtonCustom
                       label={
                         isCreateShippingDateLoading ? (
-                          <ClipLoader
-                            color="#fff"
-                            size={20}
-                            className="text-white"
-                          />
+                          <ClipLoader color="#fff" size={20} />
                         ) : (
                           "Kirim"
                         )
@@ -612,19 +617,19 @@ export default function RiwayatDonasi() {
 
       {/* Modal Dalam Perjalanan */}
       {isTransitModalOpen && (
-        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
+        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center px-4">
           <div className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px]">
             <h1 className="font-bold text-xl">
               Konfirmasi Antar Donasi Sekarang
             </h1>
-            <p>
+            <p className="text-sm">
               Dengan menekan tombol ini, status donasi akan berubah menjadi{" "}
               <span className="font-bold">"Dalam Perjalanan"</span>. Pastikan
               Anda benar-benar sedang atau sudah ingin berangkat menuju tempat
               penampung mengantarkan barang donasi.
             </p>
 
-            <div className="flex justify-end space-x-3 mt-4">
+            <div className="flex flex-col sm:flex-row justify-end space-x-3 mt-4 gap-3">
               <ButtonCustom
                 label="Konfirmasi"
                 variant="brown"

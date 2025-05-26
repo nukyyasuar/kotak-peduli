@@ -440,6 +440,7 @@ export default function CollectionCenterPosts() {
                   {/* Modal Detail Alamat */}
                   <AddressModal
                     isOpen={isAddressModalOpen}
+                    watch={watch}
                     dataProfile={selectedDataPost}
                     handleClose={() => setIsAddressModalOpen(false)}
                     setValue={setValue}

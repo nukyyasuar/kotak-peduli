@@ -49,7 +49,7 @@ export default function ConfirmEmail() {
   }, [token]);
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-white z-20 text-black">
+    <div className="flex items-center justify-center bg-white z-20 text-black min-h-[80dvh]">
       <div>
         {status === "loading" && (
           <div className="text-center space-y-3 text-xl">
