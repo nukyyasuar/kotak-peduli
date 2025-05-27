@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import { toast } from "react-toastify";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { ClipLoader } from "react-spinners";
 
 import {
   getPostsWithParams,
@@ -38,6 +39,9 @@ export default function CollectionCenterPosts() {
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isDeletePostModalOpen, setIsDeletePostModalOpen] = useState(false);
+  const [isLoadingCreateUpdatePost, setIsLoadingCreateUpdatePost] =
+    useState(false);
+  const [isLoadingDeletePost, setIsLoadingDeletePost] = useState(false);
 
   const { hasPermission } = useAuth();
   const deletePostsModalRef = useRef(null);
@@ -60,6 +64,8 @@ export default function CollectionCenterPosts() {
       tipe: "",
     },
   });
+
+  const canReadPost = hasPermission("READ_POST");
 
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
@@ -120,7 +126,10 @@ export default function CollectionCenterPosts() {
 
     if (isEditPostModalOpen) {
       try {
+        setIsLoadingCreateUpdatePost(true);
+
         await updatePost(collectionCenterId, selectedPostId, payload);
+
         toast.success("Data cabang / drop point berhasil diubah");
         setIsEditPostModalOpen(false);
         reset();
@@ -128,10 +137,15 @@ export default function CollectionCenterPosts() {
       } catch (error) {
         console.error("Error updating post:", error);
         toast.error("Gagal mengubah data cabang / drop point");
+      } finally {
+        setIsLoadingCreateUpdatePost(false);
       }
     } else if (isAddPostModalOpen) {
       try {
+        setIsLoadingCreateUpdatePost(true);
+
         await createPosts(collectionCenterId, payload);
+
         toast.success("Data cabang / drop point berhasil ditambahkan");
         setIsAddPostModalOpen(false);
         reset();
@@ -139,13 +153,18 @@ export default function CollectionCenterPosts() {
       } catch (error) {
         console.error("Error creating post:", error);
         toast.error("Gagal menambahkan data cabang / drop point");
+      } finally {
+        setIsLoadingCreateUpdatePost(false);
       }
     }
   };
 
   const onDeletePost = async () => {
     try {
+      setIsLoadingDeletePost(true);
+
       await deletePost(collectionCenterId, selectedPostId);
+
       toast.success("Data cabang / drop point berhasil dihapus");
       setIsDeletePostModalOpen(false);
       reset();
@@ -153,6 +172,8 @@ export default function CollectionCenterPosts() {
     } catch (error) {
       console.error("Error deleting post:", error);
       toast.error("Gagal menghapus data cabang / drop point");
+    } finally {
+      setIsLoadingDeletePost(false);
     }
   };
 
@@ -204,6 +225,8 @@ export default function CollectionCenterPosts() {
   }, [watch("alamat.summary")]);
 
   useEffect(() => {
+    if (!canReadPost) return;
+
     fetchPosts(currentPage, debouncedSearch, selectedPostTypesFilters);
   }, [currentPage, debouncedSearch, selectedPostTypesFilters]);
 
@@ -213,7 +236,7 @@ export default function CollectionCenterPosts() {
 
   return (
     <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
-      {!hasPermission("READ_POST") ? (
+      {!canReadPost ? (
         <Unauthorize />
       ) : (
         <main className="max-w-[1200px] mx-auto space-y-4 text-black">
@@ -463,7 +486,19 @@ export default function CollectionCenterPosts() {
 
               <div className="flex gap-3">
                 <ButtonCustom
-                  label={isAddPostModalOpen ? "Kirim" : "Simpan"}
+                  label={
+                    isLoadingCreateUpdatePost ? (
+                      <ClipLoader
+                        size={20}
+                        color="#fff"
+                        loading={isLoadingCreateUpdatePost}
+                      />
+                    ) : isAddPostModalOpen ? (
+                      "Tambah"
+                    ) : (
+                      "Simpan"
+                    )
+                  }
                   variant="brown"
                   type="submit"
                   className="w-full"
@@ -510,7 +545,17 @@ export default function CollectionCenterPosts() {
 
             <div>
               <ButtonCustom
-                label="Konfirmasi"
+                label={
+                  isLoadingDeletePost ? (
+                    <ClipLoader
+                      size={20}
+                      color="#fff"
+                      loading={isLoadingDeletePost}
+                    />
+                  ) : (
+                    "Hapus"
+                  )
+                }
                 variant="brown"
                 className="w-full"
                 type="button"
