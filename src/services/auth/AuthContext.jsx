@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
+
     if (token) {
       try {
         const decoded = jwtDecode(token);
