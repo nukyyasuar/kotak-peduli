@@ -23,7 +23,7 @@ const profileSchema = yup.object().shape({
     .string()
     .required("Nomor telepon wajib diisi.")
     .matches(/^[0-9]+$/, "Nomor telepon hanya boleh berisi angka.")
-    .min(13, "Nomor telepon minimal terdiri dari 13 digit.")
+    .min(9, "Nomor telepon minimal terdiri dari 9 digit.")
     .max(15, "Nomor telepon maksimal terdiri dari 15 digit.")
     .matches(
       /^8\d{9,14}$/,
