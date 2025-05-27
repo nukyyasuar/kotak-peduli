@@ -55,6 +55,12 @@ export default function Header() {
   const fetchProfile = async () => {
     try {
       const data = await getProfile();
+      if (data.collectionCenterCollaborator?.collectionCenterId) {
+        localStorage.setItem(
+          "collectionCenterId",
+          data.collectionCenterCollaborator?.collectionCenterId
+        );
+      }
       setDataProfile(data);
     } catch (error) {
       console.error("Error fetching profile data:", error);
@@ -88,7 +94,6 @@ export default function Header() {
               alt="Kotak Peduli Logo"
               width={100}
               height={100}
-              className="w-auto h-10 md:h-12"
             />
           </Link>
 
@@ -103,14 +108,16 @@ export default function Header() {
           {/* Desktop Menu */}
           <div className="hidden lg:flex items-center gap-10">
             <div className="flex gap-8">
-              {filteredMenu.map((item, index) => (
-                <NavBtn
-                  key={index}
-                  index={index}
-                  href={item.href}
-                  text={item.text}
-                />
-              ))}
+              {filteredMenu.map((item, index) => {
+                return (
+                  <NavBtn
+                    key={index}
+                    index={index}
+                    href={item.href}
+                    text={item.text}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
@@ -167,16 +174,18 @@ export default function Header() {
       {/* Mobile Drawer */}
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-white absolute top-20 left-0 w-full shadow-lg px-6 py-4 z-20 space-y-4">
-          {filteredMenu.map((item, index) => (
-            <Link
-              key={index}
-              href={item.href}
-              className="block text-[#543a14] text-lg font-medium"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              {item.text}
-            </Link>
-          ))}
+          {filteredMenu.map((item, index) => {
+            return (
+              <Link
+                key={index}
+                href={item.href}
+                className="block text-[#543a14] text-lg font-medium"
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                {item.text}
+              </Link>
+            );
+          })}
 
           {/* Donasi Button */}
           {role !== "admin" && (
