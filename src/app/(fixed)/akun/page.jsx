@@ -338,7 +338,7 @@ export default function Akun() {
   };
 
   return isLoadingProfileData ? (
-    <div className="flex items-center justify-center h-screen">
+    <div className="flex items-center justify-center h-50 sm:h-90">
       <ClipLoader
         color="#F5A623"
         loading={isLoadingProfileData}
