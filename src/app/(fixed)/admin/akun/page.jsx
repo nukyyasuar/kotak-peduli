@@ -538,6 +538,7 @@ export default function DaftarTempatPenampung() {
                   register={register("namaTempatPenampung")}
                   required
                   errors={errors?.namaTempatPenampung?.message}
+                  className="w-full"
                 />
                 <div className="flex gap-3">
                   <FormInput
@@ -548,6 +549,7 @@ export default function DaftarTempatPenampung() {
                     register={register("email")}
                     required
                     errors={errors?.email?.message}
+                    className="w-full"
                   />
                   <FormInput
                     label="Nomor Telepon (Whatsapp)"
@@ -558,6 +560,7 @@ export default function DaftarTempatPenampung() {
                     inputStyles={"border-none"}
                     required
                     disabled
+                    className="w-full"
                   />
                   <div className="flex items-end">
                     <ButtonCustom
@@ -584,6 +587,7 @@ export default function DaftarTempatPenampung() {
                               placeholder="Contoh: 81212312312"
                               register={register("nomorTelepon")}
                               inputStyles={`w-full`}
+                              className="w-full"
                             />
                             {dataDetailCollectionCenter?.phoneNumber !==
                               "+62" + watch("nomorTelepon") && (
@@ -660,6 +664,7 @@ export default function DaftarTempatPenampung() {
                     className="flex-1"
                     required
                     errors={errors?.alamat?.message}
+                    className="w-full"
                   />
                   {/* Modal Alamat Lengkap */}
                   <AddressModal
@@ -683,6 +688,7 @@ export default function DaftarTempatPenampung() {
                     ]}
                     required
                     errors={errors?.penjemputan?.message}
+                    className="w-full"
                   />
                   {watch("penjemputan") === "PICKED_UP" && (
                     <FormInput
@@ -690,6 +696,7 @@ export default function DaftarTempatPenampung() {
                       inputType="text"
                       placeholder="Contoh: 10"
                       register={register("batasJarak")}
+                      className="w-full"
                     />
                   )}
                 </div>
@@ -716,6 +723,7 @@ export default function DaftarTempatPenampung() {
                     }
                     required
                     errors={errors?.waktuOperasional?.message}
+                    className="w-full"
                   />
                   {/* Modal Waktu Operasional */}
                   <OperationalModal
@@ -737,6 +745,7 @@ export default function DaftarTempatPenampung() {
                     type="checkbox"
                     required
                     errors={errors?.jenisBarang?.message}
+                    className="w-full"
                   />
                 </div>
 
@@ -747,6 +756,7 @@ export default function DaftarTempatPenampung() {
                   register={register("deskripsi")}
                   required
                   errors={errors?.deskripsi?.message}
+                  className="w-full"
                 />
               </div>
 
@@ -762,9 +772,7 @@ export default function DaftarTempatPenampung() {
                           <ClipLoader
                             color="white"
                             loading={isLoadingUpdateCollectionCenter}
-                            size={25}
-                            aria-label="Loading Spinner"
-                            data-testid="loader"
+                            size={20}
                           />
                         </div>
                       ) : (
@@ -778,7 +786,7 @@ export default function DaftarTempatPenampung() {
                     type="button"
                     variant="outlineBrown"
                     label="Batalkan Perubahan"
-                    onClick={() => {
+                    onClick={async () => {
                       const address = dataDetailCollectionCenter?.address;
                       const reference = address?.reference;
                       const detail = address?.detail;
@@ -786,6 +794,17 @@ export default function DaftarTempatPenampung() {
                         reference && detail
                           ? `(${reference}) ${detail}`
                           : detail || "";
+
+                      let file = null;
+                      const fileUrl =
+                        dataDetailCollectionCenter.attachment?.file;
+                      if (fileUrl) {
+                        file = await urlToFile(
+                          fileUrl,
+                          fileUrl.name,
+                          fileUrl.mime
+                        );
+                      }
 
                       reset({
                         namaTempatPenampung: dataDetailCollectionCenter.name,
@@ -806,6 +825,7 @@ export default function DaftarTempatPenampung() {
                         batasJarak: dataDetailCollectionCenter.distanceLimitKm,
                         jenisBarang: dataDetailCollectionCenter.types,
                         deskripsi: dataDetailCollectionCenter.description,
+                        foto: file,
                       });
                       replace(
                         dataDetailCollectionCenter.activeHours.map((item) => ({
