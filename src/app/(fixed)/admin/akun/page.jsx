@@ -661,10 +661,9 @@ export default function DaftarTempatPenampung() {
                     value={watch("alamat.summary") || ""}
                     // register={register("alamat")}
                     onClick={() => setIsModalOpen(!isModalOpen)}
-                    className="flex-1"
+                    className="flex-1 w-full"
                     required
                     errors={errors?.alamat?.message}
-                    className="w-full"
                   />
                   {/* Modal Alamat Lengkap */}
                   <AddressModal
