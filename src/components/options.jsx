@@ -82,6 +82,7 @@ const baseMenuList = [
     href: "/admin/testimoni",
     text: "Testimoni",
     type: "admin",
+    permission: "CREATE_TESTIMONY",
   },
 ];
 

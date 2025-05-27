@@ -8,12 +8,14 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { id } from "date-fns/locale";
+import { ClipLoader } from "react-spinners";
 
 import {
   getEventsWithParams,
   createEventCollectionCenter,
   updateEventCollectionCenter,
 } from "src/services/api/event";
+import { getOneCollectionCenter } from "src/services/api/collectionCenter";
 import { useAuth } from "src/services/auth/AuthContext";
 
 import Unauthorize from "src/components/unauthorize";
@@ -43,6 +45,9 @@ export default function CollectionCenterEvents() {
   const [isFinishEventModalOpen, setIsFinishEventModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
+  const [validDonationTypes, setValidDonationTypes] = useState([]);
+  const [isLoadingCreateUpdateEvent, setIsLoadingCreateUpdateEvent] =
+    useState(false);
 
   const addEventModalRef = useRef(null);
   const finishEventModalRef = useRef(null);
@@ -69,6 +74,8 @@ export default function CollectionCenterEvents() {
       startDate: new Date(),
     },
   });
+
+  const canReadEvent = hasPermission("READ_EVENT");
 
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
@@ -111,6 +118,15 @@ export default function CollectionCenterEvents() {
     }
   };
 
+  const fetchCollectionCenter = async () => {
+    try {
+      const data = await getOneCollectionCenter(collectionCenterId);
+      setValidDonationTypes(data.types);
+    } catch (error) {
+      console.error("Error fetching collection center:", error);
+    }
+  };
+
   const toggleMenu = (index) => {
     setOpenMenuIndex(openMenuIndex === index ? null : index);
   };
@@ -124,6 +140,8 @@ export default function CollectionCenterEvents() {
 
     if (isEditEventModalOpen || isFinishEventModalOpen) {
       try {
+        setIsLoadingCreateUpdateEvent(true);
+
         await updateEventCollectionCenter(
           collectionCenterId,
           selectedEventId,
@@ -132,25 +150,29 @@ export default function CollectionCenterEvents() {
 
         toast.success("Data event berhasil diubah");
         setIsEditEventModalOpen(false);
-        reset();
-
         fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
+        reset();
       } catch (error) {
         console.error("Error updating event:", error);
         toast.error("Gagal mengubah data event");
+      } finally {
+        setIsLoadingCreateUpdateEvent(false);
       }
     } else if (isAddEventModalOpen) {
       try {
+        setIsLoadingCreateUpdateEvent(true);
+
         await createEventCollectionCenter(collectionCenterId, payload);
 
         toast.success("Data event berhasil ditambahkan");
         setIsAddEventModalOpen(false);
+        fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
         reset();
-
-        fetchEvents(currentPage, debouncedSearch, selectedStatusFilters);
       } catch (error) {
         console.error("Error creating event:", error);
         toast.error("Gagal menambahkan data event");
+      } finally {
+        setIsLoadingCreateUpdateEvent(false);
       }
     }
   };
@@ -186,8 +208,16 @@ export default function CollectionCenterEvents() {
   }, [isFinishEventModalOpen]);
 
   useEffect(() => {
+    if (!canReadEvent) return;
+
     fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
   }, [currentPage, debouncedSearch, sort, selectedStatusFilters]);
+
+  useEffect(() => {
+    if (!canReadEvent) return;
+
+    fetchCollectionCenter();
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -195,7 +225,7 @@ export default function CollectionCenterEvents() {
 
   return (
     <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
-      {!hasPermission("READ_EVENT") ? (
+      {!canReadEvent ? (
         <Unauthorize />
       ) : (
         <main className="max-w-[1200px] mx-auto space-y-4 text-black">
@@ -459,7 +489,9 @@ export default function CollectionCenterEvents() {
                 <FormInput
                   label="Jenis Barang yang Diterima"
                   inputType="dropdownInput"
-                  options={donationTypes}
+                  options={donationTypes.filter((option) =>
+                    validDonationTypes.includes(option.value)
+                  )}
                   control={control}
                   name="types"
                   placeholder="Pilih jenis barang yang diterima"
@@ -471,10 +503,23 @@ export default function CollectionCenterEvents() {
 
               <div className="flex gap-3">
                 <ButtonCustom
-                  label="Simpan"
+                  label={
+                    isLoadingCreateUpdateEvent ? (
+                      <ClipLoader
+                        color="white"
+                        size={20}
+                        loading={isLoadingCreateUpdateEvent}
+                      />
+                    ) : isAddEventModalOpen ? (
+                      "Tambah"
+                    ) : (
+                      "Simpan"
+                    )
+                  }
                   variant="brown"
                   type="submit"
                   className="w-full"
+                  disabled={isLoadingCreateUpdateEvent}
                 />
                 <ButtonCustom
                   label="Batal"
@@ -518,7 +563,17 @@ export default function CollectionCenterEvents() {
 
             <div>
               <ButtonCustom
-                label="Konfirmasi"
+                label={
+                  isLoadingCreateUpdateEvent ? (
+                    <ClipLoader
+                      color="white"
+                      size={20}
+                      loading={isLoadingCreateUpdateEvent}
+                    />
+                  ) : (
+                    "Selesai"
+                  )
+                }
                 variant="brown"
                 className="w-full"
                 type="button"

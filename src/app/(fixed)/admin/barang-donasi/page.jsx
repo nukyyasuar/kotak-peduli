@@ -94,6 +94,8 @@ export default function CollectionCenterDonationItems() {
     },
   });
 
+  const canReadDonation = hasPermission("READ_DONATION");
+
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("collectionCenterId");
@@ -273,16 +275,9 @@ export default function CollectionCenterDonationItems() {
   };
 
   const onSubmitUpdateStatus = async (data) => {
-    // Alur status = DIGITAL_CHECKING -> (true: PENDING, false: REJECTED) -> Donatur mengirim opsi tanggal (CONFIRMING) -> Tempat penampung milih opsi tanggal (CONFIRMED) [Balik ke CONFIRMING jika donatur atur ulang sebelum status TRANSPORTING/PICKING] -> BE otomatis hari-h tanggal pengiriman (TRANSPORTING/PICKING) -> Manual ketika otw (IN_TRANSIT) -> PHYSICAL_CHECKING -> (true: STORED, false: REDIRECTED) -> DISTRIBUTED
-
     const selectedStatusPemeriksaan = statusCheckingList.find(
       (item) => item.name === data.statusPemeriksaan
     );
-
-    const payload = {
-      isApproved: selectedStatusPemeriksaan?.value,
-      notes: data.note || undefined,
-    };
 
     const formData = new FormData();
     if (selectedStatusPemeriksaan?.value) {
@@ -331,12 +326,16 @@ export default function CollectionCenterDonationItems() {
       }
     };
 
+    if (!canReadDonation) return;
+
     if (selectedDonationId) {
       fetchDetailDonation();
     }
   }, [selectedDonationId]);
 
   useEffect(() => {
+    if (!canReadDonation) return;
+
     fetchDonations(
       currentPage,
       debouncedSearch,
@@ -364,7 +363,7 @@ export default function CollectionCenterDonationItems() {
 
   return (
     <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
-      {!hasPermission("READ_DONATION") ? (
+      {!canReadDonation ? (
         <Unauthorize />
       ) : (
         <main className="max-w-[1200px] mx-auto space-y-4 text-black">

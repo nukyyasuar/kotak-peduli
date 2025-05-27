@@ -296,12 +296,12 @@ const ModalDetailDonation = ({
                   title="Detail Tempat Penampung:"
                   values={[
                     detailDonation.collectionCenter.name,
-                    detailDonation.post.name,
+                    detailDonation.post?.name,
                     `(${detailDonation.targetAddress.reference}) ${detailDonation.targetAddress.detail}`,
                     <TextBetween
                       key="event"
                       label="Event"
-                      value={detailDonation.event?.name}
+                      value={detailDonation.event?.name || "-"}
                     />,
                   ]}
                 />

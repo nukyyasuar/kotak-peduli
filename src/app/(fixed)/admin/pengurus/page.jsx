@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 import { toast } from "react-toastify";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import { ClipLoader } from "react-spinners";
 
 import {
   getMembersWithParams,
@@ -47,6 +48,8 @@ export default function CollectionCenterMembers() {
   const [selectedDataMember, setSelectedDataMember] = useState(null);
   const [memberRolesListData, setMemberRolesListData] = useState([]);
   const [dataPosts, setDataPosts] = useState([]);
+  const [isLoadingCreateMember, setIsLoadingCreateMember] = useState(false);
+  const [isLoadingDeleteMember, setIsLoadingDeleteMember] = useState(false);
 
   const { hasPermission } = useAuth();
   const {
@@ -66,6 +69,8 @@ export default function CollectionCenterMembers() {
       role: null,
     },
   });
+
+  const canReadRole = hasPermission("READ_ROLE");
 
   const totalSelectedFiltersCount = selectedMemberRolesFilters?.length;
 
@@ -170,6 +175,8 @@ export default function CollectionCenterMembers() {
     const isEdit = isEditMemberModalOpen;
 
     try {
+      setIsLoadingCreateMember(true);
+
       await createUpdateMember(collectionCenterId, payload);
 
       toast.success(
@@ -190,12 +197,17 @@ export default function CollectionCenterMembers() {
           isEdit ? "Gagal mengubah pengurus" : "Gagal menambahkan pengurus"
         );
       }
+    } finally {
+      setIsLoadingCreateMember(false);
     }
   };
 
   const onDeleteMember = async () => {
     try {
+      setIsLoadingDeleteMember(true);
+
       await deleteMember(collectionCenterId, selectedMemberId);
+
       toast.success("Data pengurus berhasil dihapus");
       setIsDeleteMemberModalOpen(false);
       reset();
@@ -203,6 +215,8 @@ export default function CollectionCenterMembers() {
     } catch (error) {
       console.error("Error deleting member:", error);
       toast.error("Gagal menghapus pengurus");
+    } finally {
+      setIsLoadingDeleteMember(false);
     }
   };
 
@@ -259,6 +273,8 @@ export default function CollectionCenterMembers() {
   }, [isDeleteMemberModalOpen, selectedMemberId]);
 
   useEffect(() => {
+    if (!canReadRole) return;
+
     fetchMembers(currentPage, debouncedSearch, selectedMemberRolesFilters);
   }, [currentPage, debouncedSearch, selectedMemberRolesFilters]);
 
@@ -267,16 +283,20 @@ export default function CollectionCenterMembers() {
   }, [debouncedSearch, selectedMemberRolesFilters]);
 
   useEffect(() => {
+    if (!canReadRole) return;
+
     fetchAllRoles();
   }, []);
 
   useEffect(() => {
+    if (!canReadRole) return;
+
     fetchPosts(collectionCenterId);
   }, [collectionCenterId]);
 
   return (
     <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
-      {!hasPermission("READ_ROLE") ? (
+      {!canReadRole ? (
         <Unauthorize />
       ) : (
         <main className="max-w-[1200px] mx-auto space-y-4 text-black">
@@ -555,7 +575,19 @@ export default function CollectionCenterMembers() {
 
               <div className="flex gap-3">
                 <ButtonCustom
-                  label={isAddMemberModalOpen ? "Kirim" : "Simpan"}
+                  label={
+                    isLoadingCreateMember ? (
+                      <ClipLoader
+                        size={20}
+                        color="white"
+                        loading={isLoadingCreateMember}
+                      />
+                    ) : isEditMemberModalOpen ? (
+                      "Simpan"
+                    ) : (
+                      "Kirim"
+                    )
+                  }
                   variant="brown"
                   type="submit"
                   className="w-full"
@@ -601,7 +633,17 @@ export default function CollectionCenterMembers() {
 
             <div>
               <ButtonCustom
-                label="Konfirmasi"
+                label={
+                  isLoadingDeleteMember ? (
+                    <ClipLoader
+                      size={20}
+                      color="white"
+                      loading={isLoadingDeleteMember}
+                    />
+                  ) : (
+                    "Konfirmasi"
+                  )
+                }
                 variant="brown"
                 className="w-full"
                 type="button"

@@ -90,6 +90,7 @@ export default function Home() {
     dataProfile?.firstName && dataProfile?.lastName
       ? dataProfile?.firstName + " " + dataProfile?.lastName
       : "";
+
   const donationTypeOptions = dataCollectionCenter?.types?.map((item) => {
     const matchedDonationType = donationTypes.find(
       (type) => type.value === item
@@ -108,7 +109,7 @@ export default function Home() {
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") {
-      e.preventDefault(); // blokir submit ketika tekan Enter
+      e.preventDefault();
     }
   };
 
@@ -126,7 +127,7 @@ export default function Home() {
           label: label,
           jumlah: "",
           berat: "",
-          event: [],
+          event: "",
           foto: [],
           tipeElektronik: [],
         },
@@ -223,7 +224,9 @@ export default function Home() {
       data;
 
     formData.append("collectionCenterId", tempatPenampung);
-    formData.append("postId", cabang);
+    if (cabang) {
+      formData.append("postId", cabang);
+    }
 
     formData.append("address[detail]", alamat.jalan);
     if (alamat.patokan) {
@@ -393,8 +396,7 @@ export default function Home() {
         : dataProfile?.phoneNumber;
 
       reset({
-        namaDepan: dataProfile.firstName || "",
-        namaBelakang: dataProfile.lastName || "",
+        namaLengkap: dataProfile.firstName + " " + dataProfile.lastName,
         nomorTelepon: formattedPhoneNumber || "",
         email: dataProfile.email || "",
         alamat: {
@@ -880,20 +882,23 @@ export default function Home() {
             )}
           </div>
 
-          <button
+          <ButtonCustom
             type="submit"
-            className="w-full bg-[#543a14] hover:bg-[#6B4D20] text-white h-12 rounded-lg font-bold"
-          >
-            {isCreateDonationLoading ? (
-              <PulseLoader
-                color="white"
-                loading={isCreateDonationLoading}
-                size={8}
-              />
-            ) : (
-              "Kirim Donasi"
-            )}
-          </button>
+            variant="brown"
+            label={
+              isCreateDonationLoading ? (
+                <ClipLoader
+                  color="white"
+                  size={20}
+                  loading={isCreateDonationLoading}
+                />
+              ) : (
+                "Kirim Donasi"
+              )
+            }
+            disabled={isCreateDonationLoading}
+            className="w-full h-12"
+          />
         </form>
       </div>
     </section>

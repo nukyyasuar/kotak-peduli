@@ -71,7 +71,7 @@ export default function Login() {
     try {
       await loginWithEmail(data.email, data.password);
       toast.success("Berhasil login! Anda akan diarahkan ke halaman utama.");
-      router.push("/");
+      window.location.href = "/";
     } catch (err) {
       if (err.message === "This resource does not exist") {
         toast.error("Email atau password salah");
@@ -84,8 +84,6 @@ export default function Login() {
   };
 
   const onSubmitForgotPassword = async (data) => {
-    console.log(data);
-
     try {
       setIsLoadingSendForgotPassword(true);
 

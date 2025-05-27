@@ -8,6 +8,19 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { toast } from "react-toastify";
 import { ClipLoader } from "react-spinners";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+import collectionCenterRegistSchema from "src/components/schema/collectionCenterRegistSchema";
+import {
+  createCollectionCenter,
+  getOneCollectionCenter,
+} from "src/services/api/collectionCenter";
+import { getProfile } from "src/services/api/profile";
+import {
+  sendPhoneVerificationCode,
+  verifyPhoneCode,
+} from "src/services/auth/auth";
+import { useAuth } from "src/services/auth/AuthContext";
 
 import { FormInput } from "src/components/formInput";
 import AddressModal from "src/components/addressModal";
@@ -15,19 +28,6 @@ import { ButtonCustom } from "src/components/button";
 import OperationalModal from "src/components/operationalModal";
 import { donationTypes, days } from "src/components/options";
 import handleOutsideModal from "src/components/handleOutsideModal";
-
-import collectionCenterRegistSchema from "src/components/schema/collectionCenterRegistSchema";
-
-import {
-  createCollectionCenter,
-  getOneCollectionCenter,
-} from "src/services/api/collectionCenter";
-import { getProfile } from "src/services/api/profile";
-
-import {
-  sendPhoneVerificationCode,
-  verifyPhoneCode,
-} from "src/services/auth/auth";
 
 export default function DaftarTempatPenampung() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -43,6 +43,8 @@ export default function DaftarTempatPenampung() {
   const [isLoadingCreateCollectionCenter, setIsLoadingCreateCollectionCenter] =
     useState(false);
   const [isLoadingCollectionCenter, setIsLoadingCollectionCenter] =
+    useState(false);
+  const [isLoadingDetailCollectionCenter, setIsLoadingDetailCollectionCenter] =
     useState(false);
 
   const [isEditPhoneNumber, setIsEditPhoneNumber] = useState(false);
@@ -80,8 +82,22 @@ export default function DaftarTempatPenampung() {
       foto: "",
     },
   });
+  const router = useRouter();
+  const { hasPermission } = useAuth();
 
-  console.log("alamat:", watch("alamat"));
+  const routerByPermission = () => {
+    if (hasPermission("READ_DONATION")) {
+      router.push("/admin/barang-donasi");
+    } else if (hasPermission("READ_EVENT")) {
+      router.push("/admin/event");
+    } else if (hasPermission("READ_POST")) {
+      router.push("/admin/cabang");
+    } else if (hasPermission("READ_ROLE")) {
+      router.push("/admin/pengurus");
+    } else {
+      router.push("/unauthorized");
+    }
+  };
 
   const watchPhoneNumber = watch("nomorTelepon");
   const collectionCenterId =
@@ -175,19 +191,26 @@ export default function DaftarTempatPenampung() {
 
   const fetchDetailCollectionCenter = async (collectionCenterId) => {
     if (!collectionCenterId) return;
+    try {
+      setIsLoadingDetailCollectionCenter(true);
 
-    const detailData = await getOneCollectionCenter(collectionCenterId);
-    setDataDetailCollectionCenter(detailData);
+      const detailData = await getOneCollectionCenter(collectionCenterId);
+      setDataDetailCollectionCenter(detailData);
 
-    const approvalStatus = detailData?.approval.latestStatus;
+      const approvalStatus = detailData?.approval.latestStatus;
 
-    if (approvalStatus === "PENDING") {
-      setIsPending(true);
-    } else if (approvalStatus === "APPROVED") {
-      setIsApproved(true);
-    }
-    if (approvalStatus === "REJECTED") {
-      setIsDecline(true);
+      if (approvalStatus === "PENDING") {
+        setIsPending(true);
+      } else if (approvalStatus === "APPROVED") {
+        setIsApproved(true);
+      }
+      if (approvalStatus === "REJECTED") {
+        setIsDecline(true);
+      }
+    } catch (error) {
+      console.error("Error fetching collection center details:", error);
+    } finally {
+      setIsLoadingDetailCollectionCenter(false);
     }
   };
 
@@ -333,14 +356,18 @@ export default function DaftarTempatPenampung() {
     }
   };
 
-  return isLoadingCreateCollectionCenter || isLoadingCollectionCenter ? (
-    <div className="flex items-center justify-center h-50 sm:h-screen">
+  return isLoadingCreateCollectionCenter ||
+    isLoadingCollectionCenter ||
+    isLoadingDetailCollectionCenter ? (
+    <div className="flex items-center justify-center h-50 sm:h-90">
       <ClipLoader
         color="#F5A623"
-        loading={isLoadingCreateCollectionCenter || isLoadingCollectionCenter}
+        loading={
+          isLoadingCreateCollectionCenter ||
+          isLoadingCollectionCenter ||
+          isLoadingDetailCollectionCenter
+        }
         size={50}
-        aria-label="Loading Spinner"
-        data-testid="loader"
       />
     </div>
   ) : (
@@ -378,24 +405,16 @@ export default function DaftarTempatPenampung() {
       </div>
 
       {isSubmitted || isPending || isApproved || isDecline ? (
-        isApproved ? (
+        isApproved &&
+        (hasPermission("READ_DONATION") ||
+          hasPermission("READ_EVENT") ||
+          hasPermission("READ_POST") ||
+          hasPermission("READ_ROLE")) ? (
           <ButtonCustom
-            label={
-              <Link
-                href="/admin/barang-donasi"
-                onClick={() =>
-                  localStorage.setItem(
-                    "collectionCenterId",
-                    dataProfile?.collectionCenterCollaborator
-                      ?.collectionCenterId
-                  )
-                }
-              >
-                Dashboard Tempat Penampung
-              </Link>
-            }
+            label="Dashboard Tempat Penampung"
             variant="orange"
             className="w-full"
+            onClick={routerByPermission}
           />
         ) : null
       ) : (

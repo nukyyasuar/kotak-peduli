@@ -38,7 +38,6 @@ export default function ConfirmEmail() {
 
   const onSubmit = async (data) => {
     const token = new URLSearchParams(window.location.search).get("token");
-    console.log("Submitted Data:", data);
 
     try {
       setIsLoading(true);

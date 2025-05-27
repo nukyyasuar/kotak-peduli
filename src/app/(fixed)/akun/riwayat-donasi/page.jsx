@@ -240,7 +240,11 @@ export default function RiwayatDonasi() {
       {/* Loading Fetch Donations */}
       {isFetchDonationsLoading ? (
         <div className="flex justify-center items-center h-[300px]">
-          <ClipLoader color="#543A14" size={30} />
+          <ClipLoader
+            color="#F5A623"
+            size={50}
+            loading={isFetchDonationsLoading}
+          />
         </div>
       ) : donations.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-[300px]">
@@ -298,7 +302,7 @@ export default function RiwayatDonasi() {
 
                     {/* Informasi Summary */}
                     <div className="w-full">
-                      <div className="flex flex-col justify-between flex-1 text-sm text-black gap-3">
+                      <div className="flex flex-col justify-between flex-1 text-sm text-black gap-3 h-full">
                         <div className="flex flex-col sm:flex-row-reverse justify-between items-start gap-3">
                           <span
                             className={`px-4 py-1 text-sm font-bold rounded-full ${
@@ -341,7 +345,9 @@ export default function RiwayatDonasi() {
                               )?.label || donation.pickupType}
                             </p>
                             <p>
-                              <span className="font-bold">Tanggal: </span>
+                              <span className="font-bold">
+                                Tanggal Pengiriman:{" "}
+                              </span>
                               {statusTextHighlighted[latestStatus] || (
                                 <FormattedWIBDate
                                   date={donation.pickupDate}
