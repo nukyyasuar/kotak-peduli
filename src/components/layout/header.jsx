@@ -37,7 +37,7 @@ export default function Header() {
       const result = await logout();
 
       if (result.meta.message[0] === "Request successful") {
-        toast.success("Logout successful");
+        toast.success("Logout Berhasil");
         localStorage.removeItem("authToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("collectionCenterId");
