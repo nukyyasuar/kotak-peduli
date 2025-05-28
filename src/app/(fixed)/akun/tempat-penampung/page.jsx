@@ -85,6 +85,8 @@ export default function DaftarTempatPenampung() {
   const router = useRouter();
   const { hasPermission } = useAuth();
 
+  const userRole = dataProfile?.collectionCenterCollaborator?.role?.name;
+
   const routerByPermission = () => {
     if (hasPermission("READ_DONATION")) {
       router.push("/admin/barang-donasi");
@@ -373,34 +375,49 @@ export default function DaftarTempatPenampung() {
   ) : (
     <div className="space-y-3 px-8 lg:px-0">
       <div className="mb-6 text-[#543A14] space-y-2">
-        <h2 className="text-xl font-bold">
-          Daftar Sebagai Tempat Penampung{" "}
-          {(isSubmitted || isPending) && "(Proses Persetujuan)"}
-          {!isSubmitted && isApproved && "(Disetujui)"}
-          {!isSubmitted && isDecline && "(Ditolak)"}
-        </h2>
-        <p className="text-base">
-          {(isSubmitted || isPending) &&
-            "Pendaftaran Anda sedang diverifikasi terlebih dahulu oleh admin platform. Setelah disetujui, Anda akan mendapatkan akses ke halaman Dashboard Tempat Penampung."}
-          {!isSubmitted &&
-            isApproved &&
-            "Sealamat! Pendaftaran Anda telah disetujui. Tekan tombol dibawah untuk mengakses halaman Dashboard Tempat Penampung."}
-          {!isSubmitted && isDecline && (
-            <>
-              Mohon maaf, pendaftaran Anda ditolak. Silakan periksa alasan
-              penolakan di bawah ini.{" "}
-              <strong>Pengajuan ulang dapat dilakukan setelah 7 hari</strong>.
-            </>
-          )}
-        </p>
-        {isDecline && (
-          <p className="text-[#E52020]">
-            {
-              dataDetailCollectionCenter?.approval?.approvalDetails?.find(
-                (item) => item.status === "REJECTED"
-              )?.notes
-            }
-          </p>
+        {userRole !== "Collection Center Admin" ? (
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">Pengurus Tempat Penampung</h2>
+            <p className="text-base">
+              Anda dapat mengakses dashboard sesuai dengan peran yang telah
+              diberikan kepada Anda oleh Admin Utama Tempat Penampung.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold">
+              Daftar Sebagai Tempat Penampung{" "}
+              {(isSubmitted || isPending) && "(Proses Persetujuan)"}
+              {!isSubmitted && isApproved && "(Disetujui)"}
+              {!isSubmitted && isDecline && "(Ditolak)"}
+            </h2>
+            <p className="text-base">
+              {(isSubmitted || isPending) &&
+                "Pendaftaran Anda sedang diverifikasi terlebih dahulu oleh admin platform. Setelah disetujui, Anda akan mendapatkan akses ke halaman Dashboard Tempat Penampung."}
+              {!isSubmitted &&
+                isApproved &&
+                "Selamat! Pendaftaran Anda telah disetujui. Tekan tombol dibawah untuk mengakses halaman Dashboard Tempat Penampung."}
+              {!isSubmitted && isDecline && (
+                <>
+                  Mohon maaf, pendaftaran Anda ditolak. Silakan periksa alasan
+                  penolakan di bawah ini.{" "}
+                  <strong>
+                    Pengajuan ulang dapat dilakukan setelah 7 hari
+                  </strong>
+                  .
+                </>
+              )}
+            </p>
+            {isDecline && (
+              <p className="text-[#E52020]">
+                {
+                  dataDetailCollectionCenter?.approval?.approvalDetails?.find(
+                    (item) => item.status === "REJECTED"
+                  )?.notes
+                }
+              </p>
+            )}
+          </div>
         )}
       </div>
 
