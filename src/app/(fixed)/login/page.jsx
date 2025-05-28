@@ -73,7 +73,7 @@ export default function Login() {
       toast.success("Berhasil login! Anda akan diarahkan ke halaman utama.");
       window.location.href = "/";
     } catch (err) {
-      if (err.message === "This resource does not exist") {
+      if (err.message === "You do not have access to this resource") {
         toast.error("Email atau password salah");
       } else {
         toast.error("Terjadi kesalahan. Silakan coba lagi.");

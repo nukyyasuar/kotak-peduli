@@ -182,7 +182,7 @@ export default function Home() {
             </div>
 
             {/* Card Testimoni */}
-            <div className="bg-[#FFF0DC] rounded-2xl px-4 sm:px-6 py-8 flex flex-col justify-center items-center">
+            <div className="bg-[#FFF0DC] rounded-2xl px-4 sm:px-6 py-8 flex flex-col justify-center items-center lg:h-95">
               <div className="flex items-center gap-3 lg:gap-8 w-full">
                 {/* Tombol Prev */}
                 <div className="flex items-center">
@@ -229,7 +229,7 @@ export default function Home() {
                             />
                           </div>
                         )}
-                        <div className="flex-1 flex items-center justify-center">
+                        <div className="flex-1 flex items-center justify-center lg:h-75">
                           <div className="text-center lg:text-left max-w-xl text-sm sm:text-base text-[#543A14]">
                             <p className="text-[#131010] mb-4 md:mb-6">
                               {item.message}
@@ -263,7 +263,7 @@ export default function Home() {
                 {dataTestimonies?.map((_, index) => (
                   <button
                     key={index}
-                    className={`w-2 h-2 rounded-full ${
+                    className={`w-2 h-2 rounded-full cursor-pointer ${
                       index === activeIndex ? "bg-[#543a14]" : "bg-white"
                     }`}
                     onClick={() => setActiveIndex(index)}

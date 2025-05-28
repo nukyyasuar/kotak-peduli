@@ -418,7 +418,6 @@ export default function RiwayatDonasi() {
         isOpen={isDetailModalOpen}
         detailModalRef={detailModalRef}
         detailDonation={detailDonation}
-        isFetchDetailDonationLoading={isFetchDetailDonationLoading}
         imgSrc={imgSrc}
         setImgSrc={setImgSrc}
         STATUS_GREEN={STATUS_GREEN}
@@ -426,6 +425,7 @@ export default function RiwayatDonasi() {
         handleImageLoaded={handleImageLoaded}
         setIsShippingDateModalOpen={setIsShippingDateModalOpen}
         selectedIdDonation={selectedIdDonation}
+        isFetchDetailDonationLoading={isFetchDetailDonationLoading}
       />
 
       {/* Modal Tanggal Pengiriman */}

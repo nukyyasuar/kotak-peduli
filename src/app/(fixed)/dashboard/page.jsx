@@ -13,7 +13,7 @@ import {
   processCollectionCenter,
 } from "src/services/api/collectionCenter";
 import { getAnalytics } from "src/services/api/analytic";
-import { useAuth } from "src/services/auth/AuthContext";
+import { useAccess } from "src/services/auth/acl";
 
 import Unauthorize from "src/components/unauthorize";
 import {
@@ -60,7 +60,6 @@ export default function AdminConsoleDashboard() {
   const [dataAnalytics, setDataAnalytics] = useState([]);
   const [isLoadingFetchAnalytics, setIsLoadingFetchAnalytics] = useState(false);
 
-  const { hasPermission } = useAuth();
   const {
     setValue,
     register,
@@ -74,7 +73,7 @@ export default function AdminConsoleDashboard() {
     },
   });
 
-  const canReadCollection = hasPermission("READ_COLLECTION");
+  const canReadCollection = useAccess("READ_COLLECTION");
 
   const baseClassNameInput =
     "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base ";
@@ -251,13 +250,13 @@ export default function AdminConsoleDashboard() {
     if (!canReadCollection) return;
 
     fetchCollectionCenters(currentPage, debouncedSearch, selectedStatusFilters);
-  }, [currentPage, debouncedSearch, selectedStatusFilters]);
+  }, [currentPage, debouncedSearch, selectedStatusFilters, canReadCollection]);
 
   useEffect(() => {
     if (!canReadCollection) return;
 
     fetchAnalytics();
-  }, []);
+  }, [canReadCollection]);
 
   useEffect(() => {
     if (!canReadCollection) return;
@@ -265,7 +264,7 @@ export default function AdminConsoleDashboard() {
     if (selectedCollectionCenterId) {
       fetchDetailCollectionCenter();
     }
-  }, [selectedCollectionCenterId]);
+  }, [selectedCollectionCenterId, canReadCollection]);
 
   useEffect(() => {
     setCurrentPage(1);

@@ -14,7 +14,7 @@ import {
   updatePost,
 } from "src/services/api/post";
 import postSchema from "src/components/schema/postSchema";
-import { useAuth } from "src/services/auth/AuthContext";
+import { useAccess } from "src/services/auth/acl";
 
 import Unauthorize from "src/components/unauthorize";
 import { FormInput } from "src/components/formInput";
@@ -42,8 +42,8 @@ export default function CollectionCenterPosts() {
   const [isLoadingCreateUpdatePost, setIsLoadingCreateUpdatePost] =
     useState(false);
   const [isLoadingDeletePost, setIsLoadingDeletePost] = useState(false);
+  const [isLoadingFetchPosts, setIsLoadingFetchPosts] = useState(false);
 
-  const { hasPermission } = useAuth();
   const deletePostsModalRef = useRef(null);
   const {
     register,
@@ -65,7 +65,7 @@ export default function CollectionCenterPosts() {
     },
   });
 
-  const canReadPost = hasPermission("READ_POST");
+  const canReadPost = useAccess("READ_POST");
 
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
@@ -90,6 +90,8 @@ export default function CollectionCenterPosts() {
 
   const fetchPosts = async (page, search, postTypeFilters) => {
     try {
+      setIsLoadingFetchPosts(true);
+
       const result = await getPostsWithParams(
         collectionCenterId,
         page,
@@ -102,12 +104,14 @@ export default function CollectionCenterPosts() {
       setTotalData(result.meta.total);
 
       if (isFirstFetchPosts.current) {
-        toast.success("Data cabang / drop point berhasil dimuat");
+        // toast.success("Data cabang / drop point berhasil dimuat");
         isFirstFetchPosts.current = false;
       }
     } catch (error) {
       console.error("Error fetching posts:", error);
       toast.error("Gagal memuat data cabang / drop point");
+    } finally {
+      setIsLoadingFetchPosts(false);
     }
   };
 
@@ -228,7 +232,7 @@ export default function CollectionCenterPosts() {
     if (!canReadPost) return;
 
     fetchPosts(currentPage, debouncedSearch, selectedPostTypesFilters);
-  }, [currentPage, debouncedSearch, selectedPostTypesFilters]);
+  }, [currentPage, debouncedSearch, selectedPostTypesFilters, canReadPost]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -304,7 +308,15 @@ export default function CollectionCenterPosts() {
           <div
             className={`bg-white p-6 rounded-lg ${totalData <= 0 && "text-center"}`}
           >
-            {totalData <= 0 ? (
+            {isLoadingFetchPosts ? (
+              <div className="flex justify-center">
+                <ClipLoader
+                  color="#543A14"
+                  size={30}
+                  loading={isLoadingFetchPosts}
+                />
+              </div>
+            ) : totalData < 0 ? (
               "Data tidak ditemukan"
             ) : (
               <table className="w-full bg-white rounded-lg">

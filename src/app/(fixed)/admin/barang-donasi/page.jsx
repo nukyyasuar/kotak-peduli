@@ -12,7 +12,7 @@ import {
   createCollectionCenterShippingDate,
   processDonation,
 } from "src/services/api/donation";
-import { useAuth } from "src/services/auth/AuthContext";
+import { useAccess } from "src/services/auth/acl";
 
 import { FormInput } from "src/components/formInput";
 import {
@@ -76,7 +76,6 @@ export default function CollectionCenterDonationItems() {
   const isFirstFetchDonations = useRef(true);
   const updateStatusModalRef = useRef(null);
   const detailModalRef = useRef(null);
-  const { hasPermission } = useAuth();
 
   const {
     watch,
@@ -94,7 +93,7 @@ export default function CollectionCenterDonationItems() {
     },
   });
 
-  const canReadDonation = hasPermission("READ_DONATION");
+  const canReadDonation = useAccess("READ_DONATION");
 
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
@@ -141,7 +140,7 @@ export default function CollectionCenterDonationItems() {
       setTotalData(result.meta.total);
 
       if (isFirstFetchDonations.current) {
-        toast.success("Data barang donasi berhasil dimuat");
+        // toast.success("Data barang donasi berhasil dimuat");
         isFirstFetchDonations.current = false;
       }
     } catch (error) {
@@ -334,7 +333,7 @@ export default function CollectionCenterDonationItems() {
   }, [selectedDonationId]);
 
   useEffect(() => {
-    if (!canReadDonation) return;
+    if (canReadDonation === false) return;
 
     fetchDonations(
       currentPage,
@@ -345,6 +344,7 @@ export default function CollectionCenterDonationItems() {
       selectedPickupFilters
     );
   }, [
+    canReadDonation,
     currentPage,
     debouncedSearch,
     sort,
@@ -605,15 +605,6 @@ export default function CollectionCenterDonationItems() {
                           {/* Dropdown Menu */}
                           {openMenuIndex === index && (
                             <div className="w-35 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
-                              {/* {isFetchDetailDonationLoading ? (
-                                <div className="flex justify-center">
-                                  <ClipLoader
-                                    color="#543A14"
-                                    size={5}
-                                    loading={isFetchDetailDonationLoading}
-                                  />
-                                </div>
-                              ) : ( */}
                               <ul className="py-2">
                                 <li
                                   className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
@@ -715,6 +706,7 @@ export default function CollectionCenterDonationItems() {
         STATUS_RED={STATUS_RED}
         handleImageLoaded={handleImageLoaded}
         setIsShippingDateModalOpen={setIsShippingDateModalOpen}
+        isFetchDetailDonationLoading={isFetchDetailDonationLoading}
       />
 
       {/* Modal Tanggal Pengiriman */}

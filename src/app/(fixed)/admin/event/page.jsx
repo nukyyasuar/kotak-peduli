@@ -16,7 +16,7 @@ import {
   updateEventCollectionCenter,
 } from "src/services/api/event";
 import { getOneCollectionCenter } from "src/services/api/collectionCenter";
-import { useAuth } from "src/services/auth/AuthContext";
+import { useAccess } from "src/services/auth/acl";
 
 import Unauthorize from "src/components/unauthorize";
 import eventSchema from "src/components/schema/eventSchema";
@@ -48,10 +48,10 @@ export default function CollectionCenterEvents() {
   const [validDonationTypes, setValidDonationTypes] = useState([]);
   const [isLoadingCreateUpdateEvent, setIsLoadingCreateUpdateEvent] =
     useState(false);
+  const [isLoadingFetchEvents, setIsLoadingFetchEvents] = useState(false);
 
   const addEventModalRef = useRef(null);
   const finishEventModalRef = useRef(null);
-  const { hasPermission } = useAuth();
 
   const {
     register,
@@ -75,7 +75,7 @@ export default function CollectionCenterEvents() {
     },
   });
 
-  const canReadEvent = hasPermission("READ_EVENT");
+  const canReadEvent = useAccess("READ_EVENT");
 
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
@@ -96,6 +96,8 @@ export default function CollectionCenterEvents() {
 
   const fetchEvents = async (page, search, sort, statusFilters) => {
     try {
+      setIsLoadingFetchEvents(true);
+
       const result = await getEventsWithParams(
         collectionCenterId,
         page,
@@ -109,12 +111,14 @@ export default function CollectionCenterEvents() {
       setTotalData(result.meta.total);
 
       if (isFirstFetchEvents.current) {
-        toast.success("Data events berhasil dimuat");
+        // toast.success("Data events berhasil dimuat");
         isFirstFetchEvents.current = false;
       }
     } catch (error) {
       console.error("Error fetching events:", error);
       toast.error("Gagal memuat data events");
+    } finally {
+      setIsLoadingFetchEvents(false);
     }
   };
 
@@ -211,13 +215,13 @@ export default function CollectionCenterEvents() {
     if (!canReadEvent) return;
 
     fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
-  }, [currentPage, debouncedSearch, sort, selectedStatusFilters]);
+  }, [currentPage, debouncedSearch, sort, selectedStatusFilters, canReadEvent]);
 
   useEffect(() => {
     if (!canReadEvent) return;
 
     fetchCollectionCenter();
-  }, []);
+  }, [canReadEvent]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -293,7 +297,15 @@ export default function CollectionCenterEvents() {
           <div
             className={`bg-white p-6 rounded-lg ${totalData <= 0 && "text-center"}`}
           >
-            {totalData <= 0 ? (
+            {isLoadingFetchEvents ? (
+              <div className="flex justify-center">
+                <ClipLoader
+                  color="#543A14"
+                  size={30}
+                  loading={isLoadingFetchEvents}
+                />
+              </div>
+            ) : totalData < 0 ? (
               "Data tidak ditemukan"
             ) : (
               <table className="w-full bg-white rounded-lg">

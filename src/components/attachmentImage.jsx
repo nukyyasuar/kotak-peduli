@@ -2,11 +2,13 @@
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { ClipLoader } from "react-spinners";
 
 import { getAttachment } from "src/services/api/donation";
 
 const AttachmentImage = ({ fileName, onSelect, onLoad, index, className }) => {
   const [imageUrl, setImageUrl] = useState(null);
+  const [isLoadingFetchImage, setIsLoadingFetchImage] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -14,6 +16,8 @@ const AttachmentImage = ({ fileName, onSelect, onLoad, index, className }) => {
 
     const fetchImage = async () => {
       try {
+        setIsLoadingFetchImage(true);
+
         const blob = await getAttachment(fileName);
         objectUrl = URL.createObjectURL(blob);
         if (isMounted) {
@@ -22,6 +26,8 @@ const AttachmentImage = ({ fileName, onSelect, onLoad, index, className }) => {
         }
       } catch (error) {
         console.error("Error loading image:", error);
+      } finally {
+        setIsLoadingFetchImage(false);
       }
     };
 
@@ -33,13 +39,17 @@ const AttachmentImage = ({ fileName, onSelect, onLoad, index, className }) => {
     };
   }, [fileName]);
 
-  if (!imageUrl) {
+  if (!imageUrl || !fileName || !onLoad) {
     return (
       <div className="bg-gray-300 min-w-16 aspect-square rounded-lg animate-pulse" />
     );
   }
 
-  return (
+  return isLoadingFetchImage ? (
+    <div className="bg-gray-300 min-w-16 aspect-square rounded-lg flex items-center justify-center">
+      <ClipLoader size={24} color="#4A5568" loading={isLoadingFetchImage} />
+    </div>
+  ) : (
     <Image
       src={imageUrl}
       alt="Donation item image"

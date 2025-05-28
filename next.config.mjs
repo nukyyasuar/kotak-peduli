@@ -11,6 +11,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "organic-katydid-truly.ngrok-free.app",
       },
+      {
+        protocol: "https",
+        hostname: "wired-snipe-deep.ngrok-free.app",
+      },
     ],
   },
 };

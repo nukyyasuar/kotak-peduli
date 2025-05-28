@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ClipLoader } from "react-spinners";
 
+import { getProfile } from "src/services/api/profile";
 import {
   getMembersWithParams,
   createUpdateMember,
@@ -15,7 +16,7 @@ import {
 } from "src/services/api/member";
 import { getPosts } from "src/services/api/post";
 import memberSchema from "src/components/schema/memberSchema";
-import { useAuth } from "src/services/auth/AuthContext";
+import { useAccess } from "src/services/auth/acl";
 
 import Unauthorize from "src/components/unauthorize";
 import { FormInput } from "src/components/formInput";
@@ -50,8 +51,11 @@ export default function CollectionCenterMembers() {
   const [dataPosts, setDataPosts] = useState([]);
   const [isLoadingCreateMember, setIsLoadingCreateMember] = useState(false);
   const [isLoadingDeleteMember, setIsLoadingDeleteMember] = useState(false);
+  const [isLoadingFetchMembers, setIsLoadingFetchMembers] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(null);
+  const [selectedMemberRoleName, setSelectedMemberRoleName] = useState(null);
+  const [profileUserRole, setProfileUserRole] = useState(null);
 
-  const { hasPermission } = useAuth();
   const {
     register,
     watch,
@@ -70,7 +74,7 @@ export default function CollectionCenterMembers() {
     },
   });
 
-  const canReadRole = hasPermission("READ_ROLE");
+  const canReadRole = useAccess("READ_ROLE");
 
   const totalSelectedFiltersCount = selectedMemberRolesFilters?.length;
 
@@ -128,8 +132,22 @@ export default function CollectionCenterMembers() {
     fetchMembers(1, "", []);
   };
 
+  const fetchProfile = async () => {
+    try {
+      const profileData = await getProfile();
+      setProfileUserRole({
+        userId: profileData?.id,
+        roleName: profileData?.collectionCenterCollaborator?.role?.name,
+      });
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+      toast.error("Gagal memuat data profil");
+    }
+  };
   const fetchMembers = async (page, search) => {
     try {
+      setIsLoadingFetchMembers(true);
+
       const result = await getMembersWithParams(
         collectionCenterId,
         page,
@@ -142,12 +160,14 @@ export default function CollectionCenterMembers() {
       setTotalData(result.meta.total);
 
       if (isFirstFetchMembers.current) {
-        toast.success("Data pengurus berhasil dimuat");
+        // toast.success("Data pengurus berhasil dimuat");
         isFirstFetchMembers.current = false;
       }
     } catch (error) {
       console.error("Error fetching members:", error);
       toast.error("Gagal memuat data pengurus");
+    } finally {
+      setIsLoadingFetchMembers(false);
     }
   };
 
@@ -237,6 +257,10 @@ export default function CollectionCenterMembers() {
   };
 
   useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  useEffect(() => {
     const delay = setTimeout(() => {
       setDebouncedSearch(searchKeyword);
     }, 500);
@@ -276,7 +300,7 @@ export default function CollectionCenterMembers() {
     if (!canReadRole) return;
 
     fetchMembers(currentPage, debouncedSearch, selectedMemberRolesFilters);
-  }, [currentPage, debouncedSearch, selectedMemberRolesFilters]);
+  }, [currentPage, debouncedSearch, selectedMemberRolesFilters, canReadRole]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -286,13 +310,13 @@ export default function CollectionCenterMembers() {
     if (!canReadRole) return;
 
     fetchAllRoles();
-  }, []);
+  }, [canReadRole]);
 
   useEffect(() => {
     if (!canReadRole) return;
 
     fetchPosts(collectionCenterId);
-  }, [collectionCenterId]);
+  }, [collectionCenterId, canReadRole]);
 
   return (
     <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
@@ -397,7 +421,15 @@ export default function CollectionCenterMembers() {
           <div
             className={`bg-white p-6 rounded-lg ${totalData <= 0 && "text-center"}`}
           >
-            {totalData <= 0 ? (
+            {isLoadingFetchMembers ? (
+              <div className="flex justify-center">
+                <ClipLoader
+                  color="#543A14"
+                  size={30}
+                  loading={isLoadingFetchMembers}
+                />
+              </div>
+            ) : totalData < 0 ? (
               "Data tidak ditemukan"
             ) : (
               <table className="w-full bg-white rounded-lg">
@@ -433,7 +465,12 @@ export default function CollectionCenterMembers() {
                         <td className="py-3">{role}</td>
                         <td className="py-3 relative text-start">
                           <button
-                            onClick={() => toggleMenu(index)}
+                            onClick={() => {
+                              toggleMenu(index);
+                              setSelectedUserId(item.userId);
+                              setSelectedMemberId(item.id);
+                              setSelectedMemberRoleName(item.role?.name);
+                            }}
                             className="border border-[#C2C2C2] rounded-sm p-1"
                           >
                             <Icon
@@ -449,16 +486,26 @@ export default function CollectionCenterMembers() {
                           {openMenuIndex === index && (
                             <div className="w-35 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
                               <ul className="py-2">
-                                <li
-                                  className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
-                                  onClick={() => {
-                                    setSelectedMemberId(item.id);
-                                    setIsEditMemberModalOpen(true);
-                                    setOpenMenuIndex(null);
-                                  }}
-                                >
-                                  Ubah Data
-                                </li>
+                                {selectedUserId !== profileUserRole?.userId &&
+                                  !(
+                                    profileUserRole?.roleName ===
+                                      "Collection Center Role Admin" &&
+                                    (selectedMemberRoleName ===
+                                      "Collection Center Admin" ||
+                                      selectedMemberRoleName ===
+                                        "Collection Center Role Admin")
+                                  ) && (
+                                    <li
+                                      className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
+                                      onClick={() => {
+                                        setSelectedMemberId(item.id);
+                                        setIsEditMemberModalOpen(true);
+                                        setOpenMenuIndex(null);
+                                      }}
+                                    >
+                                      Ubah Data
+                                    </li>
+                                  )}
                                 <li
                                   className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
                                   onClick={() => {
