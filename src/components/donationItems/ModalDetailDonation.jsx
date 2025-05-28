@@ -115,19 +115,21 @@ const ModalDetailDonation = ({
 
                   {/* Thumbnails */}
                   <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                    {detailDonation?.attachments?.files?.map((file, index) => (
-                      <div
-                        key={index}
-                        className="bg-[#C2C2C2] rounded-lg w-16 aspect-square relative"
-                      >
-                        <AttachmentImage
-                          index={index}
-                          fileName={file.name}
-                          onSelect={(src) => setImgSrc(src)}
-                          onLoad={handleImageLoaded}
-                        />
-                      </div>
-                    ))}
+                    {detailDonation?.attachments?.files?.map((file, index) => {
+                      return (
+                        <div
+                          key={index}
+                          className="bg-[#C2C2C2] rounded-lg w-16 aspect-square relative"
+                        >
+                          <AttachmentImage
+                            index={index}
+                            fileName={file.name}
+                            onSelect={(src) => setImgSrc(src)}
+                            onLoad={handleImageLoaded}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -154,19 +156,21 @@ const ModalDetailDonation = ({
                         {/* Thumbnails */}
                         <div className="flex gap-2 overflow-x-auto no-scrollbar">
                           {detailDonation?.attachments?.files?.map(
-                            (file, index) => (
-                              <div
-                                key={index}
-                                className="bg-[#C2C2C2] rounded-lg min-w-16 aspect-square relative"
-                              >
-                                <AttachmentImage
-                                  index={index}
-                                  fileName={file.name}
-                                  onSelect={(src) => setImgSrc(src)}
-                                  onLoad={handleImageLoaded}
-                                />
-                              </div>
-                            )
+                            (file, index) => {
+                              return (
+                                <div
+                                  key={index}
+                                  className="bg-[#C2C2C2] rounded-lg w-16 aspect-square relative"
+                                >
+                                  <AttachmentImage
+                                    index={index}
+                                    fileName={file.name}
+                                    onSelect={(src) => setImgSrc(src)}
+                                    onLoad={handleImageLoaded}
+                                  />
+                                </div>
+                              );
+                            }
                           )}
                         </div>
                       </div>
@@ -175,7 +179,7 @@ const ModalDetailDonation = ({
                 )}
 
                 {/* Action Buttons */}
-                <div className="space-y-2">
+                <div className="space-y-2 w-full">
                   {userRole !== "admin" && (
                     <ButtonCustom
                       variant="outlineOrange"
@@ -281,7 +285,7 @@ const ModalDetailDonation = ({
                   values={[
                     `${detailDonation.user.firstName} ${detailDonation.user.lastName}`,
                     detailDonation.user.phoneNumber,
-                    `${detailDonation.address.reference ? `(${detailDonation.address.reference}) ` : ""}${detailDonation.address.detail}`,
+                    `${detailDonation.address?.reference ? `(${detailDonation.address?.reference}) ` : ""}${detailDonation.address.detail}`,
                   ]}
                 />
 
@@ -297,7 +301,7 @@ const ModalDetailDonation = ({
                   values={[
                     detailDonation.collectionCenter.name,
                     detailDonation.post?.name,
-                    `(${detailDonation.targetAddress.reference}) ${detailDonation.targetAddress.detail}`,
+                    `${detailDonation.targetAddress?.reference ? `(${detailDonation.targetAddress.reference}) ` : ""} ${detailDonation.targetAddress.detail}`,
                     <TextBetween
                       key="event"
                       label="Event"
