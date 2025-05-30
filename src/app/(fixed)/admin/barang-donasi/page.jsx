@@ -571,12 +571,14 @@ export default function CollectionCenterDonationItems() {
                     ) : (
                       "Proses pemeriksaan digital"
                     );
-                    const donationStatus = statusList.find((status) => {
-                      return status.value === item.approval?.latestStatus;
-                    })?.label;
-                    const donationStatusValue = statusList.find((status) => {
-                      return status.value === item.approval?.latestStatus;
-                    }).value;
+                    const donationStatus =
+                      statusList?.find((status) => {
+                        return status.value === item.approval?.latestStatus;
+                      })?.label || "";
+                    const donationStatusValue =
+                      statusList?.find((status) => {
+                        return status.value === item.approval?.latestStatus;
+                      }).value || "";
 
                     return (
                       <tr key={index} className="border-b border-b-[#EDEDED]">
@@ -814,7 +816,7 @@ export default function CollectionCenterDonationItems() {
                       value={[
                         <span className="font-bold">
                           {
-                            statusList.find(
+                            statusList?.find(
                               (status) =>
                                 status.value ===
                                 detailDonation?.approvals?.latestStatus
