@@ -122,7 +122,7 @@ export default function CollectionCenterPosts() {
       phoneNumber: "+62" + data.nomorTelepon,
       address: {
         detail: data.alamat.jalan,
-        reference: data.alamat.patokan,
+        ...(data.alamat.patokan && { reference: data.alamat.patokan }),
         latitude: data.alamat.latitude,
         longitude: data.alamat.longitude,
       },
