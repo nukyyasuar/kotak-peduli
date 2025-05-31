@@ -19,7 +19,7 @@ const shippingDateSchema = yup.object().shape({
           (val) => val.date && val.hour && val.minute
         )
     )
-    .min(3, "Opsi waktu pengiriman minimal 3.")
+    .min(3, "Opsi tanggal pengiriman minimal 3.")
     .test(
       "no-duplicates",
       "Opsi waktu pengiriman tidak boleh sama.",

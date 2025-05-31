@@ -100,13 +100,14 @@ const getCollectionCenterDonations = async (
     if (keyword) {
       params.append("search", keyword);
     }
-    if (statusFilters.length > 0) {
+
+    if (statusFilters?.length > 0) {
       appendMultipleFilters(params, "statusTypes", statusFilters);
     }
-    if (donationTypesFilters.length > 0) {
+    if (donationTypesFilters?.length > 0) {
       appendMultipleFilters(params, "donationTypes", donationTypesFilters);
     }
-    if (pickupFilters.length > 0) {
+    if (pickupFilters?.length > 0) {
       appendMultipleFilters(params, "pickupTypes", pickupFilters);
     }
 

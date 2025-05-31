@@ -94,6 +94,9 @@ export default function CollectionCenterDonationItems() {
   });
 
   const canReadDonation = useAccess("READ_DONATION");
+  const filteredStatusList = statusList.filter(
+    (item) => item.label !== "Semua" && item.value !== ""
+  );
 
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
@@ -208,6 +211,7 @@ export default function CollectionCenterDonationItems() {
     fetchDonations(
       1,
       debouncedSearch,
+      sort,
       tempSelectedStatusFilters,
       tempSelectedDonationTypesFilters,
       tempSelectedPickupFilters
@@ -440,7 +444,7 @@ export default function CollectionCenterDonationItems() {
                     <div className="mb-4 max-h-50 overflow-scroll">
                       <FilterCheckboxDonationTable
                         title="Status"
-                        items={statusList}
+                        items={filteredStatusList}
                         selected={tempSelectedStatusFilters}
                         onChange={handleTempStatusFilterChange}
                         search={filterSearchKeyword}
@@ -571,12 +575,14 @@ export default function CollectionCenterDonationItems() {
                     ) : (
                       "Proses pemeriksaan digital"
                     );
-                    const donationStatus = statusList.find((status) => {
-                      return status.value === item.approval?.latestStatus;
-                    })?.label;
-                    const donationStatusValue = statusList.find((status) => {
-                      return status.value === item.approval?.latestStatus;
-                    }).value;
+                    const donationStatus =
+                      statusList?.find((status) => {
+                        return status.value === item.approval?.latestStatus;
+                      })?.label || "";
+                    const donationStatusValue =
+                      statusList?.find((status) => {
+                        return status.value === item.approval?.latestStatus;
+                      }).value || "";
 
                     return (
                       <tr key={index} className="border-b border-b-[#EDEDED]">
@@ -814,7 +820,7 @@ export default function CollectionCenterDonationItems() {
                       value={[
                         <span className="font-bold">
                           {
-                            statusList.find(
+                            statusList?.find(
                               (status) =>
                                 status.value ===
                                 detailDonation?.approvals?.latestStatus
