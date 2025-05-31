@@ -33,7 +33,7 @@ export default function ConfirmEmail() {
         toast.success("Email berhasil diverifikasi.");
         setStatus("success");
         setTimeout(() => {
-          window.location.href = "/";
+          window.location.href = "/akun";
         }, 1000);
       } catch (error) {
         if (error.message === "Token expired") {
