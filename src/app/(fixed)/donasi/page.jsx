@@ -28,7 +28,7 @@ import { electronicOptions, donationTypes } from "src/components/options";
 export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddDonationType, setIsAddDonationType] = useState(false);
-  const [addressDistance, setAddressDistance] = useState(0);
+  const [addressDistance, setAddressDistance] = useState(null);
   const [collectionCenters, setCollectionCenters] = useState([]);
   const [posts, setPosts] = useState([]);
   const [dataCollectionCenter, setDataCollectionCenter] = useState({});
@@ -569,7 +569,9 @@ export default function Home() {
                 options={pickupTypes}
                 placeholder={`${!isEmptyObject(watch("alamat")) ? (selectedTempatPenampung ? (isCalculating ? "Sedang menghitung jarak..." : addressDistance ? "Pilih metode pengiriman yang sesuai" : "Hitung jarak terlebih dahulu") : "Tempat penampung belum dipilih") : "Alamat lengkap belum diisi"}`}
                 disabled={
-                  !selectedTempatPenampung || isCalculating || !addressDistance
+                  !selectedTempatPenampung ||
+                  isCalculating ||
+                  addressDistance === null
                 }
                 errors={errors?.tipePengiriman?.message}
                 customMenu={(props) => (
@@ -580,7 +582,7 @@ export default function Home() {
                         {selectedCabang ? "cabang" : "tempat penampung"}:{" "}
                         <span
                           className={`font-bold ${
-                            addressDistance
+                            addressDistance !== null
                               ? addressDistance <=
                                 dataCollectionCenter.distanceLimitKm
                                 ? "text-[#1F7D53]"
@@ -588,7 +590,7 @@ export default function Home() {
                               : "text-[#F0BB78]"
                           }`}
                         >
-                          {addressDistance
+                          {addressDistance !== null
                             ? `${addressDistance} km`
                             : "Proses..."}{" "}
                           (
