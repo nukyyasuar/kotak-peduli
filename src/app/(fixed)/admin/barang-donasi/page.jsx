@@ -94,6 +94,9 @@ export default function CollectionCenterDonationItems() {
   });
 
   const canReadDonation = useAccess("READ_DONATION");
+  const filteredStatusList = statusList.filter(
+    (item) => item.label !== "Semua" && item.value !== ""
+  );
 
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
@@ -208,6 +211,7 @@ export default function CollectionCenterDonationItems() {
     fetchDonations(
       1,
       debouncedSearch,
+      sort,
       tempSelectedStatusFilters,
       tempSelectedDonationTypesFilters,
       tempSelectedPickupFilters
@@ -440,7 +444,7 @@ export default function CollectionCenterDonationItems() {
                     <div className="mb-4 max-h-50 overflow-scroll">
                       <FilterCheckboxDonationTable
                         title="Status"
-                        items={statusList}
+                        items={filteredStatusList}
                         selected={tempSelectedStatusFilters}
                         onChange={handleTempStatusFilterChange}
                         search={filterSearchKeyword}
