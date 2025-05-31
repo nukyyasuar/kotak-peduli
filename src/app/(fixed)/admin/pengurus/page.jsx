@@ -73,22 +73,37 @@ export default function CollectionCenterMembers() {
       role: null,
     },
   });
-
   const canReadRole = useAccess("READ_ROLE");
 
   const totalSelectedFiltersCount = selectedMemberRolesFilters?.length;
-
-  const memberRoleListDataFormatted = memberRolesListData.map((item) => {
-    const matchMemberRole = memberRolesList.find(
-      (role) => role.value === item.name
+  const isCanEdit =
+    selectedUserId !== profileUserRole?.userId &&
+    !(
+      profileUserRole?.roleName === "Collection Center Role Admin" &&
+      (selectedMemberRoleName === "Collection Center Admin" ||
+        selectedMemberRoleName === "Collection Center Role Admin")
     );
 
-    return {
-      label: matchMemberRole?.label || item.name,
-      value: item.id,
-      name: item.name,
-    };
-  });
+  const isAdmin = profileUserRole?.roleName === "Collection Center Role Admin";
+  const memberRoleListDataFormatted = memberRolesListData
+    .filter((item) => {
+      if (!isAdmin) return true;
+      return (
+        item.name !== "Collection Center Admin" &&
+        item.name !== "Collection Center Role Admin"
+      );
+    })
+    .map((item) => {
+      const matchMemberRole = memberRolesList.find(
+        (role) => role.value === item.name
+      );
+
+      return {
+        label: matchMemberRole?.label || item.name,
+        value: item.id,
+        name: item.name,
+      };
+    });
 
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
@@ -471,7 +486,7 @@ export default function CollectionCenterMembers() {
                               setSelectedMemberId(item.id);
                               setSelectedMemberRoleName(item.role?.name);
                             }}
-                            className="border border-[#C2C2C2] rounded-sm p-1"
+                            className={`border border-[#C2C2C2] rounded-sm p-1`}
                           >
                             <Icon
                               icon="iconamoon:menu-burger-vertical"
@@ -486,15 +501,8 @@ export default function CollectionCenterMembers() {
                           {openMenuIndex === index && (
                             <div className="w-35 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
                               <ul className="py-2">
-                                {selectedUserId !== profileUserRole?.userId &&
-                                  !(
-                                    profileUserRole?.roleName ===
-                                      "Collection Center Role Admin" &&
-                                    (selectedMemberRoleName ===
-                                      "Collection Center Admin" ||
-                                      selectedMemberRoleName ===
-                                        "Collection Center Role Admin")
-                                  ) && (
+                                {isCanEdit ? (
+                                  <>
                                     <li
                                       className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
                                       onClick={() => {
@@ -505,17 +513,22 @@ export default function CollectionCenterMembers() {
                                     >
                                       Ubah Data
                                     </li>
-                                  )}
-                                <li
-                                  className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
-                                  onClick={() => {
-                                    setSelectedMemberId(item.id);
-                                    setIsDeleteMemberModalOpen(true);
-                                    setOpenMenuIndex(null);
-                                  }}
-                                >
-                                  Hapus Data
-                                </li>
+                                    <li
+                                      className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
+                                      onClick={() => {
+                                        setSelectedMemberId(item.id);
+                                        setIsDeleteMemberModalOpen(true);
+                                        setOpenMenuIndex(null);
+                                      }}
+                                    >
+                                      Hapus Data
+                                    </li>
+                                  </>
+                                ) : (
+                                  <li className="text-left px-3 py-1 text-gray-700 cursor-not-allowed text-sm">
+                                    Tidak dapat mengubah data ini
+                                  </li>
+                                )}
                               </ul>
                             </div>
                           )}
