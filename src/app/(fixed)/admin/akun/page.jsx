@@ -14,6 +14,7 @@ import {
   updateCollectionCenter,
   verifyPhoneNumberCollectionCenter,
   updateAvatarCollectionCenter,
+  verifyEmailCollectionCenter,
 } from "src/services/api/collectionCenter";
 import {
   sendPhoneVerificationCode,
@@ -42,6 +43,9 @@ export default function DaftarTempatPenampung() {
   const [formKey, setFormKey] = useState(0);
   const [isLoadingUpdateCollectionCenter, setIsLoadingUpdateCollectionCenter] =
     useState(false);
+  const [isEmailVerifModalOpen, setIsEmailVerifModalOpen] = useState(false);
+  const [isEmailVerifSent, setIsEmailVerifSent] = useState(false);
+  const [isLoadingSentVerifEmail, setIsLoadingSentVerifEmail] = useState(false);
 
   const [isEditPhoneNumber, setIsEditPhoneNumber] = useState(false);
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -55,6 +59,8 @@ export default function DaftarTempatPenampung() {
   const [phoneNumberHolder, setPhoneNumberHolder] = useState(null);
 
   const { hasPermission } = useAuth();
+  const verifEmailModalRef = useRef();
+
   const {
     register,
     handleSubmit,
@@ -108,6 +114,12 @@ export default function DaftarTempatPenampung() {
       setIsOtpSent(false);
       setIsEditPhoneNumber(false);
     },
+  });
+
+  handleOutsideModal({
+    ref: verifEmailModalRef,
+    isOpen: isEmailVerifModalOpen,
+    onClose: () => setIsEmailVerifModalOpen(false),
   });
 
   const handleFileChange = (e) => {
@@ -377,6 +389,7 @@ export default function DaftarTempatPenampung() {
         dataDetailCollectionCenter
       );
       setIsEdit(Object.keys(changes).length > 0);
+      console.log("Changes detected:", changes);
     };
 
     checkChanges();
@@ -444,9 +457,18 @@ export default function DaftarTempatPenampung() {
         const idToken = await user.getIdToken();
         setIdTokenValue(idToken);
         setPhoneNumberHolder(watchPhoneNumber);
-        toast.success("Verifikasi nomor telepon berhasil");
-      } else {
-        toast.error("Gagal memverifikasi nomor telepon");
+
+        try {
+          await verifyPhoneNumberCollectionCenter(collectionCenterId, {
+            idToken,
+            phoneNumber: "+62" + watchPhoneNumber,
+          });
+          toast.success("Verifikasi nomor telepon berhasil");
+          location.reload();
+        } catch (error) {
+          console.error("Error verifying phone number:", error);
+          toast.error("Gagal memverifikasi nomor telepon");
+        }
       }
     } catch (error) {
       {
@@ -465,9 +487,31 @@ export default function DaftarTempatPenampung() {
     } finally {
       setIsOtpSent(false);
       setIsEditPhoneNumber(false);
+      setIsEdit(false);
       setOtp(["", "", "", "", "", ""]);
       setConfirmationResult(null);
       setIsLoadingVerifyOtp(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    try {
+      setIsLoadingSentVerifEmail(true);
+
+      await verifyEmailCollectionCenter(collectionCenterId);
+      toast.success(
+        "Tautan verifikasi email berhasil dikirim. Silahkan periksa email Anda."
+      );
+
+      setIsEmailVerifSent(true);
+    } catch (error) {
+      if (error.message === "Email already verified") {
+        toast.error("Email sudah terverifikasi");
+      } else {
+        toast.error(error.message || "Gagal mengirim tautan verifikasi email");
+      }
+    } finally {
+      setIsLoadingSentVerifEmail(false);
     }
   };
 
@@ -547,17 +591,86 @@ export default function DaftarTempatPenampung() {
                     errors={errors?.namaTempatPenampung?.message}
                     className="w-full"
                   />
-                  <div className="flex gap-3">
-                    <FormInput
-                      label="Email"
-                      inputType="text"
-                      type="email"
-                      placeholder="Contoh: user@example.com"
-                      register={register("email")}
-                      required
-                      errors={errors?.email?.message}
-                      className="w-full"
-                    />
+                  <div className="flex gap-3 w-full">
+                    <div className="flex gap-3 items-end relative w-full">
+                      <FormInput
+                        label="Email"
+                        inputType="text"
+                        type="email"
+                        placeholder="Contoh: user@example.com"
+                        register={register("email")}
+                        required
+                        errors={errors?.email?.message}
+                        className="w-full"
+                      />
+                      {dataDetailCollectionCenter?.emailVerifiedAt ? (
+                        <Icon
+                          icon="icon-park-solid:check-one"
+                          width={32}
+                          height={32}
+                          color="#1F7D53"
+                          className="absolute right-2 bottom-2"
+                        />
+                      ) : (
+                        <ButtonCustom
+                          type="button"
+                          variant="orange"
+                          label="Verifikasi Email"
+                          onClick={() => {
+                            handleVerifyEmail();
+                            setIsEmailVerifModalOpen(true);
+                          }}
+                          className="h-12 text-nowrap"
+                        />
+                      )}
+                      {isEmailVerifModalOpen && (
+                        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
+                          <div
+                            ref={verifEmailModalRef}
+                            className="bg-white rounded-lg p-8 space-y-6 text-black"
+                          >
+                            <h1 className="font-bold text-xl">
+                              Verfikasi Email
+                            </h1>
+                            <div className="flex gap-1">
+                              <span>
+                                Link verifikasi akan dikirim ke email Anda:
+                              </span>
+                              <span className="font-bold">
+                                {watch("email")}
+                              </span>
+                            </div>
+                            {isLoadingSentVerifEmail ? (
+                              <div className="flex items-center justify-center">
+                                <ClipLoader
+                                  color="#F5A623"
+                                  loading={isLoadingSentVerifEmail}
+                                  size={24}
+                                />
+                              </div>
+                            ) : (
+                              isEmailVerifSent && (
+                                <div className="flex items-center gap-3">
+                                  <div className="w-md">
+                                    <p>
+                                      Link verifikasi telah dikirim ke email
+                                      anda. Silakan periksa dan lakukan
+                                      verifikasi dengan mengklik link tersebut.
+                                    </p>
+                                  </div>
+                                  <Icon
+                                    icon="icon-park-solid:check-one"
+                                    width={48}
+                                    height={48}
+                                    color="#1F7D53"
+                                  />
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                     <FormInput
                       label="Nomor Telepon (Whatsapp)"
                       inputType="text"
