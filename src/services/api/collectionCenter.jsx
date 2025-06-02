@@ -168,6 +168,33 @@ const verifyPhoneNumberCollectionCenter = async (
   }
 };
 
+const verifyEmailCollectionCenter = async (collectionCenterId) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers/${collectionCenterId}/verify-email`,
+      createRequestOptions("POST")
+    );
+    const result = await handleApiResponse(response);
+
+    return result;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+const confirmEmailCollectionCenter = async (collectionCenterId, token) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers/${collectionCenterId}/confirm-email`,
+      createRequestOptions("POST", token)
+    );
+    const result = await handleApiResponse(response);
+    return result.data;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 const updateAvatarCollectionCenter = async (collectionCenterId, payload) => {
   try {
     const response = await fetchWithAuth(
@@ -191,5 +218,7 @@ export {
   updateCollectionCenter,
   processCollectionCenter,
   verifyPhoneNumberCollectionCenter,
+  verifyEmailCollectionCenter,
+  confirmEmailCollectionCenter,
   updateAvatarCollectionCenter,
 };

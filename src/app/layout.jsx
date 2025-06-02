@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
             {children}
           </div>
 
-          <ToastContainer position="top-right" autoClose={1000} />
+          <ToastContainer position="top-right" autoClose={2000} />
 
           {showLayout && <Footer />}
         </AuthProvider>

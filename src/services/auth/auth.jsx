@@ -7,6 +7,7 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber,
 } from "firebase/auth";
+import { toast } from "react-toastify";
 import { auth } from "src/services/auth/firebase";
 
 // Store reCAPTCHA verifier globally
@@ -66,14 +67,12 @@ export const setupRecaptcha = async (containerId, forceReset = false) => {
   }
 };
 
-// Validate phone number format
 const isValidPhoneNumber = (phone) => {
   return (
     phone && phone.startsWith("+") && phone.length >= 12 && phone.length <= 15
   );
 };
 
-// Send verification code to phone number
 export const sendPhoneVerificationCode = async (phoneNumber) => {
   try {
     const verifier = await setupRecaptcha("recaptcha-container", true);
@@ -117,7 +116,6 @@ export const sendPhoneVerificationCode = async (phoneNumber) => {
   }
 };
 
-// Verify OTP code
 export const verifyPhoneCode = async (confirmationResult, verificationCode) => {
   try {
     if (
@@ -126,22 +124,25 @@ export const verifyPhoneCode = async (confirmationResult, verificationCode) => {
     ) {
       throw new Error("Invalid confirmation result. Please request a new OTP.");
     }
+
     const result = await confirmationResult.confirm(verificationCode);
+
     return result.user;
   } catch (error) {
-    console.error("Error verifying OTP code:", error);
     switch (error.code) {
       case "auth/invalid-verification-code":
-        throw new Error("Kode OTP tidak valid.");
+        toast.error("Kode OTP salah. Silakan cek kode OTP kembali.");
+        break;
       case "auth/session-expired":
-        throw new Error("Sesi OTP telah kedaluwarsa. Silakan minta kode baru.");
+        toast.error("Sesi OTP telah kedaluwarsa. Silakan minta kode baru.");
+        break;
       default:
-        throw new Error("Gagal memverifikasi OTP: " + error.message);
+        toast.error("Gagal memverifikasi OTP. Silakan coba lagi.");
+        break;
     }
   }
 };
 
-// Check auth state
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, callback);
 };

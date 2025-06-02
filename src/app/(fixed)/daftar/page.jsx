@@ -29,17 +29,14 @@ import {
 } from "../../../services/auth/authStore";
 
 export default function Registration() {
-  // Form/Registration states
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSubmit, setIsLoadingSubmit] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  // Add new state to control view
   const [showOtpVerification, setShowOtpVerification] = useState(false);
 
-  // OTP states
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [timer, setTimer] = useState(60);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -94,7 +91,6 @@ export default function Registration() {
       const formattedPhoneNumber = "+62" + data.phoneNumber;
       const registrationData = { ...data, phoneNumber: formattedPhoneNumber };
 
-      // Attempt to save registrationData with retry
       let attempts = 0;
       const maxAttempts = 3;
       while (attempts < maxAttempts) {
@@ -113,24 +109,20 @@ export default function Registration() {
               "Gagal menyimpan data registrasi setelah beberapa percobaan."
             );
           }
-          await new Promise((resolve) => setTimeout(resolve, 100)); // Brief delay before retry
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
 
-      // Save registrationData in state as well
       setRegistrationData(registrationData);
 
-      // Save OTP verification state to localStorage
+      setShowOtpVerification(true);
       localStorage.setItem("showOtpVerification", "true");
 
-      // Show OTP verification screen first, then send code
-      setShowOtpVerification(true);
-
-      // Wait for recaptcha to initialize
       setTimeout(async () => {
         try {
           const confirmation =
             await sendPhoneVerificationCode(formattedPhoneNumber);
+
           toast.success(
             "Kode OTP telah dikirim ke nomor telepon Anda. Silakan periksa pesan masuk Anda."
           );
@@ -151,15 +143,6 @@ export default function Registration() {
         err.message || "Terjadi kesalahan saat memproses pendaftaran"
       );
       setIsLoadingSubmit(false);
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      await loginWithGoogle();
-      router.push("/");
-    } catch (err) {
-      toast.error(err.message);
     }
   };
 
@@ -193,6 +176,91 @@ export default function Registration() {
     }
   };
 
+  //   const handleVerifyOtp = async () => {
+  //     setIsLoading(true);
+
+  //     const code = otp.join("");
+  //     if (!code || code.length !== 6) {
+  //       toast.error("Masukkan 6 digit kode OTP");
+  //       setIsLoading(false);
+  //       return;
+  //     }
+
+  //     if (!registrationData || Object.keys(registrationData).length === 0) {
+  //       toast.error("Data registrasi tidak ditemukan. Silakan daftar ulang.");
+  //       setIsLoading(false);
+  //       setShowOtpVerification(false);
+  //       return;
+  //     }
+
+  //     try {
+  //       const user = await verifyPhoneCode(confirmationResult, code);
+  //       if (user) {
+  //         const idToken = await user.getIdToken();
+
+  //         try {
+  // await registerWithEmail({
+  //           email: watch("email"),
+  //           password: watch("password"),
+  //           firstName: watch("firstName"),
+  //           lastName: watch("lastName"),
+  //           phoneNumber: "+62" + watch("phoneNumber"),
+  //           ...(idToken ? { idToken: idToken } : {}),
+  //         });
+  //         toast.success(
+  //           "Pendaftaran berhasil! Anda akan diarahkan ke halaman login."
+  //         );
+  //         } catch (error) {
+
+  //         }
+
+  //         }
+
+  //       const { email, password } = registrationData;
+  //       if (!email || !password) {
+  //         throw new Error(
+  //           "Data registrasi tidak lengkap (email atau password hilang). Silakan daftar ulang."
+  //         );
+  //       }
+
+  //       localStorage.removeItem("registrationData");
+  //       localStorage.removeItem("showOtpVerification");
+  //       clearConfirmationResult();
+
+  //       toast.success(
+  //         "Pendaftaran berhasil! Anda akan diarahkan ke halaman login."
+  //       );
+  //       router.push("/login");
+  //     } catch (err) {
+  //       console.error("Error during OTP verification or registration:", err);
+  //       if (err?.code === "auth/invalid-verification-code") {
+  //         toast.error("Kode OTP salah. Silakan coba lagi.");
+  //       }
+  //       if (err?.code === "auth/session-expired") {
+  //         toast.error("Sesi OTP telah kedaluwarsa. Silakan minta kode baru.");
+  //       }
+  //       if (err?.code === "auth/too-many-requests") {
+  //         toast.error("Terlalu banyak permintaan. Silakan coba lagi nanti.");
+  //       }
+  //       if (
+  //         err?.message ===
+  //         "A user with the same email or phone number already exists"
+  //       ) {
+  //         toast.error(
+  //           "Akun dengan nomor telepon ini sudah terdaftar. Silakan gunakan nomor lain."
+  //         );
+  //       }
+  //       if (
+  //         err?.message?.includes("tidak lengkap") ||
+  //         err?.code === "auth/invalid-phone-number"
+  //       ) {
+  //         setShowOtpVerification(false);
+  //         localStorage.removeItem("showOtpVerification");
+  //       }
+  //     } finally {
+  //       setIsLoading(false);
+  //     }
+  //   };
   const handleVerifyOtp = async () => {
     setIsLoading(true);
 
@@ -212,57 +280,58 @@ export default function Registration() {
 
     try {
       const user = await verifyPhoneCode(confirmationResult, code);
-      const idToken = await user.getIdToken();
+      if (user) {
+        const idToken = await user.getIdToken();
 
-      const { email, password } = registrationData;
-      if (!email || !password) {
-        throw new Error(
-          "Data registrasi tidak lengkap (email atau password hilang). Silakan daftar ulang."
+        const { email, password } = registrationData;
+        if (!email || !password) {
+          throw new Error(
+            "Data registrasi tidak lengkap (email atau password hilang). Silakan daftar ulang."
+          );
+        }
+
+        await registerWithEmail({
+          email: watch("email"),
+          password: watch("password"),
+          firstName: watch("firstName"),
+          lastName: watch("lastName"),
+          phoneNumber: "+62" + watch("phoneNumber"),
+          ...(idToken ? { idToken } : {}),
+        });
+
+        toast.success(
+          "Pendaftaran berhasil! Anda akan diarahkan ke halaman login."
         );
+        localStorage.removeItem("registrationData");
+        localStorage.removeItem("showOtpVerification");
+        clearConfirmationResult();
+        router.push("/login");
       }
-
-      await registerWithEmail({
-        email: watch("email"),
-        password: watch("password"),
-        firstName: watch("firstName"),
-        lastName: watch("lastName"),
-        phoneNumber: "+62" + watch("phoneNumber"),
-        idToken,
-      });
-
-      localStorage.removeItem("registrationData");
-      localStorage.removeItem("showOtpVerification");
-      clearConfirmationResult();
-
-      toast.success(
-        "Pendaftaran berhasil! Anda akan diarahkan ke halaman login."
-      );
-      router.push("/login");
     } catch (err) {
       console.error("Error during OTP verification or registration:", err);
+
       if (err?.code === "auth/invalid-verification-code") {
         toast.error("Kode OTP salah. Silakan coba lagi.");
-      }
-      if (err?.code === "auth/session-expired") {
+      } else if (err?.code === "auth/session-expired") {
         toast.error("Sesi OTP telah kedaluwarsa. Silakan minta kode baru.");
-      }
-      if (err?.code === "auth/too-many-requests") {
+      } else if (err?.code === "auth/too-many-requests") {
         toast.error("Terlalu banyak permintaan. Silakan coba lagi nanti.");
-      }
-      if (
+      } else if (
         err?.message ===
         "A user with the same email or phone number already exists"
       ) {
         toast.error(
           "Akun dengan nomor telepon ini sudah terdaftar. Silakan gunakan nomor lain."
         );
-      }
-      if (
+      } else if (
         err?.message?.includes("tidak lengkap") ||
         err?.code === "auth/invalid-phone-number"
       ) {
         setShowOtpVerification(false);
         localStorage.removeItem("showOtpVerification");
+        toast.error("Terjadi kesalahan data. Silakan daftar ulang.");
+      } else {
+        toast.error("Terjadi kesalahan saat verifikasi. Silakan coba lagi.");
       }
     } finally {
       setIsLoading(false);
@@ -340,21 +409,21 @@ export default function Registration() {
       if (window.recaptchaVerifier) {
         window.recaptchaVerifier.clear();
       }
-    } catch (err) {
-      console.warn("Failed to clear reCAPTCHA:", err);
+    } catch (error) {
+      console.error("Failed to clear reCAPTCHA:", error);
     }
 
+    setOtp(["", "", "", "", "", ""]);
     setShowOtpVerification(false);
     localStorage.removeItem("showOtpVerification");
   };
 
-  // Check for stored OTP state on component mount
   useEffect(() => {
     try {
-      // Check if we were in OTP verification
       const storedRegistrationData = JSON.parse(
         localStorage.getItem("registrationData")
       );
+
       const storedVerificationState =
         localStorage.getItem("showOtpVerification") === "true";
 
@@ -362,31 +431,22 @@ export default function Registration() {
         setRegistrationData(storedRegistrationData);
         setShowOtpVerification(true);
 
-        // Retrieve confirmation result if available
         const storedConfirmation = getConfirmationResult();
         if (storedConfirmation) {
           setConfirmationResult(storedConfirmation);
-        } else {
-          // Set timer for 2 seconds to allow DOM to fully render before initializing reCAPTCHA
-          setTimeout(() => {
-            handleResendOtp(storedRegistrationData);
-          }, 2000);
         }
 
-        // Start timer if needed
         setTimer(60);
         setIsTimerRunning(true);
       }
     } catch (err) {
       console.error("Error restoring verification state:", err);
-      // Reset state in case of error
       localStorage.removeItem("showOtpVerification");
       localStorage.removeItem("registrationData");
       clearConfirmationResult();
     }
   }, []);
 
-  // Initialize recaptcha when component mounts
   useEffect(() => {
     if (!recaptchaContainerRef.current || !showOtpVerification) return;
 
@@ -417,7 +477,6 @@ export default function Registration() {
     return () => unsubscribe();
   }, []);
 
-  // Timer for resend OTP
   useEffect(() => {
     let interval;
     if (isTimerRunning && timer > 0) {
@@ -429,6 +488,14 @@ export default function Registration() {
     }
     return () => clearInterval(interval);
   }, [isTimerRunning, timer]);
+
+  useEffect(() => {
+    if (!watch("phoneNumber")) {
+      setShowOtpVerification(false);
+      localStorage.removeItem("showOtpVerification");
+      clearConfirmationResult();
+    }
+  }, [watch("phoneNumber")]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-black">
@@ -460,7 +527,7 @@ export default function Registration() {
 
         {/* Form / OTP Section */}
         <div className="w-full md:w-1/2 px-4 sm:px-6">
-          {!showOtpVerification ? (
+          {!showOtpVerification || !watch("phoneNumber") ? (
             <div className="max-w-md mx-auto space-y-6">
               <div id="recaptcha-container" className="hidden" />
 
@@ -548,17 +615,6 @@ export default function Registration() {
                     )
                   }
                 />
-
-                {/* Optional Google Login */}
-                {/* <Spacer text="atau menggunakan" />
-            <ButtonCustom
-              type="button"
-              onClick={handleGoogleLogin}
-              label="Google"
-              variant="outlineOrange"
-              icon="devicon:google"
-              className="w-full h-12 gap-2"
-            /> */}
 
                 <TextWithLink
                   href="/login"
