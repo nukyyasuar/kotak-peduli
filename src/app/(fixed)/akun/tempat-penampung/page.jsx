@@ -7,20 +7,20 @@ import Image from "next/image";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { toast } from "react-toastify";
 import { ClipLoader } from "react-spinners";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import collectionCenterRegistSchema from "src/components/schema/collectionCenterRegistSchema";
 import {
   createCollectionCenter,
   getOneCollectionCenter,
+  verifyPhoneNumberCollectionCenter,
 } from "src/services/api/collectionCenter";
 import { getProfile } from "src/services/api/profile";
 import {
   sendPhoneVerificationCode,
   verifyPhoneCode,
 } from "src/services/auth/auth";
-import { useAuth } from "src/services/auth/AuthContext";
+import { useAccess } from "src/services/auth/acl";
 
 import { FormInput } from "src/components/formInput";
 import AddressModal from "src/components/addressModal";
@@ -29,7 +29,7 @@ import OperationalModal from "src/components/operationalModal";
 import { donationTypes, days } from "src/components/options";
 import handleOutsideModal from "src/components/handleOutsideModal";
 
-export default function DaftarTempatPenampung() {
+export default function AkunTempatPenampung() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isModalOperationalOpen, setIsModalOperationalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
@@ -83,18 +83,21 @@ export default function DaftarTempatPenampung() {
     },
   });
   const router = useRouter();
-  const { hasPermission } = useAuth();
 
   const userRole = dataProfile?.collectionCenterCollaborator?.role?.name;
+  const canReadDonation = useAccess("READ_DONATION");
+  const canReadEvent = useAccess("READ_EVENT");
+  const canReadPost = useAccess("READ_POST");
+  const canReadRole = useAccess("READ_ROLE");
 
   const routerByPermission = () => {
-    if (hasPermission("READ_DONATION")) {
+    if (canReadDonation) {
       router.push("/admin/barang-donasi");
-    } else if (hasPermission("READ_EVENT")) {
+    } else if (canReadEvent) {
       router.push("/admin/event");
-    } else if (hasPermission("READ_POST")) {
+    } else if (canReadPost) {
       router.push("/admin/cabang");
-    } else if (hasPermission("READ_ROLE")) {
+    } else if (canReadRole) {
       router.push("/admin/pengurus");
     } else {
       router.push("/unauthorized");
@@ -358,24 +361,19 @@ export default function DaftarTempatPenampung() {
     }
   };
 
-  return isLoadingCreateCollectionCenter ||
-    isLoadingCollectionCenter ||
-    isLoadingDetailCollectionCenter ? (
+  return isLoadingCollectionCenter || isLoadingDetailCollectionCenter ? (
     <div className="flex items-center justify-center h-50 sm:h-90">
       <ClipLoader
         color="#F5A623"
-        loading={
-          isLoadingCreateCollectionCenter ||
-          isLoadingCollectionCenter ||
-          isLoadingDetailCollectionCenter
-        }
+        loading={isLoadingCollectionCenter || isLoadingDetailCollectionCenter}
         size={50}
       />
     </div>
   ) : (
     <div className="space-y-3 px-8 lg:px-0">
       <div className="mb-6 text-[#543A14] space-y-2">
-        {userRole !== "Collection Center Admin" ? (
+        {userRole !== "Collection Center Admin" &&
+        dataDetailCollectionCenter?.approval?.latestStatus !== "PENDING" ? (
           <div className="space-y-2">
             <h2 className="text-xl font-bold">Pengurus Tempat Penampung</h2>
             <p className="text-base">
@@ -422,11 +420,11 @@ export default function DaftarTempatPenampung() {
       </div>
 
       {isSubmitted || isPending || isApproved || isDecline ? (
-        isApproved &&
-        (hasPermission("READ_DONATION") ||
-          hasPermission("READ_EVENT") ||
-          hasPermission("READ_POST") ||
-          hasPermission("READ_ROLE")) ? (
+        isApproved ||
+        canReadDonation ||
+        canReadEvent ||
+        canReadPost ||
+        canReadRole ? (
           <ButtonCustom
             label="Dashboard Tempat Penampung"
             variant="orange"
@@ -447,7 +445,7 @@ export default function DaftarTempatPenampung() {
                 required
                 errors={errors?.namaTempatPenampung?.message}
               />
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex gap-3 items-end relative">
                 <FormInput
                   label="Email"
                   inputType="text"
@@ -457,6 +455,7 @@ export default function DaftarTempatPenampung() {
                   required
                   errors={errors?.email?.message}
                   className="w-full"
+                  inputStyles={"w-full"}
                 />
                 <FormInput
                   label="Nomor Telepon (Whatsapp)"
@@ -467,7 +466,7 @@ export default function DaftarTempatPenampung() {
                   inputStyles={"border-none"}
                   required
                   disabled
-                  className="w-full"
+                  className={"w-full"}
                 />
                 <div className="flex items-end">
                   <ButtonCustom
@@ -726,8 +725,19 @@ export default function DaftarTempatPenampung() {
             <ButtonCustom
               type="submit"
               variant="orange"
-              label="Kirim"
-              className="w-full"
+              label={
+                isLoadingCreateCollectionCenter ? (
+                  <ClipLoader
+                    color="white"
+                    size={20}
+                    loading={isLoadingCreateCollectionCenter}
+                  />
+                ) : (
+                  "Kirim"
+                )
+              }
+              disabled={isLoadingCreateCollectionCenter}
+              className="w-full h-12"
             />
           </div>
         </form>
