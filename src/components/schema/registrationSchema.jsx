@@ -3,16 +3,21 @@ import * as yup from "yup";
 export const registrationSchema = yup.object().shape({
   firstName: yup
     .string()
-    .required("Nama depan tidak boleh kosong")
-    .min(3, "Nama depan harus berisi minimal 3 karakter")
-    .matches(/^[A-Za-z\s]+$/, "Nama depan hanya boleh berisi huruf dan spasi"),
-  lastName: yup
-    .string()
-    .required("Nama belakang tidak boleh kosong")
-    .min(3, "Nama belakang harus berisi minimal 3 karakter")
+    .required("Nama depan wajib diisi.")
+    .min(3, "Nama depan minimal terdiri dari 3 karakter.")
+    .max(50, "Nama depan maksimal terdiri dari 50 karakter.")
     .matches(
       /^[A-Za-z\s]+$/,
-      "Nama belakang hanya boleh berisi huruf dan spasi"
+      "Nama depan hanya boleh menggunakan huruf dan spasi."
+    ),
+  lastName: yup
+    .string()
+    .required("Nama belakang wajib diisi.")
+    .min(3, "Nama belakang minimal terdiri dari 3 karakter.")
+    .max(50, "Nama belakang maksimal terdiri dari 50 karakter.")
+    .matches(
+      /^[A-Za-z\s]+$/,
+      "Nama belakang hanya boleh menggunakan huruf dan spasi."
     ),
   phoneNumber: yup
     .string()
@@ -22,37 +27,37 @@ export const registrationSchema = yup.object().shape({
     .max(15, "Nomor telepon maksimal terdiri dari 15 digit.")
     .matches(
       /^8\d{9,14}$/,
-      "Nomor telepon harus dimulai dengan angka ‘8’ (contoh: 81231231231)"
+      "Nomor telepon harus dimulai dengan angka ‘8’ (contoh: 81231231231)."
     ),
   email: yup
     .string()
-    .required("Email tidak boleh kosong")
+    .required("Email wajib diisi.")
     .email(
-      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)"
+      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)."
     ),
   password: yup
     .string()
-    .required("Password tidak boleh kosong")
-    .min(8, "Password harus berisi minimal 8 karakter")
+    .required("Password wajib diisi.")
+    .min(8, "Password minimal terdiri dari 8 karakter.")
     .matches(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password harus mengandung huruf besar, huruf kecil, dan angka"
+      "Password harus terdiri dari huruf besar, huruf kecil, dan angka."
     ),
 });
 
 export const loginSchema = yup.object().shape({
   email: yup
     .string()
-    .required("Email tidak boleh kosong")
+    .required("Email wajib diisi.")
     .email(
-      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)"
+      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)."
     ),
   password: yup
     .string()
-    .required("Password tidak boleh kosong")
-    .min(8, "Password harus berisi minimal 8 karakter")
+    .required("Password wajib diisi.")
+    .min(8, "Password minimal terdiri dari 8 karakter.")
     .matches(
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      "Password harus mengandung huruf besar, huruf kecil, dan angka"
+      "Password harus terdiri dari huruf besar, huruf kecil, dan angka."
     ),
 });
