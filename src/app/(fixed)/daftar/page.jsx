@@ -321,7 +321,7 @@ export default function Registration() {
         "A user with the same email or phone number already exists"
       ) {
         toast.error(
-          "Akun dengan nomor telepon ini sudah terdaftar. Silakan gunakan nomor lain."
+          "Akun dengan nomor telepon atau email ini sudah terdaftar. Silakan gunakan nomor lain."
         );
       } else if (
         err?.message?.includes("tidak lengkap") ||
