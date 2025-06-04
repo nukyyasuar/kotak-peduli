@@ -56,12 +56,16 @@ export default function Testimony() {
     formData.append("collectionCenterId", collectionCenterId);
 
     try {
+      setIsLoadingSubmit(true);
+
       await createTestimony(formData);
       toast.success("Ucapan terima kasih berhasil dikirim.");
       reset();
     } catch (error) {
       console.error("Error creating testimony:", error);
       toast.error("Gagal mengirim ucapan terima kasih.");
+    } finally {
+      setIsLoadingSubmit(false);
     }
   };
 
