@@ -50,8 +50,9 @@ export const loginSchema = yup.object().shape({
   email: yup
     .string()
     .required("Email wajib diisi.")
-    .email(
-      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)."
+    .matches(
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)"
     ),
   password: yup
     .string()
