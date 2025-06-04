@@ -591,38 +591,45 @@ export default function DaftarTempatPenampung() {
                     errors={errors?.namaTempatPenampung?.message}
                     className="w-full"
                   />
-                  <div className="flex gap-3 w-full">
-                    <div className="flex gap-3 items-end relative w-full">
-                      <FormInput
-                        label="Email"
-                        inputType="text"
-                        type="email"
-                        placeholder="Contoh: user@example.com"
-                        register={register("email")}
-                        required
-                        errors={errors?.email?.message}
-                        className="w-full"
-                      />
-                      {dataDetailCollectionCenter?.emailVerifiedAt ? (
-                        <Icon
-                          icon="icon-park-solid:check-one"
-                          width={32}
-                          height={32}
-                          color="#1F7D53"
-                          className="absolute right-2 bottom-2"
+                  <div className="flex flex-col gap-3 w-full">
+                    <div className="min-w-xl">
+                      <div className="flex gap-3 items-end relative">
+                        <FormInput
+                          label="Email"
+                          inputType="text"
+                          type="email"
+                          placeholder="Contoh: user@example.com"
+                          register={register("email")}
+                          required
+                          className="w-full"
                         />
-                      ) : (
-                        <ButtonCustom
-                          type="button"
-                          variant="orange"
-                          label="Verifikasi Email"
-                          onClick={() => {
-                            handleVerifyEmail();
-                            setIsEmailVerifModalOpen(true);
-                          }}
-                          className="h-12 text-nowrap"
-                        />
+                        {dataDetailCollectionCenter?.emailVerifiedAt ? (
+                          <Icon
+                            icon="icon-park-solid:check-one"
+                            width={32}
+                            height={32}
+                            color="#1F7D53"
+                            className="absolute right-2 bottom-2"
+                          />
+                        ) : (
+                          <ButtonCustom
+                            type="button"
+                            variant="orange"
+                            label="Verifikasi Email"
+                            onClick={() => {
+                              handleVerifyEmail();
+                              setIsEmailVerifModalOpen(true);
+                            }}
+                            className="h-12 text-nowrap"
+                          />
+                        )}
+                      </div>
+                      {errors?.email?.message && (
+                        <p className="text-[#E52020] text-sm mt-1">
+                          {errors?.email?.message}
+                        </p>
                       )}
+
                       {isEmailVerifModalOpen && (
                         <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
                           <div
@@ -671,108 +678,111 @@ export default function DaftarTempatPenampung() {
                         </div>
                       )}
                     </div>
-                    <FormInput
-                      label="Nomor Telepon (Whatsapp)"
-                      inputType="text"
-                      placeholder="Contoh: 81212312312"
-                      value={phoneNumberHolder || ""}
-                      errors={errors?.nomorTelepon?.message}
-                      inputStyles={"border-none"}
-                      required
-                      disabled
-                      className="w-full"
-                    />
-                    <div className="flex items-end">
-                      <ButtonCustom
-                        variant="orange"
-                        type="button"
-                        label={`Ubah Nomor Telepon`}
-                        className="text-nowrap h-12"
-                        onClick={() => setIsEditPhoneNumber(true)}
-                      />
-                      {isEditPhoneNumber && (
-                        <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
-                          <div
-                            ref={editPhoneNumberModalRef}
-                            className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
-                          >
-                            <h3 className="text-xl font-bold">
-                              Ubah Nomor Telepon
-                            </h3>
 
-                            <div className="flex items-end">
-                              <FormInput
-                                label="Nomor Telepon (Whatsapp)"
-                                inputType="text"
-                                placeholder="Contoh: 81212312312"
-                                register={register("nomorTelepon")}
-                                inputStyles={`w-full`}
-                                className="w-full"
-                              />
-                              {dataDetailCollectionCenter?.phoneNumber !==
-                                "+62" + watch("nomorTelepon") && (
-                                <ButtonCustom
-                                  variant="orange"
-                                  type="button"
-                                  label={`Kirim OTP`}
-                                  className="h-12 ml-3 text-nowrap"
-                                  isLoading={isLoadingSendOtp}
-                                  onClick={handleSendOtp}
+                    <div className="flex gap-3">
+                      <FormInput
+                        label="Nomor Telepon (Whatsapp)"
+                        inputType="text"
+                        placeholder="Contoh: 81212312312"
+                        value={phoneNumberHolder || ""}
+                        errors={errors?.nomorTelepon?.message}
+                        inputStyles={"border-none"}
+                        required
+                        disabled
+                        className="w-full"
+                      />
+                      <div className="flex items-end">
+                        <ButtonCustom
+                          variant="orange"
+                          type="button"
+                          label={`Ubah Nomor Telepon`}
+                          className="text-nowrap h-12"
+                          onClick={() => setIsEditPhoneNumber(true)}
+                        />
+                        {isEditPhoneNumber && (
+                          <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
+                            <div
+                              ref={editPhoneNumberModalRef}
+                              className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
+                            >
+                              <h3 className="text-xl font-bold">
+                                Ubah Nomor Telepon
+                              </h3>
+
+                              <div className="flex items-end">
+                                <FormInput
+                                  label="Nomor Telepon (Whatsapp)"
+                                  inputType="text"
+                                  placeholder="Contoh: 81212312312"
+                                  register={register("nomorTelepon")}
+                                  inputStyles={`w-full`}
+                                  className="w-full"
                                 />
+                                {dataDetailCollectionCenter?.phoneNumber !==
+                                  "+62" + watch("nomorTelepon") && (
+                                  <ButtonCustom
+                                    variant="orange"
+                                    type="button"
+                                    label={`Kirim OTP`}
+                                    className="h-12 ml-3 text-nowrap"
+                                    isLoading={isLoadingSendOtp}
+                                    onClick={handleSendOtp}
+                                  />
+                                )}
+                              </div>
+
+                              <div id="recaptcha-container" />
+
+                              {isOtpSent && (
+                                <div className="pt-5 border-t space-y-3">
+                                  <h3 className="text-lg font-bold">
+                                    Verifikasi OTP
+                                  </h3>
+                                  <div className="flex gap-3">
+                                    <div className="flex gap-3">
+                                      {otp.map((data, index) => (
+                                        <input
+                                          key={index}
+                                          type="text"
+                                          maxLength="1"
+                                          value={data}
+                                          onChange={(e) =>
+                                            handleOtpChange(e.target, index, e)
+                                          }
+                                          onKeyDown={(e) =>
+                                            handleKeyDown(e, index)
+                                          }
+                                          ref={(el) =>
+                                            (inputRefs.current[index] = el)
+                                          }
+                                          className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
+                                          style={{
+                                            color: data ? "#131010" : "#000",
+                                            outlineColor: data
+                                              ? "#131010"
+                                              : "#C2C2C2",
+                                          }}
+                                          aria-label={`OTP digit ${index + 1}`}
+                                          aria-required="true"
+                                          autoComplete="one-time-code"
+                                        />
+                                      ))}
+                                    </div>
+                                    <ButtonCustom
+                                      type="button"
+                                      variant="orange"
+                                      label="Konfirmasi"
+                                      onClick={handleVerifyOtp}
+                                      isLoading={isLoadingVerifyOtp}
+                                      className="min-w-[146px]"
+                                    />
+                                  </div>
+                                </div>
                               )}
                             </div>
-
-                            <div id="recaptcha-container" />
-
-                            {isOtpSent && (
-                              <div className="pt-5 border-t space-y-3">
-                                <h3 className="text-lg font-bold">
-                                  Verifikasi OTP
-                                </h3>
-                                <div className="flex gap-3">
-                                  <div className="flex gap-3">
-                                    {otp.map((data, index) => (
-                                      <input
-                                        key={index}
-                                        type="text"
-                                        maxLength="1"
-                                        value={data}
-                                        onChange={(e) =>
-                                          handleOtpChange(e.target, index, e)
-                                        }
-                                        onKeyDown={(e) =>
-                                          handleKeyDown(e, index)
-                                        }
-                                        ref={(el) =>
-                                          (inputRefs.current[index] = el)
-                                        }
-                                        className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
-                                        style={{
-                                          color: data ? "#131010" : "#000",
-                                          outlineColor: data
-                                            ? "#131010"
-                                            : "#C2C2C2",
-                                        }}
-                                        aria-label={`OTP digit ${index + 1}`}
-                                        aria-required="true"
-                                        autoComplete="one-time-code"
-                                      />
-                                    ))}
-                                  </div>
-                                  <ButtonCustom
-                                    type="button"
-                                    variant="orange"
-                                    label="Konfirmasi"
-                                    onClick={handleVerifyOtp}
-                                    isLoading={isLoadingVerifyOtp}
-                                    className="min-w-[146px]"
-                                  />
-                                </div>
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div>
