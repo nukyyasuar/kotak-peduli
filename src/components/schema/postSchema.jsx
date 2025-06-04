@@ -4,7 +4,7 @@ const postSchema = yup.object().shape({
   nama: yup
     .string()
     .required("Nama cabang / drop point wajib diisi.")
-    .min(10, "Nama cabang / drop point minimal terdiri dari 10 karakter.")
+    .min(5, "Nama cabang / drop point minimal terdiri dari 5 karakter.")
     .max(100, "Nama cabang / drop point maksimal terdiri dari 100 karakter."),
   nomorTelepon: yup
     .string()
