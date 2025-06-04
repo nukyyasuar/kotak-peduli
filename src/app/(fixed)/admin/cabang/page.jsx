@@ -316,7 +316,7 @@ export default function CollectionCenterPosts() {
                   loading={isLoadingFetchPosts}
                 />
               </div>
-            ) : totalData < 0 ? (
+            ) : totalData === 0 ? (
               "Data tidak ditemukan"
             ) : (
               <table className="w-full bg-white rounded-lg">
@@ -432,7 +432,7 @@ export default function CollectionCenterPosts() {
         </main>
       )}
 
-      {/* Modal Tambah & Ubah Event */}
+      {/* Modal Tambah & Ubah Cabang */}
       {(isAddPostModalOpen || isEditPostModalOpen) && (
         <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
           <div className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px] min-w-135 overflow-y-auto max-h-[90vh]">
