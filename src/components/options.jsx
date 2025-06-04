@@ -330,7 +330,6 @@ const minutes = Array.from({ length: 60 }, (_, i) => ({
 }));
 
 export {
-  testimonials,
   clothesCriteria,
   bookCriteria,
   electronicCriteria,
