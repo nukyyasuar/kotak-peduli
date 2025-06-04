@@ -368,7 +368,7 @@ export default function AdminConsoleDashboard() {
                       size={28}
                     />
                   </div>
-                ) : totalData <= 0 ? (
+                ) : totalData === 0 ? (
                   "Data tidak ditemukan"
                 ) : (
                   <table className="w-full bg-white rounded-lg">
