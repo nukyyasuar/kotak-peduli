@@ -15,7 +15,6 @@ import {
   KriteriaCard,
 } from "src/components/homepage";
 import {
-  testimonials,
   clothesCriteria,
   bookCriteria,
   electronicCriteria,

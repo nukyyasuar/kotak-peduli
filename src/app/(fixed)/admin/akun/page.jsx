@@ -391,7 +391,6 @@ export default function DaftarTempatPenampung() {
         dataDetailCollectionCenter
       );
       setIsEdit(Object.keys(changes).length > 0);
-      console.log("Changes detected:", changes);
     };
 
     checkChanges();
@@ -556,9 +555,6 @@ export default function DaftarTempatPenampung() {
       setIsLoadingSentVerifEmail(false);
     }
   };
-
-  console.log("errors:", errors);
-  console.log("watch nomorTelepon:", watchPhoneNumber);
 
   return (
     <div className="max-w-[1200px] mx-auto py-12">

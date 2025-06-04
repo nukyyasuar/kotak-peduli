@@ -1,19 +1,4 @@
 // Homepage
-const testimonials = [
-  {
-    name: "Fulani",
-    role: "Ketua Pengurus",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam.",
-    image: "/reviewer-photo.webp",
-  },
-  {
-    name: "Fulana",
-    role: "Ketua Pengurus",
-    text: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris iaculis eget nibh nec porttitor. Etiam.",
-    image: "/reviewer-photo.webp",
-  },
-];
-
 const clothesCriteria = [
   { text: "Bersih", type: "allow" },
   { text: "Layak Pakai", type: "allow" },

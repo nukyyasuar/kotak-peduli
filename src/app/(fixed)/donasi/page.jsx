@@ -332,7 +332,6 @@ export default function Home() {
 
         try {
           const events = await getEvents(selectedTempatPenampung);
-          console.log("Events for collection center:", events);
           if (events) {
             const formattedEvents = events
               .filter((item) => item.isActive === true)

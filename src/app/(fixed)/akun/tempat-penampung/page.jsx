@@ -305,7 +305,6 @@ export default function AkunTempatPenampung() {
       setIdTokenValue(storedIdToken);
     }
   }, [dataProfile, reset, setValue, setIdTokenValue]);
-  console.log("idTokenValue", idTokenValue);
 
   // OTP Verification
   const handleOtpChange = (element, index, event) => {
