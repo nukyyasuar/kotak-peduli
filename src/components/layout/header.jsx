@@ -68,7 +68,10 @@ export default function Header() {
   };
 
   useEffect(() => {
-    fetchProfile();
+    const refreshToken = localStorage.getItem("refreshToken");
+    if (refreshToken) {
+      fetchProfile();
+    }
   }, []);
 
   useEffect(() => {
