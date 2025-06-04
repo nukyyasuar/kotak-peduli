@@ -499,7 +499,7 @@ export default function CollectionCenterDonationItems() {
                   loading={isLoadingFetchDonations}
                 />
               </div>
-            ) : totalData <= 0 ? (
+            ) : totalData === 0 ? (
               "Data tidak ditemukan"
             ) : (
               <table className="w-full bg-white rounded-lg">
