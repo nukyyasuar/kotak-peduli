@@ -14,6 +14,7 @@ import {
   getEventsWithParams,
   createEventCollectionCenter,
   updateEventCollectionCenter,
+  deactivateEventCollectionCenter,
 } from "src/services/api/event";
 import { getOneCollectionCenter } from "src/services/api/collectionCenter";
 import { useAccess } from "src/services/auth/acl";
@@ -29,6 +30,7 @@ import {
 import handleOutsideModal from "src/components/handleOutsideModal";
 import { ButtonCustom } from "src/components/button";
 import FormattedWIBDate from "src/components/dateFormatter";
+import { boolean } from "yup";
 
 export default function CollectionCenterEvents() {
   const isFirstFetchEvents = useRef(true);
@@ -70,7 +72,6 @@ export default function CollectionCenterEvents() {
       address: "",
       endDate: "",
       types: [],
-      isActive: true,
       startDate: new Date(),
     },
   });
@@ -111,7 +112,6 @@ export default function CollectionCenterEvents() {
       setTotalData(result.meta.total);
 
       if (isFirstFetchEvents.current) {
-        // toast.success("Data events berhasil dimuat");
         isFirstFetchEvents.current = false;
       }
     } catch (error) {
@@ -139,21 +139,31 @@ export default function CollectionCenterEvents() {
     const payload = {
       ...data,
       endDate: new Date(data?.endDate).toISOString(),
-      isActive: isFinishEventModalOpen ? false : true,
     };
+    if (isFinishEventModalOpen) {
+      payload.isActive = false;
+    }
 
     if (isEditEventModalOpen || isFinishEventModalOpen) {
       try {
         setIsLoadingCreateUpdateEvent(true);
 
-        await updateEventCollectionCenter(
-          collectionCenterId,
-          selectedEventId,
-          payload
-        );
+        if (isEditEventModalOpen) {
+          await updateEventCollectionCenter(
+            collectionCenterId,
+            selectedEventId,
+            payload
+          );
+        } else if (isFinishEventModalOpen) {
+          await deactivateEventCollectionCenter(
+            collectionCenterId,
+            selectedEventId
+          );
+        }
 
         toast.success("Data event berhasil diubah");
         setIsEditEventModalOpen(false);
+        setIsFinishEventModalOpen(false);
         fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
         reset();
       } catch (error) {
@@ -305,7 +315,7 @@ export default function CollectionCenterEvents() {
                   loading={isLoadingFetchEvents}
                 />
               </div>
-            ) : totalData < 0 ? (
+            ) : totalData === 0 ? (
               "Data tidak ditemukan"
             ) : (
               <table className="w-full bg-white rounded-lg">
@@ -359,7 +369,10 @@ export default function CollectionCenterEvents() {
                         <td className="py-3">{eventStatus}</td>
                         <td className="py-3 relative text-start">
                           <button
-                            onClick={() => toggleMenu(index)}
+                            onClick={() => {
+                              toggleMenu(index);
+                              setSelectedEventId(item.id);
+                            }}
                             className="border border-[#C2C2C2] rounded-sm p-1"
                           >
                             <Icon
@@ -378,23 +391,25 @@ export default function CollectionCenterEvents() {
                                 <li
                                   className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
                                   onClick={() => {
-                                    setSelectedEventId(item.id);
                                     setIsEditEventModalOpen(true);
                                     setOpenMenuIndex(null);
                                   }}
                                 >
                                   Ubah Data
                                 </li>
-                                <li
-                                  className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
-                                  onClick={() => {
-                                    setSelectedEventId(item.id);
-                                    setIsFinishEventModalOpen(true);
-                                    setOpenMenuIndex(null);
-                                  }}
-                                >
-                                  Selesai Event
-                                </li>
+                                {dataEvents.find(
+                                  (event) => event.id === selectedEventId
+                                )?.isActive !== false && (
+                                  <li
+                                    className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
+                                    onClick={() => {
+                                      setIsFinishEventModalOpen(true);
+                                      setOpenMenuIndex(null);
+                                    }}
+                                  >
+                                    Selesai Event
+                                  </li>
+                                )}
                               </ul>
                             </div>
                           )}
@@ -583,13 +598,14 @@ export default function CollectionCenterEvents() {
                       loading={isLoadingCreateUpdateEvent}
                     />
                   ) : (
-                    "Selesai"
+                    "Konfirmasi"
                   )
                 }
                 variant="brown"
                 className="w-full"
                 type="button"
                 onClick={handleSubmit(onSubmitAddEvent)}
+                disabled={isLoadingCreateUpdateEvent}
               />
             </div>
           </div>
