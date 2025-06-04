@@ -39,6 +39,7 @@ export default function Login() {
     formState: { errors },
   } = useForm({
     resolver: yupResolver(loginSchema),
+    mode: "onBlur",
     defaultValues: {
       email: "",
       password: "",
