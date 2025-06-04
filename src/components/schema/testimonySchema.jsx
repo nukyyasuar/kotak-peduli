@@ -7,7 +7,7 @@ const testimonySchema = yup.object().shape({
     .string()
     .required("Ucapan atau pesan wajib diisi.")
     .min(20, "Ucapan atau pesan minimal terdiri dari 20 karakter.")
-    .max(250, "Ucapan atau pesan maksimal terdiri dari 250 karakter."),
+    .max(255, "Ucapan atau pesan maksimal terdiri dari 255 karakter."),
   file: yup
     .mixed()
     .test("required", "Foto barang wajib diunggah.", (value) => {
