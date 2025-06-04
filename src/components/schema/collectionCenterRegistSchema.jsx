@@ -9,7 +9,8 @@ const collectionCenterRegistSchema = yup.object().shape({
   email: yup
     .string()
     .required("Email wajib diisi.")
-    .email(
+    .matches(
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
       "Format email salah. Masukkan format email yang valid (contoh: user@example.com)"
     ),
   nomorTelepon: yup
@@ -48,7 +49,7 @@ const collectionCenterRegistSchema = yup.object().shape({
     .string()
     .required("Deskripsi barang donasi wajib diisi.")
     .min(20, "Deskripsi barang donasi minimal terdiri dari 20 karakter.")
-    .max(250, "Deskripsi barang donasi maksimal terdiri dari 250 karakter."),
+    .max(255, "Deskripsi barang donasi maksimal terdiri dari 255 karakter."),
   foto: yup
     .mixed()
     .required("Foto tempat penampung wajib diunggah.")

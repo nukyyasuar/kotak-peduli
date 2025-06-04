@@ -32,22 +32,22 @@ const profileSchema = yup.object().shape({
   email: yup
     .string()
     .required("Email wajib diisi.")
-    .email("Format email tidak valid."),
-  alamat: yup.string().required("Alamat lengkap wajib diisi."),
-  jalan: yup.string().required("Nama jalan wajib diisi."),
-  patokan: yup.string().required("Patokan wajib diisi."),
+    .matches(
+      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+      "Format email salah. Masukkan format email yang valid (contoh: user@example.com)"
+    ),
   foto: yup
     .mixed()
     .test("fileSize", "Ukuran file terlalu besar. Maksimal 5MB.", (value) => {
-      return value && value.size <= 5 * 1024 * 1024;
+      if (!value) return true;
+      return value.size <= 5 * 1024 * 1024;
     })
     .test(
       "fileType",
       "Format file tidak didukung. Hanya JPG, JPEG, PNG yang diperbolehkan.",
       (value) => {
-        return (
-          value && ["image/jpeg", "image/jpg", "image/png"].includes(value.type)
-        );
+        if (!value) return true;
+        return ["image/jpeg", "image/jpg", "image/png"].includes(value.type);
       }
     ),
 });

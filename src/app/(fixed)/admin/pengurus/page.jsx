@@ -201,8 +201,10 @@ export default function CollectionCenterMembers() {
       user: [
         {
           email: data.email,
-          title: data.penempatan.label,
           roleId: data.role.value,
+          ...(data.penempatan?.label && {
+            title: data.penempatan.label,
+          }),
         },
       ],
     };
@@ -444,7 +446,7 @@ export default function CollectionCenterMembers() {
                   loading={isLoadingFetchMembers}
                 />
               </div>
-            ) : totalData < 0 ? (
+            ) : totalData === 0 ? (
               "Data tidak ditemukan"
             ) : (
               <table className="w-full bg-white rounded-lg">
@@ -580,7 +582,7 @@ export default function CollectionCenterMembers() {
         </main>
       )}
 
-      {/* Modal Tambah & Ubah Event */}
+      {/* Modal Tambah & Ubah Pengurus */}
       {(isAddMemberModalOpen || isEditMemberModalOpen) && (
         <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
           <div className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px] w-full min-w-135 overflow-y-auto max-h-[90vh]">
@@ -600,6 +602,7 @@ export default function CollectionCenterMembers() {
                   placeholder="Contoh: user@example.com"
                   errors={errors?.email?.message}
                   required
+                  disabled={isEditMemberModalOpen}
                 />
                 <FormInput
                   key={collectionCenterId}
@@ -614,8 +617,6 @@ export default function CollectionCenterMembers() {
                   onChange={(selected) => {
                     setValue("penempatan", selected);
                   }}
-                  required
-                  errors={errors.penempatan?.message}
                 />
                 <FormInput
                   type="dynamic"
@@ -651,6 +652,7 @@ export default function CollectionCenterMembers() {
                   variant="brown"
                   type="submit"
                   className="w-full"
+                  disabled={isLoadingCreateMember}
                 />
                 <ButtonCustom
                   label="Batal"

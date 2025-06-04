@@ -70,6 +70,7 @@ export default function Home() {
   const selectedTempatPenampung = watch("tempatPenampung");
   const selectedCabang = watch("cabang");
   const watchBarangDonasi = watch("barangDonasi");
+  const watchAlamatSummary = watch("alamat.summary");
   const pickupTypes =
     dataCollectionCenter.pickupTypes
       ?.filter((item) => {
@@ -100,6 +101,9 @@ export default function Home() {
       label: matchedDonationType?.label || item,
     };
   });
+
+  const tipePengirimanValue =
+    pickupTypes.find((opt) => opt.value === watch("tipePengiriman")) || null;
 
   const isEmptyObject = (obj) => {
     return Object.keys(obj).length === 0;
@@ -306,11 +310,10 @@ export default function Home() {
           longitude: data.address.longitude,
         });
 
-        // Fetch posts sesuai tempat penampung yang dipilih
         try {
-          const posts = await getPosts(selectedTempatPenampung);
-          if (posts.length > 0) {
-            const formattedPosts = posts.map((item) => ({
+          const dataPosts = await getPosts(selectedTempatPenampung);
+          if (dataPosts) {
+            const formattedPosts = dataPosts.map((item) => ({
               value: item.id,
               label: item.name,
               latitude: item.address.latitude,
@@ -327,10 +330,9 @@ export default function Home() {
           setIsFetchPostsLoading(false);
         }
 
-        // Fetch events sesuai tempat penampung yang dipilih
         try {
           const events = await getEvents(selectedTempatPenampung);
-          if (events?.length > 0) {
+          if (events) {
             const formattedEvents = events
               .filter((item) => item.isActive === true)
               .map((item) => ({
@@ -411,10 +413,15 @@ export default function Home() {
   }, [dataProfile, reset]);
 
   useEffect(() => {
-    if (watch("alamat.summary")) {
+    if (watchAlamatSummary) {
       clearErrors("alamat");
+
+      setValue("cabang", "");
+      setValue("barangDonasi", []);
+      setValue("tipePengiriman", null);
+      setAddressDistance(null);
     }
-  }, [watch("alamat.summary")]);
+  }, [watchAlamatSummary]);
 
   useEffect(() => {
     const subscription = watch((values) => {
@@ -496,8 +503,7 @@ export default function Home() {
                     ? "Memuat alamat lengkap..."
                     : "Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
                 }
-                value={watch("alamat.summary") || ""}
-                // register={register("alamat")}
+                value={watchAlamatSummary || ""}
                 onClick={() => setIsModalOpen(!isModalOpen)}
                 className="flex-1"
                 errors={errors?.alamat?.message}
@@ -524,12 +530,20 @@ export default function Home() {
                 required
                 control={control}
                 options={collectionCenters}
-                placeholder="Pilih tempat penampung tujuan"
+                placeholder={
+                  watch("alamat.summary") === ""
+                    ? "Alamat lengkap belum diisi"
+                    : "Pilih tempat penampung tujuan"
+                }
                 onChange={(selected) => {
                   setValue("tempatPenampung", selected?.value || "");
                   setValue("cabang", "");
+                  setValue("barangDonasi", []);
+                  setValue("tipePengiriman", null);
+                  setAddressDistance(null);
                 }}
                 errors={errors?.tempatPenampung?.message}
+                disabled={watch("alamat.summary") === ""}
               />
               <FormInput
                 key={selectedTempatPenampung}
@@ -538,6 +552,12 @@ export default function Home() {
                 name="cabang"
                 control={control}
                 options={posts}
+                onChange={(selected) => {
+                  setValue("cabang", selected?.value || "");
+                  setValue("barangDonasi", []);
+                  setValue("tipePengiriman", null);
+                  setAddressDistance(null);
+                }}
                 placeholder={
                   selectedTempatPenampung
                     ? isFetchPostsLoading
@@ -566,6 +586,7 @@ export default function Home() {
                 name="tipePengiriman"
                 required
                 control={control}
+                value={tipePengirimanValue}
                 options={pickupTypes}
                 placeholder={`${!isEmptyObject(watch("alamat")) ? (selectedTempatPenampung ? (isCalculating ? "Sedang menghitung jarak..." : addressDistance ? "Pilih metode pengiriman yang sesuai" : "Hitung jarak terlebih dahulu") : "Tempat penampung belum dipilih") : "Alamat lengkap belum diisi"}`}
                 disabled={
@@ -578,28 +599,43 @@ export default function Home() {
                   <components.Menu {...props}>
                     <div className="px-3 py-2 border-b text-sm text-gray-700">
                       <div>
-                        Jarak alamat anda ke{" "}
-                        {selectedCabang ? "cabang" : "tempat penampung"}:{" "}
-                        <span
-                          className={`font-bold ${
-                            addressDistance !== null
-                              ? addressDistance <=
-                                dataCollectionCenter.distanceLimitKm
-                                ? "text-[#1F7D53]"
-                                : "text-[#E52020]"
-                              : "text-[#F0BB78]"
-                          }`}
-                        >
-                          {addressDistance !== null
-                            ? `${addressDistance} km`
-                            : "Proses..."}{" "}
-                          (
-                          {addressDistance <=
-                          dataCollectionCenter.distanceLimitKm
-                            ? "Jarak masih memenuhi batas penjemputan"
-                            : "Jarak melebihi batas penjemputan"}
-                          )
-                        </span>
+                        {dataCollectionCenter?.distanceLimitKm ||
+                        pickupTypes?.length === 2 ? (
+                          <>
+                            <p className="text-black">
+                              Batas jarak:{" "}
+                              {dataCollectionCenter?.distanceLimitKm} km
+                            </p>
+                            Jarak alamat Anda ke{" "}
+                            {selectedCabang ? "cabang" : "tempat penampung"}:{" "}
+                            <span
+                              className={`font-bold ${
+                                addressDistance !== null
+                                  ? addressDistance <=
+                                    dataCollectionCenter.distanceLimitKm
+                                    ? "text-[#1F7D53]"
+                                    : "text-[#E52020]"
+                                  : "text-[#F0BB78]"
+                              }`}
+                            >
+                              {addressDistance !== null
+                                ? `${addressDistance} km`
+                                : "Proses..."}{" "}
+                              {addressDistance !== null && (
+                                <>
+                                  (
+                                  {addressDistance <=
+                                  dataCollectionCenter.distanceLimitKm
+                                    ? "Jarak masih memenuhi batas penjemputan"
+                                    : "Jarak melebihi batas penjemputan"}
+                                  )
+                                </>
+                              )}
+                            </span>
+                          </>
+                        ) : (
+                          "Tempat penampung tidak menyediakan penjemputan"
+                        )}
                       </div>
                     </div>
 
@@ -615,9 +651,9 @@ export default function Home() {
 
             {/* Form Detail Barang */}
             {watchBarangDonasi?.map((item, index) => {
-              const selectedEvent = dataEvents?.find(
-                (event) => event.value === item.event
-              );
+              const selectedEvent = dataEvents
+                ? dataEvents?.find((event) => event.value === item.event)
+                : "";
               const isJenisInvalid =
                 selectedEvent && !selectedEvent?.types?.includes(item.jenis);
 

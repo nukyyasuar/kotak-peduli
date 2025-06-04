@@ -57,6 +57,8 @@ export default function DaftarTempatPenampung() {
   const editPhoneNumberModalRef = useRef();
   const [idTokenValue, setIdTokenValue] = useState(null);
   const [phoneNumberHolder, setPhoneNumberHolder] = useState(null);
+  const [errorPhoneNumberModal, setErrorPhoneNumberModal] = useState(null);
+  const [errorOtp, setErrorOtp] = useState(null);
 
   const { hasPermission } = useAuth();
   const verifEmailModalRef = useRef();
@@ -103,18 +105,18 @@ export default function DaftarTempatPenampung() {
   const watchPhoneNumber = watch("nomorTelepon");
   const avatarPath = dataDetailCollectionCenter?.attachment?.file?.path;
 
-  handleOutsideModal({
-    ref: editPhoneNumberModalRef,
-    isOpen: isEditPhoneNumber,
-    onClose: () => {
-      setValue(
-        "nomorTelepon",
-        dataDetailCollectionCenter?.phoneNumber?.slice(3)
-      );
-      setIsOtpSent(false);
-      setIsEditPhoneNumber(false);
-    },
-  });
+  // handleOutsideModal({
+  //   ref: editPhoneNumberModalRef,
+  //   isOpen: isEditPhoneNumber,
+  //   onClose: () => {
+  //     setValue(
+  //       "nomorTelepon",
+  //       dataDetailCollectionCenter?.phoneNumber?.slice(3)
+  //     );
+  //     setIsOtpSent(false);
+  //     setIsEditPhoneNumber(false);
+  //   },
+  // });
 
   handleOutsideModal({
     ref: verifEmailModalRef,
@@ -389,7 +391,6 @@ export default function DaftarTempatPenampung() {
         dataDetailCollectionCenter
       );
       setIsEdit(Object.keys(changes).length > 0);
-      console.log("Changes detected:", changes);
     };
 
     checkChanges();
@@ -426,70 +427,110 @@ export default function DaftarTempatPenampung() {
   };
 
   const handleSendOtp = async () => {
-    setIsLoadingSendOtp(true);
     const phoneNumber = watch("nomorTelepon");
 
-    if (!phoneNumber || phoneNumber.length < 9) {
-      toast.error("Masukkan nomor telepon yang valid.");
-      setIsLoadingSendOtp(false);
+    if (!phoneNumber) {
+      setErrorPhoneNumberModal("Nomor telepon wajib diisi.");
+      return;
+    } else if (!/^\d+$/.test(phoneNumber)) {
+      setErrorPhoneNumberModal("Nomor telepon hanya boleh berisi angka.");
+      return;
+    } else if (phoneNumber.length < 9) {
+      setErrorPhoneNumberModal("Nomor telepon minimal terdiri dari 9 digit.");
+      return;
+    } else if (phoneNumber.length > 15) {
+      setErrorPhoneNumberModal("Nomor telepon maksimal terdiri dari 15 digit.");
+      return;
+    } else if (!/^8\d{9,14}$/.test(phoneNumber)) {
+      setErrorPhoneNumberModal(
+        "Nomor telepon harus dimulai dengan angka ‘8’ (contoh: 81231231231)"
+      );
       return;
     }
 
     try {
+      setIsLoadingSendOtp(true);
+      setErrorPhoneNumberModal(null);
+
       const confirmation = await sendPhoneVerificationCode("+62" + phoneNumber);
+
       setConfirmationResult(confirmation);
       setIsOtpSent(true);
       toast.success("OTP berhasil dikirim ke nomor Anda");
     } catch (err) {
+      if (
+        err.message ===
+        "Gagal mengirim kode OTP: Firebase: Error (auth/invalid-app-credential)"
+      ) {
+        toast.error(
+          "Nomor telepon terlalu sering digunakan. Silakan coba lagi nanti."
+        );
+      } else {
+        toast.error(err.message || "Terjadi kesalahan saat mengirim OTP");
+      }
+
       setIsOtpSent(false);
-      console.error("Error during OTP sending:", err);
-      toast.error(err.message || "Terjadi kesalahan saat mengirim OTP");
     } finally {
       setIsLoadingSendOtp(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    setIsLoadingVerifyOtp(true);
-    try {
-      const user = await verifyPhoneCode(confirmationResult, otp.join(""));
-      if (user) {
-        const idToken = await user.getIdToken();
-        setIdTokenValue(idToken);
-        setPhoneNumberHolder(watchPhoneNumber);
+    const otpCode = otp.join("");
 
-        try {
-          await verifyPhoneNumberCollectionCenter(collectionCenterId, {
-            idToken,
-            phoneNumber: "+62" + watchPhoneNumber,
-          });
-          toast.success("Verifikasi nomor telepon berhasil");
-          location.reload();
-        } catch (error) {
-          console.error("Error verifying phone number:", error);
-          toast.error("Gagal memverifikasi nomor telepon");
-        }
+    if (otpCode.length !== 6 && otpCode.length > 0) {
+      setErrorOtp("Kode OTP harus terdiri dari 6 digit.");
+      return;
+    } else if (otpCode.length === 0) {
+      setErrorOtp("Kode OTP wajib diisi.");
+      return;
+    }
+    setErrorOtp(null);
+
+    try {
+      setIsLoadingVerifyOtp(true);
+
+      const user = await verifyPhoneCode(confirmationResult, otpCode);
+
+      if (!user) {
+        throw new Error("Gagal memverifikasi nomor telepon");
+      }
+
+      const idToken = await user.getIdToken();
+
+      setIdTokenValue(idToken);
+      setPhoneNumberHolder(watchPhoneNumber);
+
+      try {
+        await verifyPhoneNumberCollectionCenter(collectionCenterId, {
+          idToken,
+          phoneNumber: "+62" + watchPhoneNumber,
+        });
+
+        toast.success("Verifikasi nomor telepon berhasil");
+        setIsOtpSent(false);
+        setConfirmationResult(null);
+        setErrorOtp(null);
+        setErrorPhoneNumberModal(null);
+        location.reload();
+      } catch (error) {
+        console.error("Error verifying phone number:", error);
+        toast.error("Gagal memverifikasi nomor telepon");
       }
     } catch (error) {
-      {
-        error?.code === "auth/invalid-verification-code"
-          ? toast.error("Kode OTP salah. Silakan coba lagi.")
-          : error?.code === "auth/session-expired"
-            ? toast.error(
-                "Sesi OTP telah kedaluwarsa. Silakan minta kode baru."
-              )
-            : error?.message?.includes("Data registrasi tidak lengkap")
-              ? toast.error(error.message)
-              : toast.error(
-                  `Gagal memverifikasi OTP: ${error.message || "Terjadi kesalahan"}`
-                );
+      const code = error?.code;
+
+      if (code === "auth/invalid-verification-code") {
+        toast.error("Kode OTP salah. Silakan coba lagi.");
+      } else if (code === "auth/session-expired") {
+        toast.error("Sesi OTP telah kedaluwarsa. Silakan minta kode baru.");
+      } else if (error?.message?.includes("Data registrasi tidak lengkap")) {
+        toast.error(error.message);
+      } else {
+        toast.error(error.message || "Terjadi kesalahan saat verifikasi OTP");
       }
     } finally {
-      setIsOtpSent(false);
-      setIsEditPhoneNumber(false);
-      setIsEdit(false);
       setOtp(["", "", "", "", "", ""]);
-      setConfirmationResult(null);
       setIsLoadingVerifyOtp(false);
     }
   };
@@ -591,38 +632,45 @@ export default function DaftarTempatPenampung() {
                     errors={errors?.namaTempatPenampung?.message}
                     className="w-full"
                   />
-                  <div className="flex gap-3 w-full">
-                    <div className="flex gap-3 items-end relative w-full">
-                      <FormInput
-                        label="Email"
-                        inputType="text"
-                        type="email"
-                        placeholder="Contoh: user@example.com"
-                        register={register("email")}
-                        required
-                        errors={errors?.email?.message}
-                        className="w-full"
-                      />
-                      {dataDetailCollectionCenter?.emailVerifiedAt ? (
-                        <Icon
-                          icon="icon-park-solid:check-one"
-                          width={32}
-                          height={32}
-                          color="#1F7D53"
-                          className="absolute right-2 bottom-2"
+                  <div className="flex flex-col gap-3 w-full">
+                    <div className="min-w-xl">
+                      <div className="flex gap-3 items-end relative">
+                        <FormInput
+                          label="Email"
+                          inputType="text"
+                          type="email"
+                          placeholder="Contoh: user@example.com"
+                          register={register("email")}
+                          required
+                          className="w-full"
                         />
-                      ) : (
-                        <ButtonCustom
-                          type="button"
-                          variant="orange"
-                          label="Verifikasi Email"
-                          onClick={() => {
-                            handleVerifyEmail();
-                            setIsEmailVerifModalOpen(true);
-                          }}
-                          className="h-12 text-nowrap"
-                        />
+                        {dataDetailCollectionCenter?.emailVerifiedAt ? (
+                          <Icon
+                            icon="icon-park-solid:check-one"
+                            width={32}
+                            height={32}
+                            color="#1F7D53"
+                            className="absolute right-2 bottom-2"
+                          />
+                        ) : (
+                          <ButtonCustom
+                            type="button"
+                            variant="orange"
+                            label="Verifikasi Email"
+                            onClick={() => {
+                              handleVerifyEmail();
+                              setIsEmailVerifModalOpen(true);
+                            }}
+                            className="h-12 text-nowrap"
+                          />
+                        )}
+                      </div>
+                      {errors?.email?.message && (
+                        <p className="text-[#E52020] text-sm mt-1">
+                          {errors?.email?.message}
+                        </p>
                       )}
+
                       {isEmailVerifModalOpen && (
                         <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
                           <div
@@ -671,108 +719,154 @@ export default function DaftarTempatPenampung() {
                         </div>
                       )}
                     </div>
-                    <FormInput
-                      label="Nomor Telepon (Whatsapp)"
-                      inputType="text"
-                      placeholder="Contoh: 81212312312"
-                      value={phoneNumberHolder || ""}
-                      errors={errors?.nomorTelepon?.message}
-                      inputStyles={"border-none"}
-                      required
-                      disabled
-                      className="w-full"
-                    />
-                    <div className="flex items-end">
-                      <ButtonCustom
-                        variant="orange"
-                        type="button"
-                        label={`Ubah Nomor Telepon`}
-                        className="text-nowrap h-12"
-                        onClick={() => setIsEditPhoneNumber(true)}
-                      />
-                      {isEditPhoneNumber && (
-                        <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
-                          <div
-                            ref={editPhoneNumberModalRef}
-                            className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
-                          >
-                            <h3 className="text-xl font-bold">
-                              Ubah Nomor Telepon
-                            </h3>
 
-                            <div className="flex items-end">
-                              <FormInput
-                                label="Nomor Telepon (Whatsapp)"
-                                inputType="text"
-                                placeholder="Contoh: 81212312312"
-                                register={register("nomorTelepon")}
-                                inputStyles={`w-full`}
-                                className="w-full"
-                              />
-                              {dataDetailCollectionCenter?.phoneNumber !==
-                                "+62" + watch("nomorTelepon") && (
-                                <ButtonCustom
-                                  variant="orange"
-                                  type="button"
-                                  label={`Kirim OTP`}
-                                  className="h-12 ml-3 text-nowrap"
-                                  isLoading={isLoadingSendOtp}
-                                  onClick={handleSendOtp}
+                    <div className="flex gap-3">
+                      <FormInput
+                        label="Nomor Telepon (Whatsapp)"
+                        inputType="text"
+                        placeholder="Contoh: 81212312312"
+                        value={phoneNumberHolder || ""}
+                        // errors={errors?.nomorTelepon?.message}
+                        inputStyles={"border-none"}
+                        required
+                        disabled
+                        className="w-full"
+                      />
+                      <div className="flex items-end">
+                        <ButtonCustom
+                          variant="orange"
+                          type="button"
+                          label={`Ubah Nomor Telepon`}
+                          className="text-nowrap h-12"
+                          onClick={() => setIsEditPhoneNumber(true)}
+                        />
+                        {isEditPhoneNumber && (
+                          <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
+                            <div
+                              ref={editPhoneNumberModalRef}
+                              className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
+                            >
+                              <button className="flex justify-end gap-0 -mb-6">
+                                <Icon
+                                  icon="mdi:close"
+                                  color="black"
+                                  className="cursor-pointer"
+                                  onClick={() => {
+                                    setErrorPhoneNumberModal(null);
+                                    setIsEditPhoneNumber(false);
+                                    setOtp(["", "", "", "", "", ""]);
+                                    setIsOtpSent(false);
+                                    setConfirmationResult(null);
+                                    setValue(
+                                      "nomorTelepon",
+                                      dataDetailCollectionCenter.phoneNumber.slice(
+                                        3
+                                      ) || ""
+                                    );
+                                    setIsLoadingSendOtp(false);
+                                    setIsLoadingVerifyOtp(false);
+                                    clearErrors("nomorTelepon");
+                                  }}
                                 />
+                              </button>
+
+                              <h3 className="text-xl font-bold">
+                                Ubah Nomor Telepon
+                              </h3>
+
+                              <div className="space-y-1">
+                                <div className="flex items-end">
+                                  <FormInput
+                                    label="Nomor Telepon (Whatsapp)"
+                                    inputType="text"
+                                    placeholder="Contoh: 81212312312"
+                                    register={register("nomorTelepon")}
+                                    inputStyles={`w-full`}
+                                    className="w-full"
+                                  />
+                                  {dataDetailCollectionCenter?.phoneNumber !==
+                                    "+62" + watch("nomorTelepon") && (
+                                    <ButtonCustom
+                                      variant="orange"
+                                      type="button"
+                                      label={`Kirim OTP`}
+                                      className="h-12 ml-3 text-nowrap"
+                                      isLoading={isLoadingSendOtp}
+                                      onClick={handleSendOtp}
+                                    />
+                                  )}
+                                </div>
+                                {errorPhoneNumberModal && (
+                                  <p className="text-[#E52020] text-sm max-w-3xs">
+                                    {errorPhoneNumberModal}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div id="recaptcha-container" />
+
+                              {isOtpSent && (
+                                <div className="pt-5 border-t space-y-3">
+                                  <h3 className="text-lg font-bold">
+                                    Verifikasi OTP
+                                  </h3>
+
+                                  <div className="space-y-3">
+                                    <div className="flex gap-3">
+                                      <div className="flex gap-3">
+                                        {otp.map((data, index) => (
+                                          <input
+                                            key={index}
+                                            type="text"
+                                            maxLength="1"
+                                            value={data}
+                                            onChange={(e) =>
+                                              handleOtpChange(
+                                                e.target,
+                                                index,
+                                                e
+                                              )
+                                            }
+                                            onKeyDown={(e) =>
+                                              handleKeyDown(e, index)
+                                            }
+                                            ref={(el) =>
+                                              (inputRefs.current[index] = el)
+                                            }
+                                            className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
+                                            style={{
+                                              color: data ? "#131010" : "#000",
+                                              outlineColor: data
+                                                ? "#131010"
+                                                : "#C2C2C2",
+                                            }}
+                                            aria-label={`OTP digit ${index + 1}`}
+                                            aria-required="true"
+                                            autoComplete="one-time-code"
+                                          />
+                                        ))}
+                                      </div>
+                                      <ButtonCustom
+                                        type="button"
+                                        variant="orange"
+                                        label="Konfirmasi"
+                                        onClick={handleVerifyOtp}
+                                        isLoading={isLoadingVerifyOtp}
+                                        className="min-w-[146px]"
+                                      />
+                                    </div>
+                                    {errorOtp && (
+                                      <p className="text-[#E52020] text-sm">
+                                        {errorOtp}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
                               )}
                             </div>
-
-                            <div id="recaptcha-container" />
-
-                            {isOtpSent && (
-                              <div className="pt-5 border-t space-y-3">
-                                <h3 className="text-lg font-bold">
-                                  Verifikasi OTP
-                                </h3>
-                                <div className="flex gap-3">
-                                  <div className="flex gap-3">
-                                    {otp.map((data, index) => (
-                                      <input
-                                        key={index}
-                                        type="text"
-                                        maxLength="1"
-                                        value={data}
-                                        onChange={(e) =>
-                                          handleOtpChange(e.target, index, e)
-                                        }
-                                        onKeyDown={(e) =>
-                                          handleKeyDown(e, index)
-                                        }
-                                        ref={(el) =>
-                                          (inputRefs.current[index] = el)
-                                        }
-                                        className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
-                                        style={{
-                                          color: data ? "#131010" : "#000",
-                                          outlineColor: data
-                                            ? "#131010"
-                                            : "#C2C2C2",
-                                        }}
-                                        aria-label={`OTP digit ${index + 1}`}
-                                        aria-required="true"
-                                        autoComplete="one-time-code"
-                                      />
-                                    ))}
-                                  </div>
-                                  <ButtonCustom
-                                    type="button"
-                                    variant="orange"
-                                    label="Konfirmasi"
-                                    onClick={handleVerifyOtp}
-                                    isLoading={isLoadingVerifyOtp}
-                                    className="min-w-[146px]"
-                                  />
-                                </div>
-                              </div>
-                            )}
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div>

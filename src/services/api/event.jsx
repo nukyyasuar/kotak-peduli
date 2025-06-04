@@ -83,9 +83,24 @@ const updateEventCollectionCenter = async (
   }
 };
 
+const deactivateEventCollectionCenter = async (collectionCenterId, eventId) => {
+  try {
+    const response = await fetchWithAuth(
+      `${process.env.NEXT_PUBLIC_DOMAIN}/collection-centers/${collectionCenterId}/events/${eventId}/deactivate`,
+      createRequestOptions("PATCH")
+    );
+    const result = await handleApiResponse(response);
+
+    return result;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 export {
   getEvents,
   getEventsWithParams,
   createEventCollectionCenter,
   updateEventCollectionCenter,
+  deactivateEventCollectionCenter,
 };

@@ -5,6 +5,8 @@ import { Icon } from "@iconify/react";
 import { useForm } from "react-hook-form";
 import Image from "next/image";
 import { ClipLoader } from "react-spinners";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { toast } from "react-toastify";
 
 import { FormInput } from "src/components/formInput";
 import AddressModal from "src/components/addressModal";
@@ -18,12 +20,11 @@ import {
   verifyOtp,
 } from "src/services/api/profile";
 import { verifyEmail } from "src/services/api/verifyEmail";
-
 import {
   sendPhoneVerificationCode,
   verifyPhoneCode,
 } from "src/services/auth/auth";
-import { toast } from "react-toastify";
+import profileSchema from "src/components/schema/profileSchema";
 
 export default function Akun() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -37,6 +38,9 @@ export default function Akun() {
   const [isEmailVerifSent, setIsEmailVerifSent] = useState(false);
   const [dataProfile, setDataProfile] = useState({});
   const [isLoadingProfileData, setIsLoadingProfileData] = useState(true);
+  const [errorPhoneNumberModal, setErrorPhoneNumberModal] = useState(null);
+  const [errorOtp, setErrorOtp] = useState(null);
+  const [isLoadingUpdateProfile, setIsLoadingUpdateProfile] = useState(false);
 
   const editPhoneNumberModalRef = useRef();
   const [confirmationResult, setConfirmationResult] = useState(null);
@@ -47,7 +51,15 @@ export default function Akun() {
   const [isLoadingVerifyOtp, setIsLoadingVerifyOtp] = useState(false);
   const [isLoadingSentVerifEmail, setIsLoadingSentVerifEmail] = useState(false);
 
-  const { register, handleSubmit, watch, setValue, reset } = useForm({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: yupResolver(profileSchema),
     defaultValues: {
       namaDepan: "",
       namaBelakang: "",
@@ -120,17 +132,13 @@ export default function Akun() {
     onClose: () => setIsEmailVerifModalOpen(false),
   });
 
-  handleOutsideModal({
-    ref: editPhoneNumberModalRef,
-    isOpen: isEditPhoneNumber,
-    onClose: () => setIsEditPhoneNumber(false),
-  });
-
   const onSubmit = async (data) => {
     if (!isEditPhoneNumber) {
       const payload = buildUpdatedPayload(data, dataProfile);
 
       try {
+        setIsLoadingUpdateProfile(true);
+
         if (Object.keys(payload).length > 0) {
           await updateProfile(payload);
           toast.success("Profil berhasil diperbarui");
@@ -148,13 +156,13 @@ export default function Akun() {
           }
         }
 
-        setTimeout(() => {
-          location.reload();
-        }, 1000);
+        fetchProfile();
       } catch (error) {
         toast.error(
           "Terjadi kesalahan saat memperbarui profil. Silakan coba lagi."
         );
+      } finally {
+        setIsLoadingUpdateProfile(false);
       }
     }
   };
@@ -180,18 +188,19 @@ export default function Akun() {
     }
   };
 
+  const fetchProfile = async () => {
+    setIsLoadingProfileData(true);
+    try {
+      const data = await getProfile();
+      setDataProfile(data);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+    } finally {
+      setIsLoadingProfileData(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      setIsLoadingProfileData(true);
-      try {
-        const data = await getProfile();
-        setDataProfile(data);
-      } catch (error) {
-        console.error("Error fetching profile data:", error);
-      } finally {
-        setIsLoadingProfileData(false);
-      }
-    };
     fetchProfile();
   }, []);
 
@@ -259,81 +268,117 @@ export default function Akun() {
   };
 
   const handleSendOtp = async () => {
-    setIsLoadingSendOtp(true);
     const phoneNumber = watch("nomorTelepon");
 
-    if (!phoneNumber || phoneNumber.length < 9) {
-      toast.error("Masukkan nomor telepon yang valid.");
-      setIsLoadingSendOtp(false);
+    if (!phoneNumber) {
+      setErrorPhoneNumberModal("Nomor telepon wajib diisi.");
+      return;
+    } else if (!/^\d+$/.test(phoneNumber)) {
+      setErrorPhoneNumberModal("Nomor telepon hanya boleh berisi angka.");
+      return;
+    } else if (phoneNumber.length < 9) {
+      setErrorPhoneNumberModal("Nomor telepon minimal terdiri dari 9 digit.");
+      return;
+    } else if (phoneNumber.length > 15) {
+      setErrorPhoneNumberModal("Nomor telepon maksimal terdiri dari 15 digit.");
+      return;
+    } else if (!/^8\d{9,14}$/.test(phoneNumber)) {
+      setErrorPhoneNumberModal(
+        "Nomor telepon harus dimulai dengan angka ‘8’ (contoh: 81231231231)"
+      );
       return;
     }
+    setErrorPhoneNumberModal(null);
 
     try {
+      setIsLoadingSendOtp(true);
+
       const confirmation = await sendPhoneVerificationCode("+62" + phoneNumber);
       setConfirmationResult(confirmation);
       setIsOtpSent(true);
       toast.success("OTP berhasil dikirim ke nomor Anda");
     } catch (err) {
+      if (
+        err.message ===
+        "Gagal mengirim kode OTP: Firebase: Error (auth/invalid-app-credential)"
+      ) {
+        toast.error(
+          "Nomor telepon terlalu sering digunakan. Silakan coba lagi nanti."
+        );
+      } else {
+        toast.error(err.message || "Terjadi kesalahan saat mengirim OTP");
+      }
       setIsOtpSent(false);
-      console.error("Error during OTP sending:", err);
-      toast.error(err.message || "Terjadi kesalahan saat mengirim OTP");
     } finally {
       setIsLoadingSendOtp(false);
     }
   };
 
   const handleVerifyOtp = async () => {
-    setIsLoadingVerifyOtp(true);
-    try {
-      const user = await verifyPhoneCode(confirmationResult, otp.join(""));
-      if (user) {
-        const idToken = await user.getIdToken();
+    const otpCode = otp.join("");
 
-        try {
-          await updateProfile({
-            phoneNumber: "+62" + watch("nomorTelepon"),
-          });
-          try {
-            await verifyOtp(idToken);
-            toast.success("Nomor telepon berhasil diverifikasi dan diperbarui");
-          } catch (error) {
-            toast.error(error.message || "Gagal memverifikasi nomor telepon");
-          }
-        } catch (error) {
-          console.error("Error updating phone number:", error.message);
-          if (error.message === "Unique constraint failed") {
-            toast.error("Nomor telepon sudah terdaftar");
-          } else {
-            toast.error("Gagal memperbarui nomor telepon");
-          }
-          setValue("nomorTelepon", dataProfile.phoneNumber.slice(3));
-        }
-      } else {
-        toast.error("Gagal memverifikasi nomor telepon");
+    if (otpCode.length !== 6 && otpCode.length > 0) {
+      setErrorOtp("Kode OTP harus terdiri dari 6 digit.");
+      return;
+    } else if (otpCode.length === 0) {
+      setErrorOtp("Kode OTP wajib diisi.");
+      return;
+    }
+    setErrorOtp(null);
+    setIsLoadingVerifyOtp(true);
+
+    try {
+      const user = await verifyPhoneCode(confirmationResult, otpCode);
+
+      if (!user) {
+        throw new Error("Gagal memverifikasi nomor telepon");
       }
+
+      const idToken = await user.getIdToken();
+
+      try {
+        await updateProfile({
+          phoneNumber: "+62" + watch("nomorTelepon"),
+        });
+      } catch (error) {
+        setValue("nomorTelepon", dataProfile.phoneNumber.slice(3));
+
+        if (error.message === "Unique constraint failed") {
+          setIsOtpSent(false);
+          throw new Error("Nomor telepon sudah terdaftar");
+        } else {
+          throw new Error("Gagal memperbarui nomor telepon");
+        }
+      }
+
+      try {
+        await verifyOtp(idToken);
+      } catch (error) {
+        throw new Error(error.message || "Gagal memverifikasi nomor telepon");
+      }
+
+      toast.success("Nomor telepon berhasil diverifikasi dan diperbarui");
+
+      setIsEditPhoneNumber(false);
+      setIsOtpSent(false);
+      setConfirmationResult(null);
+      setErrorOtp(null);
+      setErrorPhoneNumberModal(null);
     } catch (error) {
-      {
-        error?.code === "auth/invalid-verification-code"
-          ? toast.error("Kode OTP salah. Silakan coba lagi.")
-          : error?.code === "auth/session-expired"
-            ? toast.error(
-                "Sesi OTP telah kedaluwarsa. Silakan minta kode baru."
-              )
-            : error?.message?.includes("Data registrasi tidak lengkap")
-              ? toast.error(error.message)
-              : toast.error(
-                  `Gagal memverifikasi OTP: ${error.message || "Terjadi kesalahan"}`
-                );
+      const code = error?.code;
+
+      if (code === "auth/invalid-verification-code") {
+        toast.error("Kode OTP salah. Silakan coba lagi.");
+      } else if (code === "auth/session-expired") {
+        toast.error("Sesi OTP telah kedaluwarsa. Silakan minta kode baru.");
+      } else if (error?.message?.includes("Data registrasi tidak lengkap")) {
+        toast.error(error.message);
+      } else {
+        toast.error(error.message || "Terjadi kesalahan saat verifikasi OTP");
       }
     } finally {
-      setIsOtpSent(false);
-      setIsEditPhoneNumber(false);
-      setOtp(["", "", "", "", "", ""]);
-      setConfirmationResult(null);
       setIsLoadingVerifyOtp(false);
-      setTimeout(() => {
-        location.reload();
-      }, 1000);
+      setOtp(["", "", "", "", "", ""]);
     }
   };
 
@@ -362,7 +407,8 @@ export default function Akun() {
         {/* Gambar Profil */}
         <div className="flex flex-col items-center">
           <div className="w-52 aspect-square bg-gray-100 rounded-full mb-3 flex items-center justify-center relative group">
-            {dataProfile?.avatar?.file && !isAvatarEdit ? (
+            {dataProfile?.avatar?.file &&
+            (!isAvatarEdit || (isAvatarEdit && !watch("foto"))) ? (
               <Image
                 src={dataProfile?.avatar?.file?.path}
                 alt="profile"
@@ -394,6 +440,11 @@ export default function Akun() {
               onChange={handleFileChange}
             />
           </div>
+          {errors?.foto?.message && (
+            <p className="text-[#E52020] text-sm max-w-3xs text-center">
+              {errors?.foto?.message}
+            </p>
+          )}
           <div className="text-sm text-black text-center">
             <p>*Ukuran maksimal 5MB</p>
             <p>*Format .jpg atau .png</p>
@@ -411,6 +462,8 @@ export default function Akun() {
                 register={register("namaDepan")}
                 inputStyles={`w-full bg-white`}
                 className="w-full"
+                required
+                errors={errors?.namaDepan?.message}
               />
               <FormInput
                 label="Nama Belakang"
@@ -419,6 +472,8 @@ export default function Akun() {
                 register={register("namaBelakang")}
                 inputStyles={`w-full bg-white`}
                 className="w-full"
+                required
+                errors={errors?.namaBelakang?.message}
               />
             </div>
             <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-0">
@@ -430,6 +485,8 @@ export default function Akun() {
                 inputStyles={`w-full border-none`}
                 disabled
                 className="w-full"
+                required
+                errors={errors?.nomorTelepon?.message}
               />
               <ButtonCustom
                 variant="orange"
@@ -444,67 +501,101 @@ export default function Akun() {
                     ref={editPhoneNumberModalRef}
                     className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
                   >
+                    <button className="flex justify-end gap-0 -mb-6">
+                      <Icon
+                        icon="mdi:close"
+                        color="black"
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setErrorPhoneNumberModal(null);
+                          setIsEditPhoneNumber(false);
+                          setOtp(["", "", "", "", "", ""]);
+                          setIsOtpSent(false);
+                          setConfirmationResult(null);
+                          setValue(
+                            "nomorTelepon",
+                            dataProfile.phoneNumber.slice(3) || ""
+                          );
+                          setIsLoadingSendOtp(false);
+                          setIsLoadingVerifyOtp(false);
+                        }}
+                      />
+                    </button>
+
                     <h3 className="text-xl font-bold">Ubah Nomor Telepon</h3>
 
-                    <div className="flex items-end">
-                      <FormInput
-                        label="Nomor Telepon (Whatsapp)"
-                        inputType="text"
-                        placeholder="Contoh: 81212312312"
-                        register={register("nomorTelepon")}
-                        inputStyles={`w-full`}
-                        className="w-full"
-                      />
-                      {dataProfile?.phoneNumber !==
-                        "+62" + watch("nomorTelepon") && (
-                        <ButtonCustom
-                          variant="orange"
-                          type="button"
-                          label={`Kirim OTP`}
-                          className="h-12 ml-3 text-nowrap"
-                          isLoading={isLoadingSendOtp}
-                          onClick={handleSendOtp}
+                    <div className="space-y-1">
+                      <div className="flex items-end">
+                        <FormInput
+                          label="Nomor Telepon (Whatsapp)"
+                          inputType="text"
+                          placeholder="Contoh: 81212312312"
+                          register={register("nomorTelepon")}
+                          inputStyles={`w-full`}
+                          className="w-full"
+                          required
                         />
+                        {dataProfile?.phoneNumber !==
+                          "+62" + watch("nomorTelepon") && (
+                          <ButtonCustom
+                            variant="orange"
+                            type="button"
+                            label={`Kirim OTP`}
+                            className="h-12 ml-3 text-nowrap"
+                            isLoading={isLoadingSendOtp}
+                            onClick={handleSendOtp}
+                          />
+                        )}
+                      </div>
+                      {errorPhoneNumberModal && (
+                        <p className="text-[#E52020] text-sm max-w-3xs">
+                          {errorPhoneNumberModal}
+                        </p>
                       )}
                     </div>
 
-                    <div id="recaptcha-container" />
+                    <div id="recaptcha-container" className="hidden" />
 
                     {isOtpSent && (
                       <div className="pt-5 border-t space-y-3">
                         <h3 className="text-lg font-bold">Verifikasi OTP</h3>
-                        <div className="flex gap-3">
+                        <div className="space-y-3">
                           <div className="flex gap-3">
-                            {otp.map((data, index) => (
-                              <input
-                                key={index}
-                                type="text"
-                                maxLength="1"
-                                value={data}
-                                onChange={(e) =>
-                                  handleOtpChange(e.target, index, e)
-                                }
-                                onKeyDown={(e) => handleKeyDown(e, index)}
-                                ref={(el) => (inputRefs.current[index] = el)}
-                                className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
-                                style={{
-                                  color: data ? "#131010" : "#000",
-                                  outlineColor: data ? "#131010" : "#C2C2C2",
-                                }}
-                                aria-label={`OTP digit ${index + 1}`}
-                                aria-required="true"
-                                autoComplete="one-time-code"
-                              />
-                            ))}
+                            <div className="flex gap-3">
+                              {otp.map((data, index) => (
+                                <input
+                                  key={index}
+                                  type="text"
+                                  maxLength="1"
+                                  value={data}
+                                  onChange={(e) =>
+                                    handleOtpChange(e.target, index, e)
+                                  }
+                                  onKeyDown={(e) => handleKeyDown(e, index)}
+                                  ref={(el) => (inputRefs.current[index] = el)}
+                                  className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
+                                  style={{
+                                    color: data ? "#131010" : "#000",
+                                    outlineColor: data ? "#131010" : "#C2C2C2",
+                                  }}
+                                  aria-label={`OTP digit ${index + 1}`}
+                                  aria-required="true"
+                                  autoComplete="one-time-code"
+                                />
+                              ))}
+                            </div>
+                            <ButtonCustom
+                              type="button"
+                              variant="orange"
+                              label="Konfirmasi"
+                              onClick={handleVerifyOtp}
+                              isLoading={isLoadingVerifyOtp}
+                              className="min-w-[146px]"
+                            />
                           </div>
-                          <ButtonCustom
-                            type="button"
-                            variant="orange"
-                            label="Konfirmasi"
-                            onClick={handleVerifyOtp}
-                            isLoading={isLoadingVerifyOtp}
-                            className="min-w-[146px]"
-                          />
+                          {errorOtp && (
+                            <p className="text-[#E52020] text-sm">{errorOtp}</p>
+                          )}
                         </div>
                       </div>
                     )}
@@ -512,36 +603,45 @@ export default function Akun() {
                 </div>
               )}
             </div>
-            <div className="flex gap-3 items-end relative">
-              <FormInput
-                label="Email"
-                inputType="text"
-                type="email"
-                placeholder="Contoh: user@example.com"
-                register={register("email")}
-                inputStyles={`w-full bg-white relative`}
-                className="w-full"
-              />
-              {dataProfile?.emailVerifiedAt ? (
-                <Icon
-                  icon="icon-park-solid:check-one"
-                  width={32}
-                  height={32}
-                  color="#1F7D53"
-                  className="absolute right-2 bottom-2"
+            <div className="space-y-1">
+              <div className="flex gap-3 items-end relative">
+                <FormInput
+                  label="Email"
+                  inputType="text"
+                  type="email"
+                  placeholder="Contoh: user@example.com"
+                  register={register("email")}
+                  inputStyles={`w-full bg-white relative`}
+                  className="w-full"
+                  required
                 />
-              ) : (
-                <ButtonCustom
-                  type="button"
-                  variant="orange"
-                  label="Verifikasi Email"
-                  onClick={() => {
-                    handleVerifyEmail();
-                    setIsEmailVerifModalOpen(true);
-                  }}
-                  className="h-12 text-nowrap"
-                />
+                {dataProfile?.emailVerifiedAt ? (
+                  <Icon
+                    icon="icon-park-solid:check-one"
+                    width={32}
+                    height={32}
+                    color="#1F7D53"
+                    className="absolute right-2 bottom-2"
+                  />
+                ) : (
+                  <ButtonCustom
+                    type="button"
+                    variant="orange"
+                    label="Verifikasi Email"
+                    onClick={() => {
+                      handleVerifyEmail();
+                      setIsEmailVerifModalOpen(true);
+                    }}
+                    className="h-12 text-nowrap"
+                  />
+                )}
+              </div>
+              {errors?.email?.message && (
+                <p className="text-[#E52020] text-sm">
+                  {errors?.email?.message}
+                </p>
               )}
+
               {isEmailVerifModalOpen && (
                 <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
                   <div
@@ -584,32 +684,45 @@ export default function Akun() {
                 </div>
               )}
             </div>
-            <FormInput
-              label="Alamat Lengkap"
-              inputType="textArea"
-              placeholder="Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
-              value={watch("alamat.summary") || ""}
-              // register={register("alamat")}
-              onClick={() => setIsModalOpen(!isModalOpen)}
-              className="flex-1"
-              inputStyles={`w-full bg-white`}
-            />
-            {/* Modal Alamat Lengkap */}
-            <AddressModal
-              isOpen={isModalOpen}
-              watch={watch}
-              dataProfile={dataProfile}
-              handleClose={() => setIsModalOpen(false)}
-              setValue={setValue}
-            />
+            <div>
+              <FormInput
+                label="Alamat Lengkap"
+                inputType="textArea"
+                placeholder="Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
+                value={watch("alamat.summary") || ""}
+                onClick={() => setIsModalOpen(!isModalOpen)}
+                className="flex-1"
+                inputStyles={`w-full bg-white`}
+              />
+              {/* Modal Alamat Lengkap */}
+              <AddressModal
+                isOpen={isModalOpen}
+                watch={watch}
+                dataProfile={dataProfile}
+                handleClose={() => setIsModalOpen(false)}
+                setValue={setValue}
+              />
+            </div>
           </div>
-          {((isEdit && !isEditPhoneNumber) || isAvatarEdit) && (
+          {((isEdit && !isEditPhoneNumber) ||
+            (isAvatarEdit && watch("foto"))) && (
             <div className="flex gap-3">
               <ButtonCustom
                 type={"submit"}
                 variant={"brown"}
-                label={"Simpan Perubahan"}
+                label={
+                  isLoadingUpdateProfile ? (
+                    <ClipLoader
+                      color="white"
+                      loading={isLoadingUpdateProfile}
+                      size={24}
+                    />
+                  ) : (
+                    "Simpan Perubahan"
+                  )
+                }
                 className="w-full"
+                disabled={isLoadingUpdateProfile}
               />
               <ButtonCustom
                 type="button"

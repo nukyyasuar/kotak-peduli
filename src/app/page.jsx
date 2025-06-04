@@ -15,7 +15,6 @@ import {
   KriteriaCard,
 } from "src/components/homepage";
 import {
-  testimonials,
   clothesCriteria,
   bookCriteria,
   electronicCriteria,
@@ -183,22 +182,7 @@ export default function Home() {
 
             {/* Card Testimoni */}
             <div className="bg-[#FFF0DC] rounded-2xl px-4 sm:px-6 py-8 flex flex-col justify-center items-center lg:h-95">
-              <div className="flex items-center gap-3 lg:gap-8 w-full">
-                {/* Tombol Prev */}
-                <div className="flex items-center">
-                  <button
-                    className="cursor-pointer"
-                    onClick={() => handleSlide("prev")}
-                  >
-                    <Icon
-                      icon="ep:arrow-left-bold"
-                      width={28}
-                      color="#543A14"
-                    />
-                  </button>
-                </div>
-
-                {/* Konten Testimoni */}
+              <div className="flex flex-col items-center gap-3 sm:gap-0 w-full">
                 {isLoadingFetchTestimonies ? (
                   <div className="flex justify-center items-center w-full h-full">
                     <ClipLoader
@@ -207,68 +191,95 @@ export default function Home() {
                       size={32}
                     />
                   </div>
+                ) : dataTestimonies?.length === 0 ? (
+                  <div className="flex flex-col justify-center items-center text-center text-[#543A14]">
+                    <p className="text-lg sm:text-xl font-bold mb-2">
+                      Belum ada testimoni yang tersedia.
+                    </p>
+                    <p className="text-sm sm:text-base">
+                      Jadilah yang pertama memberikan testimoni!
+                    </p>
+                  </div>
                 ) : (
-                  dataTestimonies?.length > 0 &&
-                  dataTestimonies?.map((item, index) => {
-                    const filePath = item.attachment?.files[0]?.path;
-
-                    return (
-                      <div
-                        key={index}
-                        className={`${
-                          index === activeIndex ? "flex" : "hidden"
-                        } flex-col lg:flex-row items-center gap-6 lg:gap-[72px] w-full`}
-                      >
-                        {filePath && (
-                          <div className="relative w-full max-w-[280px] md:max-w-[300px] aspect-square">
-                            <Image
-                              src={filePath || ""}
-                              alt="Testimonial"
-                              fill
-                              className="rounded-lg object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1 flex items-center justify-center lg:h-75">
-                          <div className="text-center lg:text-left max-w-xl text-sm sm:text-base text-[#543A14]">
-                            <p className="text-[#131010] mb-4 md:mb-6">
-                              {item.message}
-                            </p>
-                            <p className="font-bold">{item.name}</p>
-                            <p className="">{item.title}</p>
-                          </div>
-                        </div>
+                  <>
+                    <div className="flex items-center gap-3 lg:gap-8 w-full">
+                      {/* Tombol Prev */}
+                      <div className="flex items-center">
+                        <button
+                          className="cursor-pointer"
+                          onClick={() => handleSlide("prev")}
+                        >
+                          <Icon
+                            icon="ep:arrow-left-bold"
+                            width={28}
+                            color="#543A14"
+                          />
+                        </button>
                       </div>
-                    );
-                  })
+
+                      {/* Konten Testimoni */}
+                      {dataTestimonies?.map((item, index) => {
+                        const filePath = item.attachment?.files[0]?.path;
+
+                        return (
+                          <div
+                            key={index}
+                            className={`${
+                              index === activeIndex ? "flex" : "hidden"
+                            } flex-col lg:flex-row items-center gap-6 lg:gap-[72px] w-full`}
+                          >
+                            {filePath && (
+                              <div className="relative w-full max-w-[280px] md:max-w-[300px] aspect-square">
+                                <Image
+                                  src={filePath}
+                                  alt="Testimonial"
+                                  fill
+                                  className="rounded-lg object-cover"
+                                />
+                              </div>
+                            )}
+                            <div className="flex-1 flex items-center justify-center lg:h-75">
+                              <div className="text-center lg:text-left max-w-md text-sm sm:text-base text-[#543A14]">
+                                <p className="text-[#131010] mb-4 md:mb-6">
+                                  {item.message}
+                                </p>
+                                <p className="font-bold">{item.name}</p>
+                                <p>{item.title}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* Tombol Next */}
+                      <div className="flex items-center">
+                        <button
+                          className="cursor-pointer"
+                          onClick={() => handleSlide("next")}
+                        >
+                          <Icon
+                            icon="ep:arrow-right-bold"
+                            width={28}
+                            color="#543A14"
+                          />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Bullet Point */}
+                    <div className="flex justify-center gap-3 mt-3">
+                      {dataTestimonies?.map((_, index) => (
+                        <button
+                          key={index}
+                          className={`w-2 h-2 rounded-full cursor-pointer ${
+                            index === activeIndex ? "bg-[#543a14]" : "bg-white"
+                          }`}
+                          onClick={() => setActiveIndex(index)}
+                        ></button>
+                      ))}
+                    </div>
+                  </>
                 )}
-
-                {/* Tombol Next */}
-                <div className="flex items-center">
-                  <button
-                    className="cursor-pointer"
-                    onClick={() => handleSlide("next")}
-                  >
-                    <Icon
-                      icon="ep:arrow-right-bold"
-                      width={28}
-                      color="#543A14"
-                    />
-                  </button>
-                </div>
-              </div>
-
-              {/* Bullet Point */}
-              <div className="flex justify-center gap-3 mt-3">
-                {dataTestimonies?.map((_, index) => (
-                  <button
-                    key={index}
-                    className={`w-2 h-2 rounded-full cursor-pointer ${
-                      index === activeIndex ? "bg-[#543a14]" : "bg-white"
-                    }`}
-                    onClick={() => setActiveIndex(index)}
-                  ></button>
-                ))}
               </div>
             </div>
           </div>
