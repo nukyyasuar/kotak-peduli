@@ -72,6 +72,7 @@ export default function TempatPenampung() {
       ...item,
     }))
     .find((item) => item.value === selectedDropPoint);
+  const dataSelectedPostsAddress = dataSelectedPost?.address;
 
   const formatToIndonesianDate = (isoDate) => {
     if (!isoDate) return null;
@@ -208,6 +209,15 @@ export default function TempatPenampung() {
                   loading={isGetCollectionCentersLoading}
                   size={50}
                 />
+              </div>
+            ) : dataCollectionCenters?.length === 0 ? (
+              <div className="flex flex-col justify-center items-center gap-3 h-full text-center text-[#543A14]">
+                <p className="font-bold text-lg sm:text-xl">
+                  Tempat penampung akan segera tersedia
+                </p>
+                <p className="text-sm sm:text-base">
+                  Nantikan kerja sama kami dengan mitra-mitra terpercaya!
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
@@ -404,9 +414,8 @@ export default function TempatPenampung() {
                             inputType="dropdown"
                           />
                           <p>
-                            {dataSelectedPost?.address?.reference &&
-                            dataSelectedPost?.address?.detail
-                              ? `(${dataSelectedPost?.address?.reference}) ${dataSelectedPost?.address?.detail}`
+                            {dataSelectedPostsAddress?.detail
+                              ? `${dataSelectedPostsAddress?.reference ? `(${dataSelectedPostsAddress?.reference})` : ""} ${dataSelectedPost?.address?.detail}`
                               : "-"}
                           </p>
                         </div>
