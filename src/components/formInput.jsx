@@ -152,7 +152,7 @@ const FormInput = ({
                       ? field.value
                       : formattedOptions.find(
                           (opt) => opt.value === field.value
-                        )
+                        ) || null
                 }
                 onChange={
                   type === "checkbox"
