@@ -5,7 +5,6 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "clear-mammal-simply.ngrok-free.app",
-        // pathname: '/account123/**',
       },
       {
         protocol: "https",
