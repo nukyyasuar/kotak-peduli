@@ -176,91 +176,6 @@ export default function Registration() {
     }
   };
 
-  //   const handleVerifyOtp = async () => {
-  //     setIsLoading(true);
-
-  //     const code = otp.join("");
-  //     if (!code || code.length !== 6) {
-  //       toast.error("Masukkan 6 digit kode OTP");
-  //       setIsLoading(false);
-  //       return;
-  //     }
-
-  //     if (!registrationData || Object.keys(registrationData).length === 0) {
-  //       toast.error("Data registrasi tidak ditemukan. Silakan daftar ulang.");
-  //       setIsLoading(false);
-  //       setShowOtpVerification(false);
-  //       return;
-  //     }
-
-  //     try {
-  //       const user = await verifyPhoneCode(confirmationResult, code);
-  //       if (user) {
-  //         const idToken = await user.getIdToken();
-
-  //         try {
-  // await registerWithEmail({
-  //           email: watch("email"),
-  //           password: watch("password"),
-  //           firstName: watch("firstName"),
-  //           lastName: watch("lastName"),
-  //           phoneNumber: "+62" + watch("phoneNumber"),
-  //           ...(idToken ? { idToken: idToken } : {}),
-  //         });
-  //         toast.success(
-  //           "Pendaftaran berhasil! Anda akan diarahkan ke halaman login."
-  //         );
-  //         } catch (error) {
-
-  //         }
-
-  //         }
-
-  //       const { email, password } = registrationData;
-  //       if (!email || !password) {
-  //         throw new Error(
-  //           "Data registrasi tidak lengkap (email atau password hilang). Silakan daftar ulang."
-  //         );
-  //       }
-
-  //       localStorage.removeItem("registrationData");
-  //       localStorage.removeItem("showOtpVerification");
-  //       clearConfirmationResult();
-
-  //       toast.success(
-  //         "Pendaftaran berhasil! Anda akan diarahkan ke halaman login."
-  //       );
-  //       router.push("/login");
-  //     } catch (err) {
-  //       console.error("Error during OTP verification or registration:", err);
-  //       if (err?.code === "auth/invalid-verification-code") {
-  //         toast.error("Kode OTP salah. Silakan coba lagi.");
-  //       }
-  //       if (err?.code === "auth/session-expired") {
-  //         toast.error("Sesi OTP telah kedaluwarsa. Silakan minta kode baru.");
-  //       }
-  //       if (err?.code === "auth/too-many-requests") {
-  //         toast.error("Terlalu banyak permintaan. Silakan coba lagi nanti.");
-  //       }
-  //       if (
-  //         err?.message ===
-  //         "A user with the same email or phone number already exists"
-  //       ) {
-  //         toast.error(
-  //           "Akun dengan nomor telepon ini sudah terdaftar. Silakan gunakan nomor lain."
-  //         );
-  //       }
-  //       if (
-  //         err?.message?.includes("tidak lengkap") ||
-  //         err?.code === "auth/invalid-phone-number"
-  //       ) {
-  //         setShowOtpVerification(false);
-  //         localStorage.removeItem("showOtpVerification");
-  //       }
-  //     } finally {
-  //       setIsLoading(false);
-  //     }
-  //   };
   const handleVerifyOtp = async () => {
     setIsLoading(true);
 
@@ -537,7 +452,7 @@ export default function Registration() {
               </div>
 
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-                <div className="space-y-3">
+                <fieldset className="space-y-3" disabled={isLoading}>
                   <div className="flex flex-col sm:flex-row gap-3">
                     <FormInput
                       inputType="text"
@@ -597,7 +512,7 @@ export default function Registration() {
                     showPassword={showPassword}
                     inputStyles="relative"
                   />
-                </div>
+                </fieldset>
 
                 <ButtonCustom
                   type="submit"
@@ -606,10 +521,7 @@ export default function Registration() {
                   className="w-full h-12"
                   label={
                     isLoading ? (
-                      <>
-                        <ClipLoader color="white" size={20} className="mr-2" />
-                        Memproses...
-                      </>
+                      <ClipLoader color="white" size={20} loading={isLoading} />
                     ) : (
                       "Buat Akun"
                     )
@@ -651,7 +563,10 @@ export default function Registration() {
                 </p>
               </div>
 
-              <div className="flex gap-2 justify-center flex-wrap max-w-xs mx-auto">
+              <fieldset
+                className="flex gap-2 justify-center flex-wrap max-w-xs mx-auto"
+                disable
+              >
                 {otp.map((data, index) => (
                   <input
                     key={index}
@@ -671,7 +586,7 @@ export default function Registration() {
                     autoComplete="one-time-code"
                   />
                 ))}
-              </div>
+              </fieldset>
 
               <ButtonCustom
                 type="button"
@@ -681,10 +596,7 @@ export default function Registration() {
                 onClick={handleVerifyOtp}
                 label={
                   isLoading ? (
-                    <div className="flex items-center justify-center">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span className="ml-2">Memverifikasi...</span>
-                    </div>
+                    <ClipLoader color="white" size={20} loading={isLoading} />
                   ) : (
                     "Konfirmasi"
                   )
@@ -695,7 +607,7 @@ export default function Registration() {
                 type="button"
                 onClick={handleResendOtp}
                 variant="outlineOrange"
-                disabled={isTimerRunning || isResendLoading}
+                disabled={isTimerRunning || isResendLoading || isLoading}
                 className={`w-full h-12 ${
                   (isTimerRunning || isResendLoading) &&
                   "opacity-50 cursor-not-allowed"
