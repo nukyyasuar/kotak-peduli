@@ -717,7 +717,6 @@ export default function DaftarTempatPenampung() {
                         inputType="text"
                         placeholder="Contoh: 81212312312"
                         value={phoneNumberHolder || ""}
-                        // errors={errors?.nomorTelepon?.message}
                         inputStyles={"border-none"}
                         required
                         disabled
@@ -735,7 +734,7 @@ export default function DaftarTempatPenampung() {
                           <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
                             <div
                               ref={editPhoneNumberModalRef}
-                              className="bg-white rounded-lg flex flex-col p-8 text-black gap-6 max-w-xl"
+                              className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
                             >
                               <button className="flex justify-end gap-0 -mb-6">
                                 <Icon
@@ -824,7 +823,7 @@ export default function DaftarTempatPenampung() {
                                             ref={(el) =>
                                               (inputRefs.current[index] = el)
                                             }
-                                            className="h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
+                                            className="h-12 aspect-square max-w-12 text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
                                             style={{
                                               color: data ? "#131010" : "#000",
                                               outlineColor: data

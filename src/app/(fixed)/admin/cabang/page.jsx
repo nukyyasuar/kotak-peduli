@@ -102,6 +102,7 @@ export default function CollectionCenterPosts() {
     setSelectedDataPost(null);
     setIsEditPostModalOpen(false);
     setIsAddPostModalOpen(false);
+    resetValues();
   };
 
   const toggleMenu = (index) => {

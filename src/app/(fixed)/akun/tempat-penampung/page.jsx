@@ -191,6 +191,9 @@ export default function AkunTempatPenampung() {
       );
       setIsSubmitted(true);
       setIsPending(true);
+
+      localStorage.removeItem("idTokenRegistCollectionCenter");
+      localStorage.removeItem("phoneNumberRegistCollectionCenter");
     } catch (error) {
       console.error("Error:", error);
       toast.error("Pendaftaran gagal");
@@ -439,6 +442,8 @@ export default function AkunTempatPenampung() {
     }
   };
 
+  console.log("phonenumberHolder", phoneNumberHolder);
+
   return isLoadingCollectionCenter || isLoadingDetailCollectionCenter ? (
     <div className="flex items-center justify-center h-50 sm:h-90">
       <ClipLoader
@@ -568,7 +573,7 @@ export default function AkunTempatPenampung() {
                       <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20 px-4">
                         <div
                           ref={editPhoneNumberModalRef}
-                          className="bg-white rounded-lg flex flex-col p-8 text-black gap-6 max-w-xl"
+                          className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
                         >
                           <button className="flex justify-end gap-0 -mb-6">
                             <Icon
@@ -583,7 +588,22 @@ export default function AkunTempatPenampung() {
                                 setConfirmationResult(null);
                                 setValue(
                                   "nomorTelepon",
-                                  dataProfile.phoneNumber.slice(3) || ""
+                                  localStorage.getItem(
+                                    "phoneNumberRegistCollectionCenter"
+                                  )
+                                    ? localStorage.getItem(
+                                        "phoneNumberRegistCollectionCenter"
+                                      )
+                                    : dataProfile.phoneNumber.slice(3)
+                                );
+                                setPhoneNumberHolder(
+                                  localStorage.getItem(
+                                    "phoneNumberRegistCollectionCenter"
+                                  )
+                                    ? localStorage.getItem(
+                                        "phoneNumberRegistCollectionCenter"
+                                      )
+                                    : dataProfile.phoneNumber.slice(3)
                                 );
                                 setIsLoadingSendOtp(false);
                                 setIsLoadingVerifyOtp(false);
@@ -605,8 +625,12 @@ export default function AkunTempatPenampung() {
                                 inputStyles={`w-full`}
                                 className={"w-full"}
                               />
-                              {dataProfile?.phoneNumber !==
-                                "+62" + watch("nomorTelepon") && (
+                              {(dataProfile?.phoneNumber !==
+                                "+62" + watch("nomorTelepon") ||
+                                watch("nomorTelepon") !==
+                                  localStorage.getItem(
+                                    "phoneNumberRegistCollectionCenter"
+                                  )) && (
                                 <ButtonCustom
                                   variant="orange"
                                   type="button"
@@ -649,7 +673,7 @@ export default function AkunTempatPenampung() {
                                         ref={(el) =>
                                           (inputRefs.current[index] = el)
                                         }
-                                        className="h-10 sm:h-12 aspect-square text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
+                                        className="h-10 sm:h-12 aspect-square max-w-12 text-center text-lg border border-gray-300 rounded-md focus:outline-none focus:border-[#F5A623] transition-colors outline-1"
                                         style={{
                                           color: data ? "#131010" : "#000",
                                           outlineColor: data
