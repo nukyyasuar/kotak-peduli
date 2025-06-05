@@ -312,6 +312,7 @@ export default function CollectionCenterDonationItems() {
         selectedDonationTypesFilters,
         selectedPickupFilters
       );
+      location.reload();
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Gagal memperbarui status barang");
