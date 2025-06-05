@@ -128,6 +128,9 @@ export default function RiwayatDonasi() {
 
     const payload = {
       details: waktuPengirimanFormatted,
+    };
+
+    const payloadNotes = {
       ...(watch("alasan") !== "" && {
         notes: watch("alasan"),
       }),
@@ -143,7 +146,7 @@ export default function RiwayatDonasi() {
 
       // Proses Update Status
       try {
-        await processDonation(selectedIdDonation);
+        await processDonation(selectedIdDonation, payloadNotes);
         setIsDonorShippingDate(waktuPengirimanFormatted);
         toast.success(
           "Tanggal pengiriman berhasil diatur. Tempat penampung akan mengkonfirmasi pilihan Anda."
@@ -604,12 +607,19 @@ export default function RiwayatDonasi() {
                       type="submit"
                       className="w-full"
                       onClick={() => {
-                        if (
-                          watch("alasan") === "" &&
-                          detailDonation?.pickupDate
-                        ) {
+                        const alasan = watch("alasan");
+
+                        if (!alasan) {
                           setRequiredAlasanMessage(
                             "Alasan penggantian wajib diisi"
+                          );
+                        } else if (alasan.length < 10) {
+                          setRequiredAlasanMessage(
+                            "Alasan penggantian minimal terdiri dari 10 karakter"
+                          );
+                        } else if (alasan.length > 255) {
+                          setRequiredAlasanMessage(
+                            "Alasan penggantian maksimal terdiri dari 255 karakter"
                           );
                         } else {
                           setRequiredAlasanMessage("");
