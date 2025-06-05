@@ -437,6 +437,7 @@ export default function CollectionCenterMembers() {
                 icon="material-symbols:add"
                 onClick={() => {
                   setIsAddMemberModalOpen(true);
+                  setOpenMenuIndex(null);
                 }}
               />
             </div>
