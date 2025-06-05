@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Head from "next/head";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -17,12 +16,11 @@ import { sendForgotPasswordLink } from "src/services/api/forgotPassword";
 
 import { FormInput } from "src/components/formInput";
 import { ButtonCustom } from "src/components/button";
-import { Spacer, TextWithLink } from "src/components/text";
+import { TextWithLink } from "src/components/text";
 import handleOutsideModal from "@/src/components/handleOutsideModal";
 
 export default function Login() {
   const [isFormLoading, setIsFormLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isModalOpenForgotPassword, setIsModalOpenForgotPassword] =
     useState(false);
   const [isLoadingSendForgotPassword, setIsLoadingSendForgotPassword] =
@@ -104,19 +102,6 @@ export default function Login() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setIsGoogleLoading(true);
-    try {
-      await loginWithGoogle();
-      toast.success("Login dengan Google berhasil!");
-      router.push("/");
-    } catch (err) {
-      toast.error("Login Google gagal: " + err.message);
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
-
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("code");
 
@@ -176,68 +161,62 @@ export default function Login() {
               <p className="text-base">Selamat Datang Kembali</p>
             </div>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-              <FormInput
-                inputType="text"
-                type="email"
-                name="email"
-                register={register("email")}
-                value={watch("email")}
-                label="Email"
-                placeholder="Contoh: user@example.com"
-                errors={errors?.email?.message}
-                required
-                disabled={isFormLoading}
-              />
-              <div className="space-y-1">
-                <div className="relative">
-                  <FormInput
-                    inputType="text"
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    register={register("password")}
-                    value={watch("password")}
-                    label="Password"
-                    placeholder="Masukkan minimum 8 karakter"
-                    errors={errors?.password?.message}
-                    required
-                    disabled={isFormLoading}
-                    togglePassword={togglePassword}
-                    showPassword={showPassword}
-                  />
-                </div>
-                <span
-                  className="text-xs cursor-pointer underline text-[#C2C2C2] hover:text-[#F0BB78] transition"
-                  onClick={() => setIsModalOpenForgotPassword(true)}
-                >
-                  Lupa password?
-                </span>
-              </div>
-
-              <ButtonCustom
-                type="submit"
-                disabled={isFormLoading}
-                variant="orange"
-                className="h-12 w-full"
-                label={
-                  isFormLoading ? (
-                    <ClipLoader
-                      color="white"
-                      loading={isFormLoading}
-                      size={20}
+            <fieldset disabled={isFormLoading}>
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                <FormInput
+                  inputType="text"
+                  type="email"
+                  name="email"
+                  register={register("email")}
+                  value={watch("email")}
+                  label="Email"
+                  placeholder="Contoh: user@example.com"
+                  errors={errors?.email?.message}
+                  required
+                />
+                <div className="space-y-1">
+                  <div className="relative">
+                    <FormInput
+                      inputType="text"
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      register={register("password")}
+                      value={watch("password")}
+                      label="Password"
+                      placeholder="Masukkan minimum 8 karakter"
+                      errors={errors?.password?.message}
+                      required
+                      togglePassword={togglePassword}
+                      showPassword={showPassword}
                     />
-                  ) : (
-                    "Masuk"
-                  )
-                }
-              />
-            </form>
+                  </div>
+                  <span
+                    className="text-xs cursor-pointer underline text-[#C2C2C2] hover:text-[#F0BB78] transition"
+                    onClick={() => setIsModalOpenForgotPassword(true)}
+                  >
+                    Lupa password?
+                  </span>
+                </div>
 
-            {/* Optional Google Login */}
-            {/* 
-            <Spacer text="atau menggunakan" />
-            <ButtonCustom ... />
-            */}
+                <ButtonCustom
+                  type="submit"
+                  disabled={isFormLoading}
+                  variant="orange"
+                  className="h-12 w-full"
+                  label={
+                    isFormLoading ? (
+                      <ClipLoader
+                        color="white"
+                        loading={isFormLoading}
+                        size={20}
+                      />
+                    ) : (
+                      "Masuk"
+                    )
+                  }
+                />
+              </form>
+            </fieldset>
 
             <TextWithLink
               href="/daftar"
@@ -271,6 +250,7 @@ export default function Login() {
                 register={registerForgotPassword("email")}
                 required
                 errors={errorsForgotPassword?.email?.message}
+                disabled={isLoadingSendForgotPassword}
               />
               <ButtonCustom
                 type="submit"

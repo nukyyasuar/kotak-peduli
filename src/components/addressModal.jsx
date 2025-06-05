@@ -303,7 +303,7 @@ export default function AddressModal({
       const match = summary?.match(/\((.*?)\)\s*(.*)/);
       if (match) {
         const [, patokan, jalan] = match;
-        setValueDetail("alamat.patokan", patokan);
+        setValueDetail("alamat.patokan", patokan !== "null" ? patokan : "");
         setValueDetail("alamat.jalan", jalan);
       } else {
         setValueDetail("alamat.patokan", "");

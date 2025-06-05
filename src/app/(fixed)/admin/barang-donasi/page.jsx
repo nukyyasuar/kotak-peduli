@@ -72,6 +72,8 @@ export default function CollectionCenterDonationItems() {
   const [isFetchDetailDonationLoading, setIsFetchDetailDonationLoading] =
     useState(false);
   const [isLoadingFetchDonations, setIsLoadingFetchDonations] = useState(false);
+  const [isLoadingUpdateStatus, setIsLoadingUpdateStatus] = useState(false);
+  const [isOpenProofModal, setIsOpenProofModal] = useState(false);
 
   const isFirstFetchDonations = useRef(true);
   const updateStatusModalRef = useRef(null);
@@ -174,7 +176,7 @@ export default function CollectionCenterDonationItems() {
     onClose: () => {
       if (isUpdateStatusModalOpen || isShippingDateModalOpen) {
         // nothing
-      } else {
+      } else if (isDetailModalOpen && !isOpenProofModal) {
         setIsDetailModalOpen(false);
       }
     },
@@ -294,7 +296,10 @@ export default function CollectionCenterDonationItems() {
     }
 
     try {
+      setIsLoadingUpdateStatus(true);
+
       await processDonation(selectedDonationId, formData);
+
       toast.success("Status barang berhasil diperbarui");
       setIsUpdateStatusModalOpen(false);
       reset();
@@ -310,6 +315,8 @@ export default function CollectionCenterDonationItems() {
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Gagal memperbarui status barang");
+    } finally {
+      setIsLoadingUpdateStatus(false);
     }
   };
 
@@ -401,7 +408,10 @@ export default function CollectionCenterDonationItems() {
             <div className="relative">
               {/* Button Filter */}
               <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                onClick={() => {
+                  setIsFilterOpen(!isFilterOpen);
+                  setOpenMenuIndex(null);
+                }}
                 className={`border border-[#C2C2C2] rounded-lg px-3 h-12 flex items-center justify-between ${totalSelectedFiltersCount ? "bg-[#543A14] text-white" : "bg-white text-[#C2C2C2]"}`}
               >
                 <span className="mr-1">
@@ -596,7 +606,10 @@ export default function CollectionCenterDonationItems() {
                         <td className="py-3">{donationStatus}</td>
                         <td className="py-3 relative text-start">
                           <button
-                            onClick={() => toggleMenu(index)}
+                            onClick={() => {
+                              toggleMenu(index);
+                              setIsFilterOpen(false);
+                            }}
                             className="border border-[#C2C2C2] rounded-sm p-1"
                           >
                             <Icon
@@ -713,6 +726,7 @@ export default function CollectionCenterDonationItems() {
         handleImageLoaded={handleImageLoaded}
         setIsShippingDateModalOpen={setIsShippingDateModalOpen}
         isFetchDetailDonationLoading={isFetchDetailDonationLoading}
+        setIsOpenProofModal={setIsOpenProofModal}
       />
 
       {/* Modal Tanggal Pengiriman */}
@@ -730,7 +744,10 @@ export default function CollectionCenterDonationItems() {
 
             <form onSubmit={handleSubmit(onSubmitCollectionCenterShippingDate)}>
               {detailDonation?.userAvailability?.length > 0 && (
-                <div className="grid gap-3">
+                <fieldset
+                  className="grid gap-3"
+                  disabled={isSubmitShippingDateLoading}
+                >
                   {detailDonation.userAvailability.map((item, index) => {
                     const value = item;
 
@@ -752,7 +769,7 @@ export default function CollectionCenterDonationItems() {
                       </label>
                     );
                   })}
-                </div>
+                </fieldset>
               )}
               {errors?.waktuPengirimanTempatPenampung && (
                 <p className="text-red-600 mt-3 text-sm">
@@ -808,12 +825,12 @@ export default function CollectionCenterDonationItems() {
                 <div className="flex justify-center">
                   <ClipLoader
                     color="#543A14"
-                    size={30}
+                    size={40}
                     loading={isFetchDetailDonationLoading}
                   />
                 </div>
               ) : (
-                <>
+                <fieldset disabled={isLoadingUpdateStatus}>
                   <div className="space-y-3">
                     <TextBetween
                       label="Status terkini"
@@ -860,7 +877,17 @@ export default function CollectionCenterDonationItems() {
                             className={baseClassNameInput}
                             {...register("note", {
                               required:
-                                "Laporan singkat distribusi wajib diisi",
+                                "Laporan singkat penyaluran wajib diisi",
+                              minLength: {
+                                value: 20,
+                                message:
+                                  "Laporan singkat penyaluran minimal terdiri dari 20 karakter.",
+                              },
+                              maxLength: {
+                                value: 255,
+                                message:
+                                  "Laporan singkat penyaluran maksimal terdiri dari 255 karakter.",
+                              },
                             })}
                           />
                           {errors?.note && (
@@ -985,10 +1012,21 @@ export default function CollectionCenterDonationItems() {
                   </div>
                   <div className="flex justify-end space-x-3 mt-4">
                     <ButtonCustom
-                      label="Konfirmasi"
+                      label={
+                        isLoadingUpdateStatus ? (
+                          <ClipLoader
+                            loading={isLoadingUpdateStatus}
+                            color="white"
+                            size={24}
+                          />
+                        ) : (
+                          "Konfirmasi"
+                        )
+                      }
                       variant="brown"
                       type="submit"
                       className="w-full"
+                      disabled={isLoadingUpdateStatus}
                     />
                     <ButtonCustom
                       label="Batal"
@@ -998,7 +1036,7 @@ export default function CollectionCenterDonationItems() {
                       className="w-full"
                     />
                   </div>
-                </>
+                </fieldset>
               )}
             </form>
           </div>

@@ -26,6 +26,7 @@ const ModalDetailDonation = ({
   detailDonation,
   isFetchDetailDonationLoading,
   userRole,
+  setIsOpenProofModal,
 }) => {
   const largeImageModalRef = useRef(null);
   const [isModalLargeImageOpen, setIsModalLargeImageOpen] = useState(false);
@@ -56,6 +57,7 @@ const ModalDetailDonation = ({
     onClose: () => {
       if (isDistributionProofModalOpen) {
         setIsDistributionProofModalOpen(false);
+        setIsOpenProofModal(false);
       }
       if (isModalLargeImageOpen) {
         setIsModalLargeImageOpen(false);
@@ -236,7 +238,10 @@ const ModalDetailDonation = ({
                       type="button"
                       label="Lihat Bukti Penyaluran"
                       className="w-full"
-                      onClick={() => setIsDistributionProofModalOpen(true)}
+                      onClick={() => {
+                        setIsDistributionProofModalOpen(true);
+                        setIsOpenProofModal(true);
+                      }}
                     />
                   )}
 
@@ -285,7 +290,7 @@ const ModalDetailDonation = ({
                   values={[
                     `${detailDonation.user.firstName} ${detailDonation.user.lastName}`,
                     detailDonation.user.phoneNumber,
-                    `${detailDonation.address?.reference ? `(${detailDonation.address?.reference}) ` : ""}${detailDonation.address.detail}`,
+                    `${detailDonation.address?.reference && detailDonation.address?.reference !== "null" ? `(${detailDonation.address?.reference}) ` : ""}${detailDonation.address.detail}`,
                   ]}
                 />
 
@@ -301,7 +306,7 @@ const ModalDetailDonation = ({
                   values={[
                     detailDonation.collectionCenter.name,
                     detailDonation.post?.name,
-                    `${detailDonation.targetAddress?.reference ? `(${detailDonation.targetAddress.reference}) ` : ""} ${detailDonation.targetAddress.detail}`,
+                    `${detailDonation.targetAddress?.reference && !detailDonation.targetAddress?.reference !== "null" ? `(${detailDonation.targetAddress.reference}) ` : ""} ${detailDonation.targetAddress.detail}`,
                     <TextBetween
                       key="event"
                       label="Event"
@@ -376,7 +381,7 @@ const ModalDetailDonation = ({
 
       {/* Modal Bukti Penyaluran */}
       {isDistributionProofModalOpen && (
-        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
+        <div className="bg-black/40 w-screen h-screen fixed z-50 inset-0 flex items-center justify-center">
           <div
             ref={distributionProofModalRef}
             className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px]"

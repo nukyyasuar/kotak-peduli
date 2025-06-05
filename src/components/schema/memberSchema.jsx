@@ -10,8 +10,8 @@ const memberSchema = yup.object().shape({
     ),
   penempatan: yup
     .object({
-      label: yup.string().required(),
-      value: yup.mixed().required(),
+      label: yup.string(),
+      value: yup.mixed(),
     })
     .nullable(),
   role: yup
