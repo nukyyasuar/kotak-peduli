@@ -258,6 +258,7 @@ const ModalDetailDonation = ({
                       "CONFIRMED",
                       "DISTRIBUTED",
                       "REJECTED",
+                      "REDIRECTED",
                     ].includes(latestStatus) && (
                       <ButtonCustom
                         variant="brown"
