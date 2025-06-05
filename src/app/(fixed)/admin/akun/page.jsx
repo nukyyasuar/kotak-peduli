@@ -717,7 +717,6 @@ export default function DaftarTempatPenampung() {
                         inputType="text"
                         placeholder="Contoh: 81212312312"
                         value={phoneNumberHolder || ""}
-                        // errors={errors?.nomorTelepon?.message}
                         inputStyles={"border-none"}
                         required
                         disabled
