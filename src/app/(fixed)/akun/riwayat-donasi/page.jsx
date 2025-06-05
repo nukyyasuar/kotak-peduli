@@ -43,7 +43,6 @@ export default function RiwayatDonasi() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isShippingDateModalOpen, setIsShippingDateModalOpen] = useState(false);
   const [isTransitModalOpen, setIsTransitModalOpen] = useState(false);
-  const detailModalRef = useRef(null);
   const [isDonorShippingDate, setIsDonorShippingDate] = useState([]);
   const [imgSrc, setImgSrc] = useState("");
   const [donations, setDonations] = useState([]);
@@ -57,6 +56,9 @@ export default function RiwayatDonasi() {
     useState(false);
   const [detailDonation, setDetailDonation] = useState();
   const [requiredAlasanMessage, setRequiredAlasanMessage] = useState("");
+  const [isOpenProofModal, setIsOpenProofModal] = useState(false);
+
+  const detailModalRef = useRef(null);
 
   const {
     control,
@@ -81,10 +83,12 @@ export default function RiwayatDonasi() {
   const shelterShippingDate = detailDonation?.pickupDate;
 
   handleOutsideModal({
-    ref: isShippingDateModalOpen ? "" : detailModalRef,
-    isOpen: isShippingDateModalOpen ? "" : isDetailModalOpen,
+    ref: isShippingDateModalOpen ? null : detailModalRef,
+    isOpen: isShippingDateModalOpen ? false : isDetailModalOpen,
     onClose: () => {
-      isShippingDateModalOpen ? "" : setIsDetailModalOpen(false);
+      if (isDetailModalOpen && !isOpenProofModal) {
+        setIsDetailModalOpen(false);
+      }
     },
   });
 
@@ -125,7 +129,7 @@ export default function RiwayatDonasi() {
     const payload = {
       details: waktuPengirimanFormatted,
       ...(watch("alasan") !== "" && {
-        alasan: watch("alasan"),
+        notes: watch("alasan"),
       }),
     };
 
@@ -165,6 +169,7 @@ export default function RiwayatDonasi() {
       await processDonation(selectedIdDonation);
       toast.success('Status donasi berhasil diproses ke "Dalam Perjalanan".');
       fetchDonations();
+      fetchDetailDonation();
     } catch (error) {
       console.error("Error processing donation:", error);
       toast.error("Gagal memproses status donasi");
@@ -189,25 +194,25 @@ export default function RiwayatDonasi() {
     }
   };
 
+  const fetchDetailDonation = async () => {
+    setIsFetchDetailDonationLoading(true);
+
+    try {
+      const detail = await getOneDonation(selectedIdDonation);
+      setDetailDonation(detail);
+      setImgSrc(detail.attachments[0]?.fileName);
+    } catch (error) {
+      console.error("Error fetching detail donation:", error);
+    } finally {
+      setIsFetchDetailDonationLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchDonations(selectedStatus);
   }, [selectedStatus]);
 
   useEffect(() => {
-    const fetchDetailDonation = async () => {
-      setIsFetchDetailDonationLoading(true);
-
-      try {
-        const detail = await getOneDonation(selectedIdDonation);
-        setDetailDonation(detail);
-        setImgSrc(detail.attachments[0]?.fileName);
-      } catch (error) {
-        console.error("Error fetching detail donation:", error);
-      } finally {
-        setIsFetchDetailDonationLoading(false);
-      }
-    };
-
     if (selectedIdDonation) {
       fetchDetailDonation();
     }
@@ -426,6 +431,7 @@ export default function RiwayatDonasi() {
         setIsShippingDateModalOpen={setIsShippingDateModalOpen}
         selectedIdDonation={selectedIdDonation}
         isFetchDetailDonationLoading={isFetchDetailDonationLoading}
+        setIsOpenProofModal={setIsOpenProofModal}
       />
 
       {/* Modal Tanggal Pengiriman */}
@@ -441,7 +447,11 @@ export default function RiwayatDonasi() {
                 <ClipLoader color="#543A14" size={30} />
               </div>
             ) : (
-              <>
+              <fieldset
+                disabled={
+                  isUpdateStatusDonationLoading || isCreateShippingDateLoading
+                }
+              >
                 <div className="flex flex-col pb-4 border-b space-y-1">
                   <span>{detailDonation?.collectionCenter?.name}</span>
                   {detailDonation?.post && (
@@ -615,7 +625,7 @@ export default function RiwayatDonasi() {
                     />
                   </div>
                 </form>
-              </>
+              </fieldset>
             )}
           </div>
         </div>
@@ -637,13 +647,24 @@ export default function RiwayatDonasi() {
 
             <div className="flex flex-col sm:flex-row justify-end space-x-3 mt-4 gap-3">
               <ButtonCustom
-                label="Konfirmasi"
+                label={
+                  isUpdateStatusDonationLoading ? (
+                    <ClipLoader
+                      loading={isUpdateStatusDonationLoading}
+                      color="white"
+                      size={20}
+                    />
+                  ) : (
+                    "Konfirmasi"
+                  )
+                }
                 variant="brown"
                 type="button"
                 className="w-full"
                 onClick={() => {
                   handleUpdateStatus();
                 }}
+                disabled={isUpdateStatusDonationLoading}
               />
               <ButtonCustom
                 label="Batal"
