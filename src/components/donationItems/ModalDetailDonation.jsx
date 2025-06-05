@@ -49,6 +49,12 @@ const ModalDetailDonation = ({
       (item) => item.status === "REJECTED" || item.status === "REDIRECTED"
     )?.notes;
 
+  const rescheduleNotes =
+    detailDonation?.approvals?.approvalDetails[0]?.status === "CONFIRMING" &&
+    detailDonation?.approvals?.approvalDetails[0]?.notes
+      ? detailDonation?.approvals?.approvalDetails[0]?.notes
+      : "";
+
   handleOutsideModal({
     ref: isDistributionProofModalOpen
       ? distributionProofModalRef
@@ -313,6 +319,11 @@ const ModalDetailDonation = ({
                       value={detailDonation.event?.name || "-"}
                     />,
                   ]}
+                />
+
+                <ListTextWithTitle
+                  title="Alasan Pengaturan Tanggal Ulang:"
+                  values={[rescheduleNotes || "-"]}
                 />
 
                 <ListTextWithTitle
