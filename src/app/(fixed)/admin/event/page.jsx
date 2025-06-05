@@ -81,6 +81,33 @@ export default function CollectionCenterEvents() {
 
   const canReadEvent = useAccess("READ_EVENT");
 
+  // Event End Date Calculation
+  const selectedEventData = dataEvents.find(
+    (event) => event.id === selectedEventId
+  );
+
+  const eventEndDate = selectedEventData
+    ? new Date(
+        selectedEventData.endDate.toLocaleString("id-ID", {
+          timeZone: "Asia/Jakarta",
+        })
+      )
+    : null;
+  const nowWIB = new Date(
+    new Date().toLocaleString("en-US", {
+      timeZone: "Asia/Jakarta",
+    })
+  );
+  const tomorrowWIB = new Date(nowWIB);
+  tomorrowWIB.setDate(tomorrowWIB.getDate() + 1);
+  tomorrowWIB.setHours(0, 0, 0, 0);
+
+  const cantActivateEvent =
+    selectedEventData?.isActive === false &&
+    eventEndDate &&
+    eventEndDate < tomorrowWIB;
+  //
+
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("collectionCenterId");
@@ -667,6 +694,13 @@ export default function CollectionCenterEvents() {
               </span>
             </p>
 
+            {cantActivateEvent && (
+              <p className="text-[#E52020] text-base">
+                Event ini tidak dapat diaktifkan kembali karena tanggal akhir
+                penerimaan telah terlewati.
+              </p>
+            )}
+
             <div>
               <ButtonCustom
                 label={
@@ -688,7 +722,7 @@ export default function CollectionCenterEvents() {
                     ? handleSubmit(onSubmitAddEvent)
                     : onSubmitAddEvent
                 }
-                disabled={isLoadingCreateUpdateEvent}
+                disabled={isLoadingCreateUpdateEvent || cantActivateEvent}
               />
             </div>
           </div>

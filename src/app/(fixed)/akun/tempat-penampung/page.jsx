@@ -442,8 +442,6 @@ export default function AkunTempatPenampung() {
     }
   };
 
-  console.log("phonenumberHolder", phoneNumberHolder);
-
   return isLoadingCollectionCenter || isLoadingDetailCollectionCenter ? (
     <div className="flex items-center justify-center h-50 sm:h-90">
       <ClipLoader
