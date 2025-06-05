@@ -507,7 +507,7 @@ export default function RiwayatDonasi() {
                     </div>
                   )}
 
-                  <div className="space-y-1">
+                  <div className="space-y-1 py-3">
                     <span className="font-bold">
                       Pilih Tanggal & Waktu (Maks. 5 Opsi)
                     </span>
@@ -609,22 +609,27 @@ export default function RiwayatDonasi() {
                       onClick={() => {
                         const alasan = watch("alasan");
 
-                        if (!alasan) {
-                          setRequiredAlasanMessage(
-                            "Alasan penggantian wajib diisi"
-                          );
-                        } else if (alasan.length < 10) {
-                          setRequiredAlasanMessage(
-                            "Alasan penggantian minimal terdiri dari 10 karakter"
-                          );
-                        } else if (alasan.length > 255) {
-                          setRequiredAlasanMessage(
-                            "Alasan penggantian maksimal terdiri dari 255 karakter"
-                          );
+                        if (detailDonation?.pickupDate) {
+                          if (!alasan) {
+                            setRequiredAlasanMessage(
+                              "Alasan penggantian wajib diisi"
+                            );
+                          } else if (alasan.length < 10) {
+                            setRequiredAlasanMessage(
+                              "Alasan penggantian minimal terdiri dari 10 karakter"
+                            );
+                          } else if (alasan.length > 255) {
+                            setRequiredAlasanMessage(
+                              "Alasan penggantian maksimal terdiri dari 255 karakter"
+                            );
+                          } else {
+                            setRequiredAlasanMessage("");
+                          }
                         } else {
                           setRequiredAlasanMessage("");
                         }
                       }}
+                      disabled={isCreateShippingDateLoading}
                     />
                     <ButtonCustom
                       label="Batal"
