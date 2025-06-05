@@ -319,6 +319,7 @@ export default function CollectionCenterPosts() {
                 icon="material-symbols:add"
                 onClick={() => {
                   setIsAddPostModalOpen(true);
+                  setOpenMenuIndex(null);
                 }}
               />
             </div>
