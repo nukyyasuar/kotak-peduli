@@ -105,19 +105,6 @@ export default function DaftarTempatPenampung() {
   const watchPhoneNumber = watch("nomorTelepon");
   const avatarPath = dataDetailCollectionCenter?.attachment?.file?.path;
 
-  // handleOutsideModal({
-  //   ref: editPhoneNumberModalRef,
-  //   isOpen: isEditPhoneNumber,
-  //   onClose: () => {
-  //     setValue(
-  //       "nomorTelepon",
-  //       dataDetailCollectionCenter?.phoneNumber?.slice(3)
-  //     );
-  //     setIsOtpSent(false);
-  //     setIsEditPhoneNumber(false);
-  //   },
-  // });
-
   handleOutsideModal({
     ref: verifEmailModalRef,
     isOpen: isEmailVerifModalOpen,
@@ -274,9 +261,6 @@ export default function DaftarTempatPenampung() {
               formDataFile
             );
             toast.success("Foto profil berhasil diperbarui");
-            setTimeout(() => {
-              location.reload();
-            }, 1000);
           } catch (error) {
             toast.error("Gagal memperbarui foto profil");
           }
@@ -310,7 +294,6 @@ export default function DaftarTempatPenampung() {
         await getOneCollectionCenter(collectionCenterId);
 
       setDataDetailCollectionCenter(detailCollectionCenterData);
-      // toast.success("Data tempat penampung berhasil dimuat.");
     } catch (error) {
       console.error("Error fetching detail data collection center:", error);
       toast.error("Gagal memuat data tempat penampung.");
@@ -573,7 +556,10 @@ export default function DaftarTempatPenampung() {
               loading={isLoadingCollectionCenter}
             />
           ) : (
-            <div className="justify-between gap-8">
+            <fieldset
+              className="justify-between gap-8"
+              disabled={isLoadingUpdateCollectionCenter}
+            >
               {/* Foto Tempat Penampung */}
               <div className="flex flex-col items-center">
                 <div className="w-70 aspect-square bg-gray-100 mb-3 flex items-center justify-center relative group rounded-lg">
@@ -614,6 +600,11 @@ export default function DaftarTempatPenampung() {
                     onChange={handleFileChange}
                   />
                 </div>
+                {errors?.foto?.message && (
+                  <p className="text-[#E52020] text-sm max-w-3xs text-center">
+                    {errors?.foto?.message}
+                  </p>
+                )}
               </div>
 
               {/* Form Input */}
@@ -744,7 +735,7 @@ export default function DaftarTempatPenampung() {
                           <div className="fixed inset-0 flex items-center justify-center backdrop-brightness-50 z-20">
                             <div
                               ref={editPhoneNumberModalRef}
-                              className="bg-white rounded-lg flex flex-col p-8 text-black gap-6"
+                              className="bg-white rounded-lg flex flex-col p-8 text-black gap-6 max-w-xl"
                             >
                               <button className="flex justify-end gap-0 -mb-6">
                                 <Icon
@@ -1064,7 +1055,7 @@ export default function DaftarTempatPenampung() {
                   </div>
                 )}
               </form>
-            </div>
+            </fieldset>
           )}
         </div>
       )}
