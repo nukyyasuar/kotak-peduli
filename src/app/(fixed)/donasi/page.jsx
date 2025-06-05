@@ -420,6 +420,7 @@ export default function Home() {
       setValue("barangDonasi", []);
       setValue("tipePengiriman", null);
       setAddressDistance(null);
+      setIsAddDonationType(false);
     }
   }, [watchAlamatSummary]);
 
@@ -542,6 +543,7 @@ export default function Home() {
                     setValue("cabang", "");
                     setValue("barangDonasi", []);
                     setValue("tipePengiriman", null);
+                    setIsAddDonationType(false);
                     setAddressDistance(null);
                   }}
                   errors={errors?.tempatPenampung?.message}
@@ -558,6 +560,7 @@ export default function Home() {
                     setValue("cabang", selected?.value || "");
                     setValue("barangDonasi", []);
                     setValue("tipePengiriman", null);
+                    setIsAddDonationType(false);
                     setAddressDistance(null);
                   }}
                   placeholder={
