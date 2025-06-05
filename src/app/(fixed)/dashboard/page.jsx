@@ -75,6 +75,9 @@ export default function AdminConsoleDashboard() {
 
   const canReadCollection = useAccess("READ_COLLECTION");
 
+  const rejectedNote =
+    dataDetailCollectionCenter?.approval?.approvalDetails[0]?.notes;
+
   const baseClassNameInput =
     "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base ";
 
@@ -284,8 +287,11 @@ export default function AdminConsoleDashboard() {
 
             {/* Total Count */}
             <div className="flex justify-center gap-8">
-              {analyticsTotalList.map((item) => (
-                <div className="bg-[#543A14] flex flex-col items-center justify-center p-8 rounded-lg font-bold gap-2">
+              {analyticsTotalList.map((item, index) => (
+                <div
+                  key={index}
+                  className="bg-[#543A14] flex flex-col items-center justify-center p-8 rounded-lg font-bold gap-2"
+                >
                   {isLoadingFetchAnalytics ? (
                     <ClipLoader
                       color="#F0BB78"
@@ -567,20 +573,19 @@ export default function AdminConsoleDashboard() {
 
                         {/* Right Section */}
                         <div className="space-y-4 max-w-[450px]">
-                          {/* {rejectedRedirectedNote && (
-                      <ListTextWithTitle
-                        title="Alasan Penolakan:"
-                        values={[rejectedRedirectedNote]}
-                        className="max-w-[450px] text-red-600"
-                      />
-                    )} */}
+                          {rejectedNote && (
+                            <ListTextWithTitle
+                              title="Alasan Penolakan:"
+                              values={[rejectedNote]}
+                            />
+                          )}
                           <ListTextWithTitle
                             title="Informasi Tempat Penampung:"
                             values={[
                               dataDetailCollectionCenter?.name,
                               dataDetailCollectionCenter?.email,
                               dataDetailCollectionCenter?.phoneNumber,
-                              `(${detailAddress?.reference}) ${detailAddress?.detail}`,
+                              `${detailAddress?.reference ? `(${detailAddress?.reference})` : ""} ${detailAddress?.detail}`,
                             ]}
                           />
                           <div className="flex">
@@ -674,6 +679,16 @@ export default function AdminConsoleDashboard() {
                         className={baseClassNameInput}
                         {...register("notes", {
                           required: "Alasan penolakan wajib diisi",
+                          minLength: {
+                            value: 20,
+                            message:
+                              "Alasan penolakan minimal terdiri dari 20 karakter.",
+                          },
+                          maxLength: {
+                            value: 255,
+                            message:
+                              "Alasan penolakan maksimal terdiri dari 255 karakter.",
+                          },
                         })}
                       />
                       {errors?.notes && (
@@ -682,12 +697,6 @@ export default function AdminConsoleDashboard() {
                         </p>
                       )}
                     </div>
-                    // <FormInput
-                    //   label="Alasan Penolakan"
-                    //   placeholder="Contoh: Data tidak asli"
-                    //   inputType="text"
-                    //   register={register("notes")}
-                    // />
                   )}
 
                   <div>
