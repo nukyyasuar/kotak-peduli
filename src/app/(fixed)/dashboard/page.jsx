@@ -577,6 +577,7 @@ export default function AdminConsoleDashboard() {
                             <ListTextWithTitle
                               title="Alasan Penolakan:"
                               values={[rejectedNote]}
+                              className={"text-[#E52020]"}
                             />
                           )}
                           <ListTextWithTitle
