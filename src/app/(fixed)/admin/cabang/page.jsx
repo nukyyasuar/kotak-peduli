@@ -104,9 +104,6 @@ export default function CollectionCenterPosts() {
     setIsAddPostModalOpen(false);
   };
 
-  console.log("isEditPostModalOpen", isEditPostModalOpen);
-  console.log("watch", watch());
-
   const toggleMenu = (index) => {
     setOpenMenuIndex(openMenuIndex === index ? null : index);
   };

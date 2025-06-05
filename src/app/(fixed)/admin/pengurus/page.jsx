@@ -343,8 +343,6 @@ export default function CollectionCenterMembers() {
     fetchPosts(collectionCenterId);
   }, [collectionCenterId, canReadRole]);
 
-  console.log("errors", errors);
-
   return (
     <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
       {!canReadRole ? (
