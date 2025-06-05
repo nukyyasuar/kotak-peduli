@@ -80,9 +80,32 @@ export default function CollectionCenterPosts() {
     isOpen: isDeletePostModalOpen,
     onClose: () => {
       setIsDeletePostModalOpen(false);
-      reset();
+      resetValues();
     },
   });
+
+  const resetValues = () => {
+    setValue("nama", "");
+    setValue("alamat", {
+      jalan: "",
+      patokan: "",
+      latitude: "",
+      longitude: "",
+      summary: "",
+    });
+    setValue("nomorTelepon", "");
+    setValue("tipe", "");
+  };
+
+  const handleClosePostModal = () => {
+    setSelectedPostId(null);
+    setSelectedDataPost(null);
+    setIsEditPostModalOpen(false);
+    setIsAddPostModalOpen(false);
+  };
+
+  console.log("isEditPostModalOpen", isEditPostModalOpen);
+  console.log("watch", watch());
 
   const toggleMenu = (index) => {
     setOpenMenuIndex(openMenuIndex === index ? null : index);
@@ -104,7 +127,6 @@ export default function CollectionCenterPosts() {
       setTotalData(result.meta.total);
 
       if (isFirstFetchPosts.current) {
-        // toast.success("Data cabang / drop point berhasil dimuat");
         isFirstFetchPosts.current = false;
       }
     } catch (error) {
@@ -134,9 +156,9 @@ export default function CollectionCenterPosts() {
 
         await updatePost(collectionCenterId, selectedPostId, payload);
 
+        resetValues();
         toast.success("Data cabang / drop point berhasil diubah");
         setIsEditPostModalOpen(false);
-        reset();
         fetchPosts(currentPage, debouncedSearch, selectedPostTypesFilters);
       } catch (error) {
         console.error("Error updating post:", error);
@@ -150,9 +172,9 @@ export default function CollectionCenterPosts() {
 
         await createPosts(collectionCenterId, payload);
 
+        resetValues();
         toast.success("Data cabang / drop point berhasil ditambahkan");
         setIsAddPostModalOpen(false);
-        reset();
         fetchPosts(currentPage, debouncedSearch, selectedPostTypesFilters);
       } catch (error) {
         console.error("Error creating post:", error);
@@ -171,7 +193,7 @@ export default function CollectionCenterPosts() {
 
       toast.success("Data cabang / drop point berhasil dihapus");
       setIsDeletePostModalOpen(false);
-      reset();
+      resetValues();
       fetchPosts(currentPage, debouncedSearch, selectedPostTypesFilters);
     } catch (error) {
       console.error("Error deleting post:", error);
@@ -190,27 +212,28 @@ export default function CollectionCenterPosts() {
   }, [searchKeyword]);
 
   useEffect(() => {
-    if (isEditPostModalOpen && selectedPostId) {
-      dataPosts.forEach((post) => {
-        if (post.id === selectedPostId) {
-          setSelectedDataPost(post);
-          reset({
-            nama: post.name,
-            alamat: {
-              jalan: post.address.detail,
-              patokan: post.address.reference,
-              latitude: post.address.latitude,
-              longitude: post.address.longitude,
-              summary:
-                `(${post?.address?.reference}) ${post?.address?.detail}` || "",
-            },
-            nomorTelepon: post.phoneNumber.replace("+62", ""),
-            tipe: post.type,
-          });
-        }
+    if (!isEditPostModalOpen || !selectedPostId) return;
+
+    const selectedPost = dataPosts.find((post) => post.id === selectedPostId);
+
+    if (selectedPost) {
+      setSelectedDataPost(selectedPost);
+      reset({
+        nama: selectedPost.name,
+        alamat: {
+          jalan: selectedPost.address.detail,
+          patokan: selectedPost.address.reference,
+          latitude: selectedPost.address.latitude,
+          longitude: selectedPost.address.longitude,
+          summary:
+            `${selectedPost?.address?.reference ? `(${selectedPost?.address?.reference})` : ""} ${selectedPost?.address?.detail}` ||
+            "",
+        },
+        nomorTelepon: selectedPost.phoneNumber.replace("+62", ""),
+        tipe: selectedPost.type,
       });
     }
-  }, [isEditPostModalOpen, selectedPostId]);
+  }, [isEditPostModalOpen, selectedPostId, dataPosts, reset]);
 
   useEffect(() => {
     if (isDeletePostModalOpen && selectedPostId) {
@@ -332,7 +355,7 @@ export default function CollectionCenterPosts() {
 
                 <tbody>
                   {dataPosts.map((item, index) => {
-                    const formattedAddress = `(${item.address?.reference}) ${item.address?.detail}`;
+                    const formattedAddress = `${item.address?.reference ? `(${item.address?.reference})` : ""} ${item.address?.detail}`;
                     const formattedType = postTypesList.find(
                       (type) => type.value === item.type
                     )?.label;
@@ -442,93 +465,90 @@ export default function CollectionCenterPosts() {
                 : "Tambah Cabang / Drop Point"}
             </h1>
 
-            <form onSubmit={handleSubmit(onSubmitPost)}>
-              <div className="space-y-3 mb-6">
-                <FormInput
-                  inputType="text"
-                  label="Nama Cabang / Drop Point"
-                  placeholder="Contoh: Tempat Penampung B"
-                  register={register("nama")}
-                  required
-                  errors={errors.nama?.message}
-                />
-                <FormInput
-                  inputType="text"
-                  label="Nomor Telepon (Whatsapp)"
-                  placeholder="Contoh: +6281212312312"
-                  register={register("nomorTelepon")}
-                  required
-                  errors={errors.nomorTelepon?.message}
-                />
-                <>
+            <fieldset disabled={isLoadingCreateUpdatePost}>
+              <form onSubmit={handleSubmit(onSubmitPost)}>
+                <div className="space-y-3 mb-6">
                   <FormInput
-                    label="Alamat Lengkap"
-                    inputType="textArea"
-                    placeholder="Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
-                    value={watch("alamat.summary") || ""}
-                    onClick={() => setIsAddressModalOpen(!isAddressModalOpen)}
-                    className="flex-1"
+                    inputType="text"
+                    label="Nama Cabang / Drop Point"
+                    placeholder="Contoh: Tempat Penampung B"
+                    register={register("nama")}
                     required
-                    errors={errors?.alamat?.message}
+                    errors={errors.nama?.message}
                   />
-
-                  {/* Modal Detail Alamat */}
-                  <AddressModal
-                    isOpen={isAddressModalOpen}
-                    watch={watch}
-                    dataProfile={selectedDataPost}
-                    handleClose={() => setIsAddressModalOpen(false)}
-                    setValue={setValue}
+                  <FormInput
+                    inputType="text"
+                    label="Nomor Telepon (Whatsapp)"
+                    placeholder="Contoh: +6281212312312"
+                    register={register("nomorTelepon")}
+                    required
+                    errors={errors.nomorTelepon?.message}
                   />
-                </>
-                <FormInput
-                  label="Tipe"
-                  inputType="dropdownInput"
-                  name="tipe"
-                  options={postTypesList}
-                  control={control}
-                  placeholder="Pilih tipe tempat yang sesuai"
-                  required
-                  onChange={(selected) => {
-                    setValue("tipe", selected?.value || "");
-                  }}
-                  errors={errors.tipe?.message}
-                />
-              </div>
+                  <>
+                    <FormInput
+                      label="Alamat Lengkap"
+                      inputType="textArea"
+                      placeholder="Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
+                      value={watch("alamat.summary") || ""}
+                      onClick={() => setIsAddressModalOpen(!isAddressModalOpen)}
+                      className="flex-1"
+                      required
+                      errors={errors?.alamat?.message}
+                    />
 
-              <div className="flex gap-3">
-                <ButtonCustom
-                  label={
-                    isLoadingCreateUpdatePost ? (
-                      <ClipLoader
-                        size={20}
-                        color="#fff"
-                        loading={isLoadingCreateUpdatePost}
-                      />
-                    ) : isAddPostModalOpen ? (
-                      "Tambah"
-                    ) : (
-                      "Simpan"
-                    )
-                  }
-                  variant="brown"
-                  type="submit"
-                  className="w-full"
-                />
-                <ButtonCustom
-                  label="Batal"
-                  variant="outlineBrown"
-                  type="button"
-                  className="w-full"
-                  onClick={() => {
-                    isEditPostModalOpen
-                      ? setIsEditPostModalOpen(false)
-                      : setIsAddPostModalOpen(false);
-                    reset();
-                  }}
-                />
-              </div>
-            </form>
+                    {/* Modal Detail Alamat */}
+                    <AddressModal
+                      isOpen={isAddressModalOpen}
+                      watch={watch}
+                      dataProfile={selectedDataPost}
+                      handleClose={() => setIsAddressModalOpen(false)}
+                      setValue={setValue}
+                    />
+                  </>
+                  <FormInput
+                    label="Tipe"
+                    inputType="dropdownInput"
+                    name="tipe"
+                    options={postTypesList}
+                    control={control}
+                    placeholder="Pilih tipe tempat yang sesuai"
+                    required
+                    onChange={(selected) => {
+                      setValue("tipe", selected?.value || "");
+                    }}
+                    errors={errors.tipe?.message}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <ButtonCustom
+                    label={
+                      isLoadingCreateUpdatePost ? (
+                        <ClipLoader
+                          size={20}
+                          color="#fff"
+                          loading={isLoadingCreateUpdatePost}
+                        />
+                      ) : isAddPostModalOpen ? (
+                        "Tambah"
+                      ) : (
+                        "Simpan"
+                      )
+                    }
+                    variant="brown"
+                    type="submit"
+                    className="w-full"
+                  />
+                  <ButtonCustom
+                    label="Batal"
+                    variant="outlineBrown"
+                    type="button"
+                    className="w-full"
+                    onClick={handleClosePostModal}
+                  />
+                </div>
+              </form>
+            </fieldset>
           </div>
         </div>
       )}
