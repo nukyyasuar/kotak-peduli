@@ -868,7 +868,7 @@ export default function AkunTempatPenampung() {
                       </p>
                     )}
                     <div className="text-sm text-black">
-                      <p>*Ukuran maksimal 5MB</p>
+                      <p>*Ukuran maksimal 1MB</p>
                       <p>*Format .jpg atau .png</p>
                     </div>
                   </div>

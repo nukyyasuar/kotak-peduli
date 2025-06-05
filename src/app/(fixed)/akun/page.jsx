@@ -455,7 +455,7 @@ export default function Akun() {
               </p>
             )}
             <div className="text-sm text-black text-center">
-              <p>*Ukuran maksimal 5MB</p>
+              <p>*Ukuran maksimal 1MB</p>
               <p>*Format .jpg atau .png</p>
             </div>
           </div>

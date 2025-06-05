@@ -53,9 +53,9 @@ const collectionCenterRegistSchema = yup.object().shape({
   foto: yup
     .mixed()
     .required("Foto tempat penampung wajib diunggah.")
-    .test("fileSize", "Ukuran file terlalu besar. Maksimal 5MB.", (value) => {
+    .test("fileSize", "Ukuran file terlalu besar. Maksimal 1MB.", (value) => {
       if (!value) return true;
-      return value.size <= 5 * 1024 * 1024;
+      return value.size <= 1 * 1024 * 1024;
     })
     .test(
       "fileType",
