@@ -14,6 +14,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "wired-snipe-deep.ngrok-free.app",
       },
+      {
+        protocol: "http",
+        hostname: "35.219.57.198",
+      },
     ],
   },
 };
