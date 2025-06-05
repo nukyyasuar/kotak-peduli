@@ -314,6 +314,7 @@ export default function CollectionCenterEvents() {
                 icon="material-symbols:add"
                 onClick={() => {
                   setIsAddEventModalOpen(true);
+                  setOpenMenuIndex(null);
                 }}
               />
             </div>
