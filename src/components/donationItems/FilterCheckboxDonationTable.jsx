@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const FilterCheckboxDonationTable = ({
   title,
@@ -8,12 +8,13 @@ const FilterCheckboxDonationTable = ({
   search,
 }) => {
   const [filteredItems, setFilteredItems] = useState(items);
-  if (search) {
+
+  useEffect(() => {
     const filteredItems = items.filter((item) =>
       item.label.toLowerCase().includes(search.toLowerCase())
     );
     setFilteredItems(filteredItems);
-  }
+  }, [search, items]);
 
   return (
     <div>
