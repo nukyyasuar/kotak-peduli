@@ -927,8 +927,8 @@ export default function CollectionCenterDonationItems() {
                                       const file = value;
                                       return (
                                         (file &&
-                                          file.size <= 5 * 1024 * 1024) ||
-                                        "Ukuran maksimal 5MB"
+                                          file.size <= 1 * 1024 * 1024) ||
+                                        "Ukuran maksimal 1MB"
                                       );
                                     },
                                   },

@@ -46,9 +46,9 @@ const donationSchema = yup.object().shape({
           .min(1, "Foto barang donasi wajib diunggah.")
           .test(
             "fileSize",
-            "Ukuran file terlalu besar. Maksimal 5MB.",
+            "Ukuran file terlalu besar. Maksimal 1MB.",
             (files) => {
-              return files?.every((file) => file.size <= 5 * 1024 * 1024);
+              return files?.every((file) => file.size <= 1 * 1024 * 1024);
             }
           )
           .test(
