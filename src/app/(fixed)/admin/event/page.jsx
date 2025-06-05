@@ -15,6 +15,7 @@ import {
   createEventCollectionCenter,
   updateEventCollectionCenter,
   deactivateEventCollectionCenter,
+  activateEventCollectionCenter,
 } from "src/services/api/event";
 import { getOneCollectionCenter } from "src/services/api/collectionCenter";
 import { useAccess } from "src/services/auth/acl";
@@ -30,7 +31,6 @@ import {
 import handleOutsideModal from "src/components/handleOutsideModal";
 import { ButtonCustom } from "src/components/button";
 import FormattedWIBDate from "src/components/dateFormatter";
-import { boolean } from "yup";
 
 export default function CollectionCenterEvents() {
   const isFirstFetchEvents = useRef(true);
@@ -45,6 +45,8 @@ export default function CollectionCenterEvents() {
   const [isAddEventModalOpen, setIsAddEventModalOpen] = useState(false);
   const [isEditEventModalOpen, setIsEditEventModalOpen] = useState(false);
   const [isFinishEventModalOpen, setIsFinishEventModalOpen] = useState(false);
+  const [isActivateEventModalOpen, setIsActivateEventModalOpen] =
+    useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [openMenuIndex, setOpenMenuIndex] = useState(null);
   const [validDonationTypes, setValidDonationTypes] = useState([]);
@@ -54,6 +56,7 @@ export default function CollectionCenterEvents() {
 
   const addEventModalRef = useRef(null);
   const finishEventModalRef = useRef(null);
+  const activateEventModalRef = useRef(null);
 
   const {
     register,
@@ -91,6 +94,14 @@ export default function CollectionCenterEvents() {
     isOpen: isFinishEventModalOpen,
     onClose: () => {
       setIsFinishEventModalOpen(false);
+      reset();
+    },
+  });
+  handleOutsideModal({
+    ref: activateEventModalRef,
+    isOpen: isActivateEventModalOpen,
+    onClose: () => {
+      setIsActivateEventModalOpen(false);
       reset();
     },
   });
@@ -136,58 +147,63 @@ export default function CollectionCenterEvents() {
   };
 
   const onSubmitAddEvent = async (data) => {
-    const payload = {
-      ...data,
-      endDate: new Date(data?.endDate).toISOString(),
-    };
-    if (isFinishEventModalOpen) {
-      payload.isActive = false;
-    }
+    setIsLoadingCreateUpdateEvent(true);
 
-    if (isEditEventModalOpen || isFinishEventModalOpen) {
-      try {
-        setIsLoadingCreateUpdateEvent(true);
+    try {
+      if (isEditEventModalOpen) {
+        const payload = {
+          ...data,
+          endDate: new Date(data?.endDate).toISOString(),
+        };
 
-        if (isEditEventModalOpen) {
-          await updateEventCollectionCenter(
-            collectionCenterId,
-            selectedEventId,
-            payload
-          );
-        } else if (isFinishEventModalOpen) {
-          await deactivateEventCollectionCenter(
-            collectionCenterId,
-            selectedEventId
-          );
-        }
-
+        await updateEventCollectionCenter(
+          collectionCenterId,
+          selectedEventId,
+          payload
+        );
         toast.success("Data event berhasil diubah");
         setIsEditEventModalOpen(false);
-        setIsFinishEventModalOpen(false);
-        fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
-        reset();
-      } catch (error) {
-        console.error("Error updating event:", error);
-        toast.error("Gagal mengubah data event");
-      } finally {
-        setIsLoadingCreateUpdateEvent(false);
-      }
-    } else if (isAddEventModalOpen) {
-      try {
-        setIsLoadingCreateUpdateEvent(true);
+      } else if (isAddEventModalOpen) {
+        const payload = {
+          ...data,
+          endDate: new Date(data?.endDate).toISOString(),
+        };
 
         await createEventCollectionCenter(collectionCenterId, payload);
-
         toast.success("Data event berhasil ditambahkan");
         setIsAddEventModalOpen(false);
-        fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
-        reset();
-      } catch (error) {
-        console.error("Error creating event:", error);
-        toast.error("Gagal menambahkan data event");
-      } finally {
-        setIsLoadingCreateUpdateEvent(false);
+      } else if (isFinishEventModalOpen) {
+        await deactivateEventCollectionCenter(
+          collectionCenterId,
+          selectedEventId
+        );
+        toast.success("Event berhasil diselesaikan");
+        setIsFinishEventModalOpen(false);
+      } else if (isActivateEventModalOpen) {
+        await activateEventCollectionCenter(
+          collectionCenterId,
+          selectedEventId
+        );
+        toast.success("Event berhasil diaktifkan kembali");
+        setIsActivateEventModalOpen(false);
       }
+
+      fetchEvents(currentPage, debouncedSearch, sort, selectedStatusFilters);
+      reset();
+    } catch (error) {
+      console.error("Error submitting event:", error);
+
+      if (isEditEventModalOpen) {
+        toast.error("Gagal mengubah data event");
+      } else if (isAddEventModalOpen) {
+        toast.error("Gagal menambahkan data event");
+      } else if (isFinishEventModalOpen) {
+        toast.error("Gagal menyelesaikan event");
+      } else if (isActivateEventModalOpen) {
+        toast.error("Gagal mengaktifkan kembali event");
+      }
+    } finally {
+      setIsLoadingCreateUpdateEvent(false);
     }
   };
 
@@ -200,7 +216,7 @@ export default function CollectionCenterEvents() {
   }, [searchKeyword]);
 
   useEffect(() => {
-    if ((isEditEventModalOpen || isFinishEventModalOpen) && selectedEventId) {
+    if (isEditEventModalOpen && selectedEventId) {
       dataEvents.forEach((event) => {
         if (event.id === selectedEventId) {
           setValue("name", event.name);
@@ -213,13 +229,13 @@ export default function CollectionCenterEvents() {
   }, [isEditEventModalOpen, selectedEventId]);
 
   useEffect(() => {
-    if (isFinishEventModalOpen) {
+    if (isFinishEventModalOpen || isActivateEventModalOpen) {
       clearErrors("name");
       clearErrors("address");
       clearErrors("endDate");
       clearErrors("types");
     }
-  }, [isFinishEventModalOpen]);
+  }, [isFinishEventModalOpen, isActivateEventModalOpen]);
 
   useEffect(() => {
     if (!canReadEvent) return;
@@ -386,7 +402,7 @@ export default function CollectionCenterEvents() {
 
                           {/* Dropdown Menu */}
                           {openMenuIndex === index && (
-                            <div className="w-35 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
+                            <div className="w-40 absolute left-0 mt-1 bg-white border border-[#543A14] rounded-lg shadow-lg z-10">
                               <ul className="py-2">
                                 <li
                                   className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
@@ -399,7 +415,7 @@ export default function CollectionCenterEvents() {
                                 </li>
                                 {dataEvents.find(
                                   (event) => event.id === selectedEventId
-                                )?.isActive !== false && (
+                                )?.isActive !== false ? (
                                   <li
                                     className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
                                     onClick={() => {
@@ -407,7 +423,17 @@ export default function CollectionCenterEvents() {
                                       setOpenMenuIndex(null);
                                     }}
                                   >
-                                    Selesai Event
+                                    Tandai Selesai
+                                  </li>
+                                ) : (
+                                  <li
+                                    className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
+                                    onClick={() => {
+                                      setIsActivateEventModalOpen(true);
+                                      setOpenMenuIndex(null);
+                                    }}
+                                  >
+                                    Aktifkan Kembali
                                   </li>
                                 )}
                               </ul>
@@ -472,96 +498,98 @@ export default function CollectionCenterEvents() {
               {isEditEventModalOpen ? "Ubah Data Event" : "Tambah Event"}
             </h1>
 
-            <form onSubmit={handleSubmit(onSubmitAddEvent)}>
-              <div className="space-y-3 mb-6">
-                <FormInput
-                  inputType="text"
-                  label="Nama Event"
-                  placeholder="Contoh: Banjir Bekasi"
-                  register={register("name")}
-                  required
-                  errors={errors.name?.message}
-                />
-                <FormInput
-                  inputType="textArea"
-                  label="Lokasi Tujuan Penyaluran"
-                  placeholder="Contoh: Yayasan Peduli Banjir Jakarta"
-                  register={register("address")}
-                  required
-                  errors={errors.address?.message}
-                />
-                <div className="flex flex-col gap-1">
-                  <label className="font-bold">
-                    Tanggal Akhir Penerimaan
-                    <span className="text-[#E52020]">*</span>
-                  </label>
-                  <DatePicker
-                    placeholderText="Pilih tanggal"
-                    selected={watch("endDate")}
-                    onChange={(date) => {
-                      setValue("endDate", date);
-                    }}
-                    minDate={tomorrow}
-                    dateFormat="EEEE, dd/MM/yyyy"
-                    locale={id}
-                    popperPlacement="right"
-                    className="border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 focus:outline-none focus:border-black placeholder:text-[#C2C2C2] bg-white w-full"
+            <fieldset disabled={isLoadingCreateUpdateEvent}>
+              <form onSubmit={handleSubmit(onSubmitAddEvent)}>
+                <div className="space-y-3 mb-6">
+                  <FormInput
+                    inputType="text"
+                    label="Nama Event"
+                    placeholder="Contoh: Banjir Bekasi"
+                    register={register("name")}
+                    required
+                    errors={errors.name?.message}
                   />
-                  {errors.endDate && (
-                    <p className="text-[#E52020] text-sm">
-                      {errors.endDate.message}
-                    </p>
-                  )}
+                  <FormInput
+                    inputType="textArea"
+                    label="Lokasi Tujuan Penyaluran"
+                    placeholder="Contoh: Yayasan Peduli Banjir Jakarta"
+                    register={register("address")}
+                    required
+                    errors={errors.address?.message}
+                  />
+                  <div className="flex flex-col gap-1">
+                    <label className="font-bold">
+                      Tanggal Akhir Penerimaan
+                      <span className="text-[#E52020]">*</span>
+                    </label>
+                    <DatePicker
+                      placeholderText="Pilih tanggal"
+                      selected={watch("endDate")}
+                      onChange={(date) => {
+                        setValue("endDate", date);
+                      }}
+                      minDate={tomorrow}
+                      dateFormat="EEEE, dd/MM/yyyy"
+                      locale={id}
+                      popperPlacement="right"
+                      className="border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 focus:outline-none focus:border-black placeholder:text-[#C2C2C2] bg-white w-full"
+                    />
+                    {errors.endDate && (
+                      <p className="text-[#E52020] text-sm">
+                        {errors.endDate.message}
+                      </p>
+                    )}
+                  </div>
+                  <FormInput
+                    label="Jenis Barang yang Diterima"
+                    inputType="dropdownInput"
+                    options={donationTypes.filter((option) =>
+                      validDonationTypes.includes(option.value)
+                    )}
+                    control={control}
+                    name="types"
+                    placeholder="Pilih jenis barang yang diterima"
+                    type="checkbox"
+                    required
+                    errors={errors.types?.message}
+                  />
                 </div>
-                <FormInput
-                  label="Jenis Barang yang Diterima"
-                  inputType="dropdownInput"
-                  options={donationTypes.filter((option) =>
-                    validDonationTypes.includes(option.value)
-                  )}
-                  control={control}
-                  name="types"
-                  placeholder="Pilih jenis barang yang diterima"
-                  type="checkbox"
-                  required
-                  errors={errors.types?.message}
-                />
-              </div>
 
-              <div className="flex gap-3">
-                <ButtonCustom
-                  label={
-                    isLoadingCreateUpdateEvent ? (
-                      <ClipLoader
-                        color="white"
-                        size={20}
-                        loading={isLoadingCreateUpdateEvent}
-                      />
-                    ) : isAddEventModalOpen ? (
-                      "Tambah"
-                    ) : (
-                      "Simpan"
-                    )
-                  }
-                  variant="brown"
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoadingCreateUpdateEvent}
-                />
-                <ButtonCustom
-                  label="Batal"
-                  variant="outlineBrown"
-                  type="button"
-                  className="w-full"
-                  onClick={() => {
-                    isEditEventModalOpen
-                      ? setIsEditEventModalOpen(false)
-                      : setIsAddEventModalOpen(false);
-                    reset();
-                  }}
-                />
-              </div>
-            </form>
+                <div className="flex gap-3">
+                  <ButtonCustom
+                    label={
+                      isLoadingCreateUpdateEvent ? (
+                        <ClipLoader
+                          color="white"
+                          size={20}
+                          loading={isLoadingCreateUpdateEvent}
+                        />
+                      ) : isAddEventModalOpen ? (
+                        "Tambah"
+                      ) : (
+                        "Simpan"
+                      )
+                    }
+                    variant="brown"
+                    type="submit"
+                    className="w-full"
+                    disabled={isLoadingCreateUpdateEvent}
+                  />
+                  <ButtonCustom
+                    label="Batal"
+                    variant="outlineBrown"
+                    type="button"
+                    className="w-full"
+                    onClick={() => {
+                      isEditEventModalOpen
+                        ? setIsEditEventModalOpen(false)
+                        : setIsAddEventModalOpen(false);
+                      reset();
+                    }}
+                  />
+                </div>
+              </form>
+            </fieldset>
           </div>
         </div>
       )}
@@ -604,7 +632,61 @@ export default function CollectionCenterEvents() {
                 variant="brown"
                 className="w-full"
                 type="button"
-                onClick={handleSubmit(onSubmitAddEvent)}
+                onClick={
+                  isAddEventModalOpen || isEditEventModalOpen
+                    ? handleSubmit(onSubmitAddEvent)
+                    : onSubmitAddEvent
+                }
+                disabled={isLoadingCreateUpdateEvent}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Aktifkan Kembali Event */}
+      {isActivateEventModalOpen && (
+        <div className="bg-black/40 w-screen h-screen fixed z-20 inset-0 flex items-center justify-center">
+          <div
+            ref={activateEventModalRef}
+            className="bg-white rounded-lg p-8 space-y-6 text-black max-w-[640px] min-w-135 overflow-y-auto max-h-[90vh]"
+          >
+            <h1 className="font-bold text-xl">
+              Ubah Status Event{" "}
+              <span className="text-[#1F7D53] font-bold">{`(AKTIF)`}</span>
+            </h1>
+            <p>
+              Status event yang telah diubah menjadi{" "}
+              <span className="font-bold">AKTIF</span>, akan{" "}
+              <span className="font-bold">ditampilkan kembali</span> pada
+              halaman yang diakses donatur dan dapat dipilih kembali untuk
+              melakukan donasi.{" "}
+              <span className="font-bold">
+                Apakah Anda yakin ingin mengaktifkan kembali event ini?
+              </span>
+            </p>
+
+            <div>
+              <ButtonCustom
+                label={
+                  isLoadingCreateUpdateEvent ? (
+                    <ClipLoader
+                      color="white"
+                      size={20}
+                      loading={isLoadingCreateUpdateEvent}
+                    />
+                  ) : (
+                    "Konfirmasi"
+                  )
+                }
+                variant="brown"
+                className="w-full"
+                type="button"
+                onClick={
+                  isAddEventModalOpen || isEditEventModalOpen
+                    ? handleSubmit(onSubmitAddEvent)
+                    : onSubmitAddEvent
+                }
                 disabled={isLoadingCreateUpdateEvent}
               />
             </div>
