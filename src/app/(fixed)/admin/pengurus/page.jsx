@@ -105,6 +105,14 @@ export default function CollectionCenterMembers() {
       };
     });
 
+  const resetValues = () => {
+    reset({
+      email: "",
+      penempatan: null,
+      role: null,
+    });
+  };
+
   const getInitialValue = () => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("collectionCenterId");
@@ -123,7 +131,7 @@ export default function CollectionCenterMembers() {
     isOpen: isDeleteMemberModalOpen,
     onClose: () => {
       setIsDeleteMemberModalOpen(false);
-      reset();
+      resetValues();
     },
   });
 
@@ -222,7 +230,7 @@ export default function CollectionCenterMembers() {
           : "Data pengurus berhasil ditambahkan"
       );
       isEdit ? setIsEditMemberModalOpen(false) : setIsAddMemberModalOpen(false);
-      reset();
+      resetValues();
       fetchMembers(currentPage, debouncedSearch, selectedMemberRolesFilters);
     } catch (error) {
       console.error("Error submitting member:", error);
@@ -247,7 +255,7 @@ export default function CollectionCenterMembers() {
 
       toast.success("Data pengurus berhasil dihapus");
       setIsDeleteMemberModalOpen(false);
-      reset();
+      resetValues();
       fetchMembers(currentPage, debouncedSearch, selectedMemberRolesFilters);
     } catch (error) {
       console.error("Error deleting member:", error);
@@ -334,6 +342,8 @@ export default function CollectionCenterMembers() {
 
     fetchPosts(collectionCenterId);
   }, [collectionCenterId, canReadRole]);
+
+  console.log("errors", errors);
 
   return (
     <div className="min-h-[92dvh] bg-[#F5E9D4] py-12">
@@ -590,88 +600,90 @@ export default function CollectionCenterMembers() {
               {isEditMemberModalOpen ? "Ubah Data Pengurus" : "Tambah Pengurus"}
             </h1>
 
-            <form onSubmit={handleSubmit(onSubmitMember)}>
-              <div className="space-y-3 mb-6">
-                <FormInput
-                  inputType="text"
-                  type="email"
-                  name="email"
-                  register={register("email")}
-                  value={watch("email")}
-                  label="Email"
-                  placeholder="Contoh: user@example.com"
-                  errors={errors?.email?.message}
-                  required
-                  disabled={isEditMemberModalOpen}
-                />
-                <FormInput
-                  key={collectionCenterId}
-                  type="dynamic"
-                  inputType="dropdownInput"
-                  label="Penempatan"
-                  name="penempatan"
-                  control={control}
-                  options={dataPosts}
-                  placeholder="Pilih cabang / drop point yang sesuai"
-                  disabled={dataPosts?.length === 0}
-                  onChange={(selected) => {
-                    setValue("penempatan", selected);
-                  }}
-                />
-                <FormInput
-                  type="dynamic"
-                  label="Role"
-                  inputType="dropdownInput"
-                  name="role"
-                  options={memberRoleListDataFormatted}
-                  control={control}
-                  placeholder="Pilih role yang sesuai"
-                  required
-                  onChange={(selected) => {
-                    setValue("role", selected);
-                  }}
-                  errors={errors.role?.message}
-                />
-              </div>
+            <fieldset disabled={isLoadingCreateMember}>
+              <form onSubmit={handleSubmit(onSubmitMember)}>
+                <div className="space-y-3 mb-6">
+                  <FormInput
+                    inputType="text"
+                    type="email"
+                    name="email"
+                    register={register("email")}
+                    value={watch("email")}
+                    label="Email"
+                    placeholder="Contoh: user@example.com"
+                    errors={errors?.email?.message}
+                    required
+                    disabled={isEditMemberModalOpen}
+                  />
+                  <FormInput
+                    key={collectionCenterId}
+                    type="dynamic"
+                    inputType="dropdownInput"
+                    label="Penempatan"
+                    name="penempatan"
+                    control={control}
+                    options={dataPosts}
+                    placeholder="Pilih cabang / drop point yang sesuai"
+                    disabled={dataPosts?.length === 0}
+                    onChange={(selected) => {
+                      setValue("penempatan", selected);
+                    }}
+                  />
+                  <FormInput
+                    type="dynamic"
+                    label="Role"
+                    inputType="dropdownInput"
+                    name="role"
+                    options={memberRoleListDataFormatted}
+                    control={control}
+                    placeholder="Pilih role yang sesuai"
+                    required
+                    onChange={(selected) => {
+                      setValue("role", selected);
+                    }}
+                    errors={errors.role?.message}
+                  />
+                </div>
 
-              <div className="flex gap-3">
-                <ButtonCustom
-                  label={
-                    isLoadingCreateMember ? (
-                      <ClipLoader
-                        size={20}
-                        color="white"
-                        loading={isLoadingCreateMember}
-                      />
-                    ) : isEditMemberModalOpen ? (
-                      "Simpan"
-                    ) : (
-                      "Kirim"
-                    )
-                  }
-                  variant="brown"
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoadingCreateMember}
-                />
-                <ButtonCustom
-                  label="Batal"
-                  variant="outlineBrown"
-                  type="button"
-                  className="w-full"
-                  onClick={() => {
-                    isEditMemberModalOpen
-                      ? setIsEditMemberModalOpen(false)
-                      : setIsAddMemberModalOpen(false);
-                    reset({
-                      email: "",
-                      penempatan: null,
-                      role: null,
-                    });
-                  }}
-                />
-              </div>
-            </form>
+                <div className="flex gap-3">
+                  <ButtonCustom
+                    label={
+                      isLoadingCreateMember ? (
+                        <ClipLoader
+                          size={20}
+                          color="white"
+                          loading={isLoadingCreateMember}
+                        />
+                      ) : isEditMemberModalOpen ? (
+                        "Simpan"
+                      ) : (
+                        "Kirim"
+                      )
+                    }
+                    variant="brown"
+                    type="submit"
+                    className="w-full"
+                    disabled={isLoadingCreateMember}
+                  />
+                  <ButtonCustom
+                    label="Batal"
+                    variant="outlineBrown"
+                    type="button"
+                    className="w-full"
+                    onClick={() => {
+                      isEditMemberModalOpen
+                        ? setIsEditMemberModalOpen(false)
+                        : setIsAddMemberModalOpen(false);
+                      reset({
+                        email: "",
+                        penempatan: null,
+                        role: null,
+                      });
+                    }}
+                  />
+                </div>
+              </form>
+            </fieldset>
           </div>
         </div>
       )}
