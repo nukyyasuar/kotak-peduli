@@ -638,7 +638,8 @@ export default function CollectionCenterDonationItems() {
                                   donationStatusValue !== "CONFIRMING" &&
                                   donationStatusValue !== "CONFIRMED" &&
                                   donationStatusValue !== "DISTRIBUTED" &&
-                                  donationStatusValue !== "REJECTED" && (
+                                  donationStatusValue !== "REJECTED" &&
+                                  donationStatusValue !== "REDIRECTED" && (
                                     <li
                                       className="text-left px-3 py-1 text-gray-700 hover:bg-[#543A14] hover:text-white cursor-pointer"
                                       onClick={() => {
@@ -998,6 +999,16 @@ export default function CollectionCenterDonationItems() {
                               className={baseClassNameInput}
                               {...register("note", {
                                 required: "Alasan penolakan wajib diisi",
+                                minLength: {
+                                  value: 20,
+                                  message:
+                                    "Alasan penolakan minimal terdiri dari 20 karakter.",
+                                },
+                                maxLength: {
+                                  value: 255,
+                                  message:
+                                    "Alasan penolakan maksimal terdiri dari 255 karakter.",
+                                },
                               })}
                             />
                             {errors?.note && (
