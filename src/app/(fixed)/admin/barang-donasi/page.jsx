@@ -408,7 +408,10 @@ export default function CollectionCenterDonationItems() {
             <div className="relative">
               {/* Button Filter */}
               <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                onClick={() => {
+                  setIsFilterOpen(!isFilterOpen);
+                  setOpenMenuIndex(null);
+                }}
                 className={`border border-[#C2C2C2] rounded-lg px-3 h-12 flex items-center justify-between ${totalSelectedFiltersCount ? "bg-[#543A14] text-white" : "bg-white text-[#C2C2C2]"}`}
               >
                 <span className="mr-1">
@@ -603,7 +606,10 @@ export default function CollectionCenterDonationItems() {
                         <td className="py-3">{donationStatus}</td>
                         <td className="py-3 relative text-start">
                           <button
-                            onClick={() => toggleMenu(index)}
+                            onClick={() => {
+                              toggleMenu(index);
+                              setIsFilterOpen(false);
+                            }}
                             className="border border-[#C2C2C2] rounded-sm p-1"
                           >
                             <Icon
