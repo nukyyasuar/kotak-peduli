@@ -10,10 +10,12 @@ const FilterCheckboxDonationTable = ({
   const [filteredItems, setFilteredItems] = useState(items);
 
   useEffect(() => {
-    const filteredItems = items.filter((item) =>
-      item.label.toLowerCase().includes(search.toLowerCase())
-    );
-    setFilteredItems(filteredItems);
+    if (search) {
+      const filteredItems = items.filter((item) =>
+        item.label.toLowerCase().includes(search?.toLowerCase())
+      );
+      setFilteredItems(filteredItems);
+    }
   }, [search, items]);
 
   return (
