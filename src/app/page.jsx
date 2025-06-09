@@ -21,8 +21,15 @@ import {
   toyCriteria,
 } from "src/components/options";
 
+const bannerImages = [
+  "/banner_home_2.webp",
+  "/banner_home_4.webp",
+  "/banner_home_5.webp",
+];
+
 export default function Home() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [activeBannerIndex, setActiveBannerIndex] = useState(0);
   const [dataAnalytics, setDataAnalytics] = useState(null);
   const [dataTestimonies, setDataTestimonies] = useState(null);
   const [isLoadingFetchAnalytics, setIsLoadingFetchAnalytics] = useState(false);
@@ -84,17 +91,33 @@ export default function Home() {
     fetchTestimonies();
   }, []);
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveBannerIndex(
+        (prevIndex) => (prevIndex + 1) % bannerImages.length
+      );
+    }, 10000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <section className="bg-[#FFF0DC]">
       {/* Hero Section */}
       <section className="relative w-full h-[80vh] sm:h-[92dvh]">
-        <Image
-          src="/banner_home.webp"
-          alt="Banner"
-          layout="fill"
-          objectFit="cover"
-          priority
-        />
+        {bannerImages.map((src, index) => (
+          <Image
+            key={index}
+            src={src}
+            alt={`Banner ${index}`}
+            layout="fill"
+            objectFit="cover"
+            className={`transition-opacity duration-1000 ease-in-out ${
+              index === activeBannerIndex ? "opacity-100" : "opacity-0"
+            } brightness-95`}
+            priority={index === 0}
+          />
+        ))}
         <div className="absolute inset-0 flex items-start justify-end pt-4 sm:pt-8 px-4 sm:px-0">
           <div className="flex flex-col gap-4 items-end">
             <BannerText
