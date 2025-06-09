@@ -8,6 +8,7 @@ import { Tooltip } from "react-tooltip";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { toast } from "react-toastify";
 import { PulseLoader, ClipLoader } from "react-spinners";
+import { motion } from "framer-motion";
 
 import { FormInput } from "src/components/formInput";
 import { ButtonCustom } from "src/components/button";
@@ -40,6 +41,7 @@ export default function Home() {
   const [isCreateDonationLoading, setIsCreateDonationLoading] = useState(false);
   const [isFetchPostsLoading, setIsFetchPostsLoading] = useState(false);
   const [isLoadingFetchProfile, setIsLoadingFetchProfile] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const {
     register,
@@ -263,10 +265,14 @@ export default function Home() {
 
     try {
       await createDonation(formData);
-      toast.success(
-        "Donasi kamu berhasil dibuat. Terima kasih atas kebaikanmu! Anda akan diarahkan ke halaman riwayat donasi"
-      );
-      window.location.href = "/akun/riwayat-donasi";
+
+      // toast.success(
+      //   "Donasi kamu berhasil dibuat. Terima kasih atas kebaikanmu! Anda akan diarahkan ke halaman riwayat donasi"
+      // );
+      setIsSubmitted(true);
+      setTimeout(() => {
+        window.location.href = "/akun/riwayat-donasi";
+      }, 5000);
     } catch (error) {
       toast.error(`Maaf, donasi gagal dibuat. Silakan coba lagi.`);
       console.error("Error creating donation:", error);
@@ -433,521 +439,576 @@ export default function Home() {
   }, [watch]);
 
   return (
-    <section className="bg-white py-12 flex flex-col justify-center text-black">
-      <div className="w-full max-w-[1200px] px-4 sm:px-6 lg:px-0 mx-auto">
-        {/* Title */}
-        <div className="w-full flex justify-center mb-6">
-          <div className="max-w-[1200px] px-4 sm:px-6 lg:px-8 mx-auto text-center">
-            <h1 className="text-2xl  sm:text-[32px] font-bold">
-              Yuk Donasikan Barangmu
-            </h1>
-            <p className="text-[#543A14] text-sm sm:text-base">
-              Isi form berikut untuk mendeskripsikan barang yang ingin kamu
-              donasikan dan bantu kami menyalurkan barangmu kepada yang
-              membutuhkan.
-            </p>
-          </div>
-        </div>
-
-        {/* Form */}
-        <fieldset disabled={isCreateDonationLoading}>
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            onKeyDown={handleKeyDown}
-            className="flex flex-col items-center gap-5"
+    <section className="bg-white py-12 flex flex-col justify-center text-[#543A14]">
+      {isSubmitted ? (
+        <div className="w-full max-w-[1200px] mx-auto h-[82dvh] flex flex-col items-center justify-center text-center px-4">
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1.1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 10 }}
           >
-            {/* Form General Info */}
-            <div className="flex flex-col lg:flex-row gap-5 w-full">
-              {/* Form Informasi Donatur */}
-              <div className="flex flex-col gap-3 w-full">
-                <h3 className="text-xl font-bold">Informasi Donatur</h3>
-                <div className="flex flex-col sm:flex-row gap-5">
+            <Icon
+              icon="icon-park-solid:check-one"
+              color="#543A14"
+              width={80}
+              height={80}
+              className="mb-4"
+            />
+          </motion.div>
+          <motion.h1
+            className="text-3xl md:text-4xl font-bold mb-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6, ease: "easeOut" }}
+          >
+            Terima kasih telah berdonasi!
+          </motion.h1>
+          <motion.p
+            className="text-black max-w-md"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6, ease: "easeOut" }}
+          >
+            Donasi Anda sangat berarti dan akan membantu mereka yang
+            membutuhkan.
+          </motion.p>
+          <motion.p
+            className=" text-black mt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+          >
+            Anda akan diarahkan ke halaman <strong>riwayat donasi</strong>{" "}
+            sebentar lagi.
+            <br />
+            Jangan lupa untuk <strong>memeriksa email secara rutin</strong>{" "}
+            untuk mengetahui status donasi Anda.
+          </motion.p>
+        </div>
+      ) : (
+        <div className="w-full max-w-[1200px] px-4 sm:px-6 lg:px-0 mx-auto">
+          {/* Title */}
+          <div className="w-full flex justify-center mb-6">
+            <div className="max-w-[1200px] px-4 sm:px-6 lg:px-8 mx-auto text-center">
+              <h1 className="text-2xl  sm:text-[32px] font-bold">
+                Yuk Donasikan Barangmu
+              </h1>
+              <p className="text-[#543A14] text-sm sm:text-base">
+                Isi form berikut untuk mendeskripsikan barang yang ingin kamu
+                donasikan dan bantu kami menyalurkan barangmu kepada yang
+                membutuhkan.
+              </p>
+            </div>
+          </div>
+
+          {/* Form */}
+          <fieldset disabled={isCreateDonationLoading}>
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              onKeyDown={handleKeyDown}
+              className="flex flex-col items-center gap-5"
+            >
+              {/* Form General Info */}
+              <div className="flex flex-col lg:flex-row gap-5 w-full">
+                {/* Form Informasi Donatur */}
+                <div className="flex flex-col gap-3 w-full">
+                  <h3 className="text-xl font-bold">Informasi Donatur</h3>
+                  <div className="flex flex-col sm:flex-row gap-5">
+                    <FormInput
+                      name="namaLengkap"
+                      label="Nama Lengkap"
+                      required
+                      inputType="text"
+                      placeholder={
+                        isLoadingFetchProfile
+                          ? "Memuat nama lengkap..."
+                          : "Contoh: Matthew"
+                      }
+                      value={namaLengkap}
+                      register={register("namaLengkap")}
+                      errors={errors?.namaLengkap?.message}
+                      disabled
+                      className="w-full"
+                    />
+                    <FormInput
+                      name="nomorTelepon"
+                      label="Nomor Telepon (Whatsapp)"
+                      inputType="text"
+                      required
+                      value={dataProfile?.phoneNumber?.slice(3) || ""}
+                      placeholder={
+                        isLoadingFetchProfile
+                          ? "Memuat nomor telepon..."
+                          : "Contoh: 81212312312"
+                      }
+                      register={register("nomorTelepon")}
+                      inputStyles="bg-[#D9D9D9] cursor-not-allowed"
+                      errors={errors?.nomorTelepon?.message}
+                      disabled
+                      className="w-full"
+                    />
+                  </div>
                   <FormInput
-                    name="namaLengkap"
-                    label="Nama Lengkap"
+                    label="Alamat Lengkap"
+                    inputType="textArea"
+                    name="alamat"
                     required
-                    inputType="text"
                     placeholder={
                       isLoadingFetchProfile
-                        ? "Memuat nama lengkap..."
-                        : "Contoh: Matthew"
+                        ? "Memuat alamat lengkap..."
+                        : "Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
                     }
-                    value={namaLengkap}
-                    register={register("namaLengkap")}
-                    errors={errors?.namaLengkap?.message}
-                    disabled
-                    className="w-full"
+                    value={watchAlamatSummary || ""}
+                    onClick={() => setIsModalOpen(!isModalOpen)}
+                    className="flex-1"
+                    errors={errors?.alamat?.message}
+                    inputStyles="flex-grow w-full"
+                    disabled={isLoadingFetchProfile}
                   />
-                  <FormInput
-                    name="nomorTelepon"
-                    label="Nomor Telepon (Whatsapp)"
-                    inputType="text"
-                    required
-                    value={dataProfile?.phoneNumber?.slice(3) || ""}
-                    placeholder={
-                      isLoadingFetchProfile
-                        ? "Memuat nomor telepon..."
-                        : "Contoh: 81212312312"
-                    }
-                    register={register("nomorTelepon")}
-                    inputStyles="bg-[#D9D9D9] cursor-not-allowed"
-                    errors={errors?.nomorTelepon?.message}
-                    disabled
-                    className="w-full"
+
+                  {/* Modal Alamat Lengkap */}
+                  <AddressModal
+                    isOpen={isModalOpen}
+                    watch={watch}
+                    dataProfile={dataProfile}
+                    handleClose={() => setIsModalOpen(false)}
+                    setValue={setValue}
                   />
                 </div>
-                <FormInput
-                  label="Alamat Lengkap"
-                  inputType="textArea"
-                  name="alamat"
-                  required
-                  placeholder={
-                    isLoadingFetchProfile
-                      ? "Memuat alamat lengkap..."
-                      : "Contoh: Jl. Tanah Air, Blok. A, No. 1, Alam Sutera"
-                  }
-                  value={watchAlamatSummary || ""}
-                  onClick={() => setIsModalOpen(!isModalOpen)}
-                  className="flex-1"
-                  errors={errors?.alamat?.message}
-                  inputStyles="flex-grow w-full"
-                  disabled={isLoadingFetchProfile}
-                />
+                <div className="space-y-3 w-full max-w-[590px]">
+                  {/* Form Tujuan Donasi */}
+                  <h3 className="text-xl font-bold">Tujuan Donasi</h3>
+                  <FormInput
+                    inputType="dropdownInput"
+                    label="Tempat Penampung"
+                    name="tempatPenampung"
+                    required
+                    control={control}
+                    options={collectionCenters}
+                    placeholder={
+                      watch("alamat.summary") === ""
+                        ? "Alamat lengkap belum diisi"
+                        : "Pilih tempat penampung tujuan"
+                    }
+                    onChange={(selected) => {
+                      setValue("tempatPenampung", selected?.value || "");
+                      setValue("cabang", "");
+                      setValue("barangDonasi", []);
+                      setValue("tipePengiriman", null);
+                      setIsAddDonationType(false);
+                      setAddressDistance(null);
+                    }}
+                    errors={errors?.tempatPenampung?.message}
+                    disabled={watch("alamat.summary") === ""}
+                  />
+                  <FormInput
+                    key={selectedTempatPenampung}
+                    inputType="dropdownInput"
+                    label="Cabang / Drop Point (opsional)"
+                    name="cabang"
+                    control={control}
+                    options={posts}
+                    onChange={(selected) => {
+                      setValue("cabang", selected?.value || "");
+                      setValue("barangDonasi", []);
+                      setValue("tipePengiriman", null);
+                      setIsAddDonationType(false);
+                      setAddressDistance(null);
+                    }}
+                    placeholder={
+                      selectedTempatPenampung
+                        ? isFetchPostsLoading
+                          ? "Sedang mengambil data cabang..."
+                          : posts
+                            ? "Pilih cabang / drop point tujuan"
+                            : "Cabang / drop point tidak tersedia"
+                        : "Tempat penampung belum dipilih"
+                    }
+                    disabled={posts.length <= 0}
+                  />
 
-                {/* Modal Alamat Lengkap */}
-                <AddressModal
-                  isOpen={isModalOpen}
-                  watch={watch}
-                  dataProfile={dataProfile}
-                  handleClose={() => setIsModalOpen(false)}
-                  setValue={setValue}
-                />
-              </div>
-              <div className="space-y-3 w-full max-w-[590px]">
-                {/* Form Tujuan Donasi */}
-                <h3 className="text-xl font-bold">Tujuan Donasi</h3>
-                <FormInput
-                  inputType="dropdownInput"
-                  label="Tempat Penampung"
-                  name="tempatPenampung"
-                  required
-                  control={control}
-                  options={collectionCenters}
-                  placeholder={
-                    watch("alamat.summary") === ""
-                      ? "Alamat lengkap belum diisi"
-                      : "Pilih tempat penampung tujuan"
-                  }
-                  onChange={(selected) => {
-                    setValue("tempatPenampung", selected?.value || "");
-                    setValue("cabang", "");
-                    setValue("barangDonasi", []);
-                    setValue("tipePengiriman", null);
-                    setIsAddDonationType(false);
-                    setAddressDistance(null);
-                  }}
-                  errors={errors?.tempatPenampung?.message}
-                  disabled={watch("alamat.summary") === ""}
-                />
-                <FormInput
-                  key={selectedTempatPenampung}
-                  inputType="dropdownInput"
-                  label="Cabang / Drop Point (opsional)"
-                  name="cabang"
-                  control={control}
-                  options={posts}
-                  onChange={(selected) => {
-                    setValue("cabang", selected?.value || "");
-                    setValue("barangDonasi", []);
-                    setValue("tipePengiriman", null);
-                    setIsAddDonationType(false);
-                    setAddressDistance(null);
-                  }}
-                  placeholder={
-                    selectedTempatPenampung
-                      ? isFetchPostsLoading
-                        ? "Sedang mengambil data cabang..."
-                        : posts
-                          ? "Pilih cabang / drop point tujuan"
-                          : "Cabang / drop point tidak tersedia"
-                      : "Tempat penampung belum dipilih"
-                  }
-                  disabled={posts.length <= 0}
-                />
+                  {/* Button Hitung Jarak */}
+                  <ButtonCustom
+                    variant={calculatingBtnDisabled ? "disabled" : "orange"}
+                    label={`Hitung Jarak ke ${selectedCabang ? "Cabang" : "Tempat Penampung"}`}
+                    type="button"
+                    className="w-full h-12 text-[#C2C2C2]"
+                    onClick={calculateAddressDistance}
+                    disabled={calculatingBtnDisabled}
+                  />
 
-                {/* Button Hitung Jarak */}
-                <ButtonCustom
-                  variant={calculatingBtnDisabled ? "disabled" : "orange"}
-                  label={`Hitung Jarak ke ${selectedCabang ? "Cabang" : "Tempat Penampung"}`}
-                  type="button"
-                  className="w-full h-12 text-[#C2C2C2]"
-                  onClick={calculateAddressDistance}
-                  disabled={calculatingBtnDisabled}
-                />
-
-                <FormInput
-                  inputType="dropdownInput"
-                  label="Metode Pengiriman"
-                  name="tipePengiriman"
-                  required
-                  control={control}
-                  value={tipePengirimanValue}
-                  options={pickupTypes}
-                  placeholder={`${!isEmptyObject(watch("alamat")) ? (selectedTempatPenampung ? (isCalculating ? "Sedang menghitung jarak..." : addressDistance ? "Pilih metode pengiriman yang sesuai" : "Hitung jarak terlebih dahulu") : "Tempat penampung belum dipilih") : "Alamat lengkap belum diisi"}`}
-                  disabled={
-                    !selectedTempatPenampung ||
-                    isCalculating ||
-                    addressDistance === null
-                  }
-                  errors={errors?.tipePengiriman?.message}
-                  customMenu={(props) => (
-                    <components.Menu {...props}>
-                      <div className="px-3 py-2 border-b text-sm text-gray-700">
-                        <div>
-                          {dataCollectionCenter?.distanceLimitKm ||
-                          pickupTypes?.length === 2 ? (
-                            <>
-                              <p className="text-black">
-                                Batas jarak:{" "}
-                                {dataCollectionCenter?.distanceLimitKm} km
-                              </p>
-                              Jarak alamat Anda ke{" "}
-                              {selectedCabang ? "cabang" : "tempat penampung"}:{" "}
-                              <span
-                                className={`font-bold ${
-                                  addressDistance !== null
-                                    ? addressDistance <=
-                                      dataCollectionCenter.distanceLimitKm
-                                      ? "text-[#1F7D53]"
-                                      : "text-[#E52020]"
-                                    : "text-[#F0BB78]"
-                                }`}
-                              >
-                                {addressDistance !== null
-                                  ? `${addressDistance} km`
-                                  : "Proses..."}{" "}
-                                {addressDistance !== null && (
-                                  <>
-                                    (
-                                    {addressDistance <=
-                                    dataCollectionCenter.distanceLimitKm
-                                      ? "Jarak masih memenuhi batas penjemputan"
-                                      : "Jarak melebihi batas penjemputan"}
-                                    )
-                                  </>
-                                )}
-                              </span>
-                            </>
-                          ) : (
-                            "Tempat penampung tidak menyediakan penjemputan"
-                          )}
-                        </div>
-                      </div>
-
-                      {props.children}
-                    </components.Menu>
-                  )}
-                />
-              </div>
-            </div>
-
-            <div className="w-full">
-              <h3 className="text-xl font-bold mb-3">Jenis Barang Donasi</h3>
-
-              {/* Form Detail Barang */}
-              {watchBarangDonasi?.map((item, index) => {
-                const selectedEvent = dataEvents
-                  ? dataEvents?.find((event) => event.value === item.event)
-                  : "";
-                const isJenisInvalid =
-                  selectedEvent && !selectedEvent?.types?.includes(item.jenis);
-
-                return (
-                  <div key={index}>
-                    {/* Cek Jenis Barang Event */}
-                    {selectedEvent && isJenisInvalid && (
-                      <p className="text-[#E52020] text-sm font-medium mb-2">
-                        Jenis barang donasi tidak sesuai dengan tipe yang
-                        diperbolehkan pada event{" "}
-                        <span className="font-bold">
-                          ({selectedEvent?.name || "-"})
-                        </span>{" "}
-                        yang dipilih, hanya menerima{" "}
-                        <span className="font-bold">
-                          (
-                          {selectedEvent?.types
-                            .map(
-                              (type) =>
-                                donationTypes.find(
-                                  (donation) => donation.value === type
-                                )?.label
-                            )
-                            .filter(Boolean)
-                            .join(", ") || "(-)"}
-                          )
-                        </span>{" "}
-                        {}. Mohon periksa kembali jenis barang donasi Anda.
-                      </p>
-                    )}
-
-                    <div
-                      key={index}
-                      className="bg-[#FFF0DC] px-5 pb-5 rounded-lg mb-3 relative"
-                    >
-                      {/* Jenis Barang */}
-                      <div className="w-full flex justify-center mb-3">
-                        <p className="text-base font-bold text-white bg-[#543a14] text-center px-6 py-2 w-fit rounded-b-lg">
-                          {item.label}
-                        </p>
-                      </div>
-                      <button
-                        className="absolute top-0 right-0 px-2 bg-[#E52020] h-9 rounded-bl-lg cursor-pointer"
-                        onClick={() => handleRemoveDonationItem(item.jenis)}
-                        type="button"
-                      >
-                        <Icon icon="mdi:trash" width={20} color="white" />
-                      </button>
-                      <div className="space-y-3">
-                        {/* Tipe Barang (Elektronik) */}
-                        {item.jenis === "ELECTRONICS" && (
-                          <FormInput
-                            inputType="dropdownChecklistOther"
-                            options={electronicOptions}
-                            placeholder="Pilih tipe barang elektronik yang sesuai"
-                            label="Tipe Barang"
-                            name={`barangDonasi.${index}.tipeElektronik`}
-                            control={control}
-                            inputStyles="bg-white"
-                            errors={
-                              errors?.barangDonasi?.[index]?.tipeElektronik
-                                ?.message
-                            }
-                            required
-                          />
-                        )}
-                        {/* Jumlah & Berat */}
-                        <div className="flex flex-col sm:flex-row gap-5">
-                          <FormInput
-                            label="Jumlah Barang"
-                            inputType="text"
-                            type="number"
-                            placeholder="Contoh: 20"
-                            register={register(`barangDonasi.${index}.jumlah`)}
-                            inputStyles="bg-white"
-                            errors={
-                              errors?.barangDonasi?.[index]?.jumlah?.message
-                            }
-                            required
-                            className="w-full"
-                          />
-                          <FormInput
-                            label="Total Berat Barang (kg)"
-                            inputType="text"
-                            type="number"
-                            placeholder="Contoh: 10"
-                            register={register(`barangDonasi.${index}.berat`)}
-                            inputStyles="bg-white"
-                            errors={
-                              errors?.barangDonasi?.[index]?.berat?.message
-                            }
-                            required
-                            className="w-full"
-                          />
-                        </div>
-                        {/* Foto & Event */}
-                        <div className="flex flex-col sm:flex-row gap-5">
-                          <div className="flex-1">
-                            <div className="flex w-full items-end gap-3">
-                              <FormInput
-                                inputType="custom"
-                                label="Foto Barang"
-                                className="w-full"
-                                inputStyles="bg-white relative min-h-[3rem] flex items-center gap-2 px-2 py-1 border rounded-lg max-w-[461px] overflow-scroll"
-                                errors={
-                                  errors?.barangDonasi?.[index]?.foto?.message
-                                }
-                                required
-                                customValueRender={() => (
-                                  <>
-                                    {Array.isArray(
-                                      watch(`barangDonasi.${index}.foto`)
-                                    ) &&
-                                      watch(`barangDonasi.${index}.foto`).map(
-                                        (file, fileIndex) => (
-                                          <div
-                                            key={fileIndex}
-                                            className="flex items-center bg-[#EDEDED] rounded-xs px-3 text-nowrap text-sm"
-                                          >
-                                            {file.name}
-                                            <button
-                                              type="button"
-                                              className="ml-2 text-[#E52020] font-bold hover:text-red-700 cursor-pointer"
-                                              onClick={() => {
-                                                const updated = watch(
-                                                  `barangDonasi.${index}.foto`
-                                                ).filter(
-                                                  (_, i) => i !== fileIndex
-                                                );
-                                                setValue(
-                                                  `barangDonasi.${index}.foto`,
-                                                  updated,
-                                                  { shouldValidate: true }
-                                                );
-                                              }}
-                                            >
-                                              ×
-                                            </button>
-                                          </div>
-                                        )
-                                      )}
-                                  </>
-                                )}
-                              />
-                              <div className="flex">
-                                <label
-                                  htmlFor={`fotoBarang-${index}`}
-                                  className="px-4 py-3 bg-[#F0BB78] text-nowrap rounded-lg font-semibold text-white cursor-pointer"
+                  <FormInput
+                    inputType="dropdownInput"
+                    label="Metode Pengiriman"
+                    name="tipePengiriman"
+                    required
+                    control={control}
+                    value={tipePengirimanValue}
+                    options={pickupTypes}
+                    placeholder={`${!isEmptyObject(watch("alamat")) ? (selectedTempatPenampung ? (isCalculating ? "Sedang menghitung jarak..." : addressDistance ? "Pilih metode pengiriman yang sesuai" : "Hitung jarak terlebih dahulu") : "Tempat penampung belum dipilih") : "Alamat lengkap belum diisi"}`}
+                    disabled={
+                      !selectedTempatPenampung ||
+                      isCalculating ||
+                      addressDistance === null
+                    }
+                    errors={errors?.tipePengiriman?.message}
+                    customMenu={(props) => (
+                      <components.Menu {...props}>
+                        <div className="px-3 py-2 border-b text-sm text-gray-700">
+                          <div>
+                            {dataCollectionCenter?.distanceLimitKm ||
+                            pickupTypes?.length === 2 ? (
+                              <>
+                                <p className="text-black">
+                                  Batas jarak:{" "}
+                                  {dataCollectionCenter?.distanceLimitKm} km
+                                </p>
+                                Jarak alamat Anda ke{" "}
+                                {selectedCabang ? "cabang" : "tempat penampung"}
+                                :{" "}
+                                <span
+                                  className={`font-bold ${
+                                    addressDistance !== null
+                                      ? addressDistance <=
+                                        dataCollectionCenter.distanceLimitKm
+                                        ? "text-[#1F7D53]"
+                                        : "text-[#E52020]"
+                                      : "text-[#F0BB78]"
+                                  }`}
                                 >
-                                  Pilih File
-                                </label>
-                                <input
-                                  id={`fotoBarang-${index}`}
-                                  type="file"
-                                  accept="image/*"
-                                  multiple
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const newFiles = Array.from(e.target.files);
-
-                                    const existingFiles =
-                                      watch(`barangDonasi.${index}.foto`) || [];
-
-                                    const mergedFiles = [
-                                      ...existingFiles,
-                                      ...newFiles,
-                                    ].filter(
-                                      (file, i, self) =>
-                                        i ===
-                                        self.findIndex(
-                                          (f) =>
-                                            f.name === file.name &&
-                                            f.size === file.size
-                                        )
-                                    );
-
-                                    setValue(
-                                      `barangDonasi.${index}.foto`,
-                                      mergedFiles,
-                                      {
-                                        shouldValidate: true,
-                                      }
-                                    );
-
-                                    e.target.value = "";
-                                  }}
-                                />
-                              </div>
-                            </div>
-                            {errors?.barangDonasi?.[index]?.foto && (
-                              <p className="text-[#E52020] text-sm mt-1">
-                                {errors?.barangDonasi?.[index]?.foto?.message}
-                              </p>
+                                  {addressDistance !== null
+                                    ? `${addressDistance} km`
+                                    : "Proses..."}{" "}
+                                  {addressDistance !== null && (
+                                    <>
+                                      (
+                                      {addressDistance <=
+                                      dataCollectionCenter.distanceLimitKm
+                                        ? "Jarak masih memenuhi batas penjemputan"
+                                        : "Jarak melebihi batas penjemputan"}
+                                      )
+                                    </>
+                                  )}
+                                </span>
+                              </>
+                            ) : (
+                              "Tempat penampung tidak menyediakan penjemputan"
                             )}
                           </div>
-                          <FormInput
-                            inputType="dropdownInput"
-                            label="Event (opsional)"
-                            name={`barangDonasi.${index}.event`}
-                            control={control}
-                            options={dataEvents}
-                            placeholder="Pilih event tujuan (jika tersedia)"
-                            className="flex-1"
-                            inputStyles="bg-white"
-                          />
+                        </div>
+
+                        {props.children}
+                      </components.Menu>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="w-full">
+                <h3 className="text-xl font-bold mb-3">Jenis Barang Donasi</h3>
+
+                {/* Form Detail Barang */}
+                {watchBarangDonasi?.map((item, index) => {
+                  const selectedEvent = dataEvents
+                    ? dataEvents?.find((event) => event.value === item.event)
+                    : "";
+                  const isJenisInvalid =
+                    selectedEvent &&
+                    !selectedEvent?.types?.includes(item.jenis);
+
+                  return (
+                    <div key={index}>
+                      {/* Cek Jenis Barang Event */}
+                      {selectedEvent && isJenisInvalid && (
+                        <p className="text-[#E52020] text-sm font-medium mb-2">
+                          Jenis barang donasi tidak sesuai dengan tipe yang
+                          diperbolehkan pada event{" "}
+                          <span className="font-bold">
+                            ({selectedEvent?.name || "-"})
+                          </span>{" "}
+                          yang dipilih, hanya menerima{" "}
+                          <span className="font-bold">
+                            (
+                            {selectedEvent?.types
+                              .map(
+                                (type) =>
+                                  donationTypes.find(
+                                    (donation) => donation.value === type
+                                  )?.label
+                              )
+                              .filter(Boolean)
+                              .join(", ") || "(-)"}
+                            )
+                          </span>{" "}
+                          {}. Mohon periksa kembali jenis barang donasi Anda.
+                        </p>
+                      )}
+
+                      <div
+                        key={index}
+                        className="bg-[#FFF0DC] px-5 pb-5 rounded-lg mb-3 relative"
+                      >
+                        {/* Jenis Barang */}
+                        <div className="w-full flex justify-center mb-3">
+                          <p className="text-base font-bold text-white bg-[#543a14] text-center px-6 py-2 w-fit rounded-b-lg">
+                            {item.label}
+                          </p>
+                        </div>
+                        <button
+                          className="absolute top-0 right-0 px-2 bg-[#E52020] h-9 rounded-bl-lg cursor-pointer"
+                          onClick={() => handleRemoveDonationItem(item.jenis)}
+                          type="button"
+                        >
+                          <Icon icon="mdi:trash" width={20} color="white" />
+                        </button>
+                        <div className="space-y-3">
+                          {/* Tipe Barang (Elektronik) */}
+                          {item.jenis === "ELECTRONICS" && (
+                            <FormInput
+                              inputType="dropdownChecklistOther"
+                              options={electronicOptions}
+                              placeholder="Pilih tipe barang elektronik yang sesuai"
+                              label="Tipe Barang"
+                              name={`barangDonasi.${index}.tipeElektronik`}
+                              control={control}
+                              inputStyles="bg-white"
+                              errors={
+                                errors?.barangDonasi?.[index]?.tipeElektronik
+                                  ?.message
+                              }
+                              required
+                            />
+                          )}
+                          {/* Jumlah & Berat */}
+                          <div className="flex flex-col sm:flex-row gap-5">
+                            <FormInput
+                              label="Jumlah Barang"
+                              inputType="text"
+                              type="number"
+                              placeholder="Contoh: 20"
+                              register={register(
+                                `barangDonasi.${index}.jumlah`
+                              )}
+                              inputStyles="bg-white"
+                              errors={
+                                errors?.barangDonasi?.[index]?.jumlah?.message
+                              }
+                              required
+                              className="w-full"
+                            />
+                            <FormInput
+                              label="Total Berat Barang (kg)"
+                              inputType="text"
+                              type="number"
+                              placeholder="Contoh: 10"
+                              register={register(`barangDonasi.${index}.berat`)}
+                              inputStyles="bg-white"
+                              errors={
+                                errors?.barangDonasi?.[index]?.berat?.message
+                              }
+                              required
+                              className="w-full"
+                            />
+                          </div>
+                          {/* Foto & Event */}
+                          <div className="flex flex-col sm:flex-row gap-5">
+                            <div className="flex-1">
+                              <div className="flex w-full items-end gap-3">
+                                <FormInput
+                                  inputType="custom"
+                                  label="Foto Barang"
+                                  className="w-full"
+                                  inputStyles="bg-white relative min-h-[3rem] flex items-center gap-2 px-2 py-1 border rounded-lg max-w-[461px] overflow-scroll"
+                                  errors={
+                                    errors?.barangDonasi?.[index]?.foto?.message
+                                  }
+                                  required
+                                  customValueRender={() => (
+                                    <>
+                                      {Array.isArray(
+                                        watch(`barangDonasi.${index}.foto`)
+                                      ) &&
+                                        watch(`barangDonasi.${index}.foto`).map(
+                                          (file, fileIndex) => (
+                                            <div
+                                              key={fileIndex}
+                                              className="flex items-center bg-[#EDEDED] rounded-xs px-3 text-nowrap text-sm"
+                                            >
+                                              {file.name}
+                                              <button
+                                                type="button"
+                                                className="ml-2 text-[#E52020] font-bold hover:text-red-700 cursor-pointer"
+                                                onClick={() => {
+                                                  const updated = watch(
+                                                    `barangDonasi.${index}.foto`
+                                                  ).filter(
+                                                    (_, i) => i !== fileIndex
+                                                  );
+                                                  setValue(
+                                                    `barangDonasi.${index}.foto`,
+                                                    updated,
+                                                    { shouldValidate: true }
+                                                  );
+                                                }}
+                                              >
+                                                ×
+                                              </button>
+                                            </div>
+                                          )
+                                        )}
+                                    </>
+                                  )}
+                                />
+                                <div className="flex">
+                                  <label
+                                    htmlFor={`fotoBarang-${index}`}
+                                    className="px-4 py-3 bg-[#F0BB78] text-nowrap rounded-lg font-semibold text-white cursor-pointer"
+                                  >
+                                    Pilih File
+                                  </label>
+                                  <input
+                                    id={`fotoBarang-${index}`}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const newFiles = Array.from(
+                                        e.target.files
+                                      );
+
+                                      const existingFiles =
+                                        watch(`barangDonasi.${index}.foto`) ||
+                                        [];
+
+                                      const mergedFiles = [
+                                        ...existingFiles,
+                                        ...newFiles,
+                                      ].filter(
+                                        (file, i, self) =>
+                                          i ===
+                                          self.findIndex(
+                                            (f) =>
+                                              f.name === file.name &&
+                                              f.size === file.size
+                                          )
+                                      );
+
+                                      setValue(
+                                        `barangDonasi.${index}.foto`,
+                                        mergedFiles,
+                                        {
+                                          shouldValidate: true,
+                                        }
+                                      );
+
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                              {errors?.barangDonasi?.[index]?.foto && (
+                                <p className="text-[#E52020] text-sm mt-1">
+                                  {errors?.barangDonasi?.[index]?.foto?.message}
+                                </p>
+                              )}
+                            </div>
+                            <FormInput
+                              inputType="dropdownInput"
+                              label="Event (opsional)"
+                              name={`barangDonasi.${index}.event`}
+                              control={control}
+                              options={dataEvents}
+                              placeholder="Pilih event tujuan (jika tersedia)"
+                              className="flex-1"
+                              inputStyles="bg-white"
+                            />
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
 
-              {/* Button Tambah Jenis Barang */}
-              {watch("barangDonasi")?.length !==
-                donationTypeOptions?.length && (
-                <div className="flex flex-col-reverse sm:flex-row gap-5 sm:gap-6">
-                  <ButtonCustom
-                    variant={!watch("tipePengiriman") ? "disabled" : `orange`}
-                    label="Tambah Jenis Barang"
-                    onClick={() => {
-                      setIsAddDonationType(!isAddDonationType);
-                    }}
-                    icon="mdi:plus"
-                    className="text-nowrap"
-                    type="button"
-                    disabled={!watch("tipePengiriman")}
-                    data-tooltip-id="addDonationType-tooltip"
-                    data-tooltip-content="Isi informasi donatur dan tujuan donasi secara lengkap terlebih dahulu"
-                  />
+                {/* Button Tambah Jenis Barang */}
+                {watch("barangDonasi")?.length !==
+                  donationTypeOptions?.length && (
+                  <div className="flex flex-col-reverse sm:flex-row gap-5 sm:gap-6">
+                    <ButtonCustom
+                      variant={!watch("tipePengiriman") ? "disabled" : `orange`}
+                      label="Tambah Jenis Barang"
+                      onClick={() => {
+                        setIsAddDonationType(!isAddDonationType);
+                      }}
+                      icon="mdi:plus"
+                      className="text-nowrap"
+                      type="button"
+                      disabled={!watch("tipePengiriman")}
+                      data-tooltip-id="addDonationType-tooltip"
+                      data-tooltip-content="Isi informasi donatur dan tujuan donasi secara lengkap terlebih dahulu"
+                    />
 
-                  {isAddDonationType && (
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      {donationTypeOptions?.map(({ value, label }) => {
-                        const isDisabled = watch("barangDonasi")?.some(
-                          (item) => item.jenis === value
-                        );
+                    {isAddDonationType && (
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        {donationTypeOptions?.map(({ value, label }) => {
+                          const isDisabled = watch("barangDonasi")?.some(
+                            (item) => item.jenis === value
+                          );
 
-                        return (
-                          <ButtonCustom
-                            key={value}
-                            variant={isDisabled ? "" : "outlineOrange"}
-                            label={label}
-                            onClick={() =>
-                              !isDisabled && handleAddDonationType(value, label)
-                            }
-                            type="button"
-                            className={`max-h-10
+                          return (
+                            <ButtonCustom
+                              key={value}
+                              variant={isDisabled ? "" : "outlineOrange"}
+                              label={label}
+                              onClick={() =>
+                                !isDisabled &&
+                                handleAddDonationType(value, label)
+                              }
+                              type="button"
+                              className={`max-h-10
                             ${
                               isDisabled &&
                               "bg-[#F0BB78] text-white cursor-not-allowed"
                             }
                           `}
-                            disabled={isDisabled}
-                          />
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-              {!watch("tipePengiriman") && (
-                <Tooltip
-                  id="addDonationType-tooltip"
-                  place="bottom"
-                  content="Hello world! I'm a Tooltip"
-                />
-              )}
-            </div>
-
-            <ButtonCustom
-              type="submit"
-              variant="brown"
-              label={
-                isCreateDonationLoading ? (
-                  <ClipLoader
-                    color="white"
-                    size={20}
-                    loading={isCreateDonationLoading}
+                              disabled={isDisabled}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {!watch("tipePengiriman") && (
+                  <Tooltip
+                    id="addDonationType-tooltip"
+                    place="bottom"
+                    content="Hello world! I'm a Tooltip"
                   />
-                ) : (
-                  "Kirim Donasi"
-                )
-              }
-              disabled={isCreateDonationLoading}
-              className="w-full h-12"
-            />
-          </form>
-        </fieldset>
-      </div>
+                )}
+              </div>
+
+              <ButtonCustom
+                type="submit"
+                variant="brown"
+                label={
+                  isCreateDonationLoading ? (
+                    <ClipLoader
+                      color="white"
+                      size={20}
+                      loading={isCreateDonationLoading}
+                    />
+                  ) : (
+                    "Kirim Donasi"
+                  )
+                }
+                disabled={isCreateDonationLoading}
+                className="w-full h-12"
+              />
+            </form>
+          </fieldset>
+        </div>
+      )}
     </section>
   );
 }
