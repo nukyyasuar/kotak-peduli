@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { Icon } from "@iconify/react";
 import { usePathname } from "next/navigation";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 import { useAuth } from "src/services/auth/AuthContext";
 import { logout } from "src/services/api/logout";
@@ -24,6 +25,9 @@ export default function Header() {
 
   const pathname = usePathname();
   const { hasPermission } = useAuth();
+  const router = useRouter();
+
+  const emailVerifiedAt = dataProfile?.emailVerifiedAt;
 
   const filteredMenu = baseMenuList
     .filter((item) => {
@@ -31,6 +35,20 @@ export default function Header() {
       return item.type !== "admin";
     })
     .filter((item) => !item.permission || hasPermission(item.permission));
+
+  const handleDonasiSekarang = () => {
+    if (!authToken) {
+      router.push("/login");
+      toast.error("Login terlebih dahulu untuk melanjutkan ke halaman donasi.");
+    } else if (!emailVerifiedAt) {
+      toast.error(
+        "Email belum diverifikasi. Verifikasi terlebih dahulu sebelum berdonasi."
+      );
+      router.push("/akun");
+    } else {
+      router.push("/donasi");
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -128,12 +146,12 @@ export default function Header() {
         {/* Desktop Buttons */}
         <div className="hidden lg:flex items-center gap-3">
           {role === "admin" ? null : (
-            <Link
-              href={authToken ? "/donasi" : "/login"}
+            <button
+              onClick={handleDonasiSekarang}
               className="text-[#FFF0DC] font-bold h-10 px-5 bg-[#543a14] flex items-center rounded-lg hover:bg-[#6B4D20] transition"
             >
               Donasi Sekarang
-            </Link>
+            </button>
           )}
 
           {isLoggedIn ? (
