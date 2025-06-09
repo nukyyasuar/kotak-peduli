@@ -4,6 +4,10 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
+        hostname: "kotak-peduli.ngrok.app",
+      },
+      {
+        protocol: "https",
         hostname: "clear-mammal-simply.ngrok-free.app",
       },
       {
