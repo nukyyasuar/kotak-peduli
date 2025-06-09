@@ -19,7 +19,7 @@ const memberSchema = yup.object().shape({
       label: yup.string().required(),
       value: yup.number().required(),
     })
-    .required("Role wajib dipilih"),
+    .required("Role wajib dipilih."),
 });
 
 export default memberSchema;

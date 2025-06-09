@@ -46,7 +46,7 @@ export default function About() {
         <div className="w-full flex justify-center mb-4">
           <Image
             src="/kotak-peduli-logo-v2.svg"
-            alt="Beri Barang Logo"
+            alt="Kotak Peduli Logo"
             width={102}
             height={140}
           />

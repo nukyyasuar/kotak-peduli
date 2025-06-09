@@ -679,7 +679,7 @@ export default function AdminConsoleDashboard() {
                         placeholder="Contoh: Data tidak valid"
                         className={baseClassNameInput}
                         {...register("notes", {
-                          required: "Alasan penolakan wajib diisi",
+                          required: "Alasan penolakan wajib diisi.",
                           minLength: {
                             value: 20,
                             message:

@@ -5,7 +5,7 @@ import { Icon } from "@iconify/react";
 
 const BannerText = ({ title, subtitle }) => {
   return (
-    <div className="bg-[#543a14] text-white px-4 sm:px-8 md:px-12 py-4 h-auto sm:h-[130px] flex flex-col justify-center w-fit shadow-lg shadow-neutral-500">
+    <div className="bg-[#543a14] text-white px-4 sm:px-8 md:px-12 py-4 h-auto sm:h-[130px] flex flex-col justify-center w-fit shadow-lg">
       <h2 className="text-[20px] sm:text-[24px] md:text-[32px] font-bold mb-2">
         {title}
       </h2>
