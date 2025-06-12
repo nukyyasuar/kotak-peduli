@@ -327,13 +327,13 @@ export default function Home() {
               criteria={bookCriteria}
             />
             <KriteriaCard
-              src="/electronic-junk.svg"
+              src="/pile-electronic.jpg"
               alt="Electronics"
               title="Elektronik"
               criteria={electronicCriteria}
             />
             <KriteriaCard
-              src="/toys.webp"
+              src="/toys-bright.webp"
               alt="Arrange of toys"
               title="Mainan"
               criteria={toyCriteria}
