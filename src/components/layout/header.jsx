@@ -52,21 +52,19 @@ export default function Header() {
 
   const handleLogout = async () => {
     try {
-      const result = await logout();
+      await logout();
 
-      if (result.meta.message[0] === "Request successful") {
-        toast.success("Logout Berhasil. Anda akan diarahkan ke halaman utama.");
+      toast.success("Logout Berhasil. Anda akan diarahkan ke halaman utama.");
+      setTimeout(() => {
+        router.push("/");
         localStorage.removeItem("authToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("collectionCenterId");
-        window.location.href = "/";
         setIsLoggedIn(false);
         setRole(null);
-      } else {
-        toast.error("Logout failed");
-      }
+      }, 1000);
     } catch (error) {
-      toast.error("Logout failed:", error);
+      toast.error("Logout Gagal. Silakan coba lagi.");
     }
   };
 
