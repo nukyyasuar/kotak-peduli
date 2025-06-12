@@ -51,7 +51,7 @@ const customStyles = {
 };
 
 const baseClass =
-  "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base w-full";
+  "border border-[#C2C2C2] rounded-lg px-5 py-3 min-h-12 resize-none focus:outline-none focus:border-black placeholder:text-[#C2C2C2] text-base w-full text-black";
 const disabledClass = "bg-[#EDEDED] cursor-not-allowed";
 
 const FormInput = ({

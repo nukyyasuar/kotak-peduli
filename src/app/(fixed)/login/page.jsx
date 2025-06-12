@@ -9,7 +9,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ClipLoader } from "react-spinners";
 
-import { loginWithEmail, loginWithGoogle } from "src/services/api/login";
+import { loginWithEmail } from "src/services/api/login";
 import { loginSchema } from "src/components/schema/registrationSchema";
 import forgotPassSchema from "src/components/schema/forgotPassSchema";
 import { sendForgotPasswordLink } from "src/services/api/forgotPassword";
@@ -70,7 +70,9 @@ export default function Login() {
     try {
       await loginWithEmail(data.email, data.password);
       toast.success("Berhasil login! Anda akan diarahkan ke halaman utama.");
-      window.location.href = "/";
+      setTimeout(() => {
+        router.push("/");
+      }, 1000);
     } catch (err) {
       if (err.message === "You do not have access to this resource") {
         toast.error("Email atau password salah");
