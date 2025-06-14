@@ -1,16 +1,11 @@
-import { initializeApp } from "firebase/app";
 import {
-  getAuth,
   onAuthStateChanged,
-  GoogleAuthProvider,
-  signInWithPopup,
   RecaptchaVerifier,
   signInWithPhoneNumber,
 } from "firebase/auth";
 import { toast } from "react-toastify";
 import { auth } from "src/services/auth/firebase";
 
-// Store reCAPTCHA verifier globally
 let recaptchaVerifier = null;
 
 export const setupRecaptcha = async (containerId, forceReset = false) => {
@@ -30,7 +25,6 @@ export const setupRecaptcha = async (containerId, forceReset = false) => {
         throw new Error("reCAPTCHA container not found");
       }
 
-      // Clear container and remove existing reCAPTCHA elements
       container.innerHTML = "";
       const existingScripts = document.querySelectorAll(
         'script[src*="recaptcha"]'
@@ -38,7 +32,6 @@ export const setupRecaptcha = async (containerId, forceReset = false) => {
       existingScripts.forEach((script) => script.remove());
       ("Cleared existing reCAPTCHA scripts and container content");
 
-      // Ensure container is clean
       const newContainer = document.createElement("div");
       newContainer.id = containerId;
       container.parentNode.replaceChild(newContainer, container);
