@@ -352,7 +352,7 @@ export default function AkunTempatPenampung() {
     } else if (watchPhoneNumber.length > 15) {
       setErrorPhoneNumberModal("Nomor telepon maksimal terdiri dari 15 digit.");
       return;
-    } else if (!/^8\d{9,14}$/.test(watchPhoneNumber)) {
+    } else if (!/^8\d{8,14}$/.test(watchPhoneNumber)) {
       setErrorPhoneNumberModal(
         "Nomor telepon harus dimulai dengan angka ‘8’ (contoh: 81231231231)"
       );

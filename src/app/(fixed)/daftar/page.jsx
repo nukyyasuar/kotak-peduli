@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import Head from "next/head";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -12,10 +11,9 @@ import { ClipLoader } from "react-spinners";
 import { registrationSchema } from "src/components/schema/registrationSchema";
 import { FormInput } from "src/components/formInput";
 import { ButtonCustom } from "src/components/button";
-import { Spacer, TextWithLink } from "src/components/text";
+import { TextWithLink } from "src/components/text";
 
 import { registerWithEmail } from "src/services/api/register";
-import { loginWithGoogle } from "src/services/api/login";
 
 import {
   onAuthStateChange,

@@ -424,7 +424,7 @@ export default function DaftarTempatPenampung() {
     } else if (phoneNumber.length > 15) {
       setErrorPhoneNumberModal("Nomor telepon maksimal terdiri dari 15 digit.");
       return;
-    } else if (!/^8\d{9,14}$/.test(phoneNumber)) {
+    } else if (!/^8\d{8,14}$/.test(phoneNumber)) {
       setErrorPhoneNumberModal(
         "Nomor telepon harus dimulai dengan angka ‘8’ (contoh: 81231231231)"
       );

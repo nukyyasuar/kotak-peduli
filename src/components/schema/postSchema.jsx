@@ -13,7 +13,7 @@ const postSchema = yup.object().shape({
     .min(9, "Nomor telepon minimal terdiri dari 9 digit.")
     .max(15, "Nomor telepon maksimal terdiri dari 15 digit.")
     .matches(
-      /^8\d{9,14}$/,
+      /^8\d{8,14}$/,
       "Nomor telepon harus dimulai dengan angka ‘8’ (contoh: 81231231231)"
     ),
   alamat: yup
