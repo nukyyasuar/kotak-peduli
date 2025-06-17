@@ -210,7 +210,8 @@ export default function TempatPenampung() {
                   size={50}
                 />
               </div>
-            ) : dataCollectionCenters?.length === 0 ? (
+            ) : dataCollectionCenters?.length === 0 ||
+              !dataCollectionCenters ? (
               <div className="flex flex-col justify-center items-center gap-3 h-full text-center text-[#543A14]">
                 <p className="font-bold text-lg sm:text-xl">
                   Tempat penampung akan segera tersedia
