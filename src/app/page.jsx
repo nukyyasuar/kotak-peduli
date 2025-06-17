@@ -101,6 +101,8 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
+  console.log("data testimonies", dataTestimonies);
+
   return (
     <section className="bg-[#FFF0DC]">
       {/* Hero Section */}
@@ -193,7 +195,7 @@ export default function Home() {
                     />
                   ) : (
                     <span className="text-xl sm:text-2xl md:text-[32px] text-[#F0BB78] text-center">
-                      {item.value}
+                      {item.value || "0"}
                     </span>
                   )}
                   <span className="text-sm sm:text-base md:text-xl text-[#543a14] text-center">
@@ -214,7 +216,7 @@ export default function Home() {
                       size={32}
                     />
                   </div>
-                ) : dataTestimonies?.length === 0 ? (
+                ) : dataTestimonies?.length === 0 || !dataTestimonies ? (
                   <div className="flex flex-col justify-center items-center text-center text-[#543A14]">
                     <p className="text-lg sm:text-xl font-bold mb-2">
                       Belum ada testimoni yang tersedia.
