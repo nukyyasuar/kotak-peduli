@@ -101,8 +101,6 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  console.log("data testimonies", dataTestimonies);
-
   return (
     <section className="bg-[#FFF0DC]">
       {/* Hero Section */}

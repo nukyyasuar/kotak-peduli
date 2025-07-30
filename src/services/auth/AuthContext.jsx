@@ -21,6 +21,7 @@ export const AuthProvider = ({ children }) => {
           decoded?.collectionCenterCollaborator?.role?.permissions ||
           decoded?.role?.permissions ||
           [];
+
         setPermissions(permissionsList);
       } catch (e) {
         console.error("Invalid token", e);

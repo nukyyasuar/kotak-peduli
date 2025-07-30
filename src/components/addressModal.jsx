@@ -242,8 +242,7 @@ export default function AddressModal({
 
     scriptLoadedRef.current = true;
     const script = document.createElement("script");
-    script.src =
-      "https://maps.googleapis.com/maps/api/js?key=AIzaSyBTJ0RDz8V6qAOZARcoMaVttH1Rco05I60&libraries=places&callback=initGoogleMaps";
+    script.src = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_URL;
     script.async = true;
     script.defer = true;
     script.onerror = () => {
