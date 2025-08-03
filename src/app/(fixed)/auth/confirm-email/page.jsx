@@ -12,13 +12,6 @@ export default function ConfirmEmail() {
   const [token, setToken] = useState("");
 
   useEffect(() => {
-    const tokenFromUrl = new URLSearchParams(window.location.search).get(
-      "token"
-    );
-    if (tokenFromUrl) setToken(tokenFromUrl);
-  }, []);
-
-  useEffect(() => {
     const token = new URLSearchParams(window.location.search).get("token");
 
     const confirmationEmail = async () => {
